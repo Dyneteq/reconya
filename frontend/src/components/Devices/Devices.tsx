@@ -17,7 +17,7 @@ const Devices: React.FC<DevicesProps> = ({ devices }) => {
   return (
     <div className="mt-5">
       <h6 className="text-success d-block w-100">[ ONLINE DEVICE LIST ]</h6>
-      {/* <table className="table-dark table-sm table-compact text-success w-100">
+      <table className="table-dark table-sm table-compact text-success w-100">
         <thead>
           <tr>
             <th>Hostname</th>
@@ -42,7 +42,7 @@ const Devices: React.FC<DevicesProps> = ({ devices }) => {
             </tr>
           ))}
         </tbody>
-      </table> */}
+      </table>
     </div>
   );
 };

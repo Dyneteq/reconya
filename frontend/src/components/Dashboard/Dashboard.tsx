@@ -6,6 +6,7 @@ import DeviceList from '../DeviceList/DeviceList';
 
 const Dashboard: React.FC = () => {
   const { devices, isLoading, error } = useDevices();
+  console.log('rerun')
   const localDevice = undefined;
 
   if (isLoading) return <div>Loading...</div>;
@@ -13,8 +14,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      {/* <NetworkMap devices={devices} localDevice={localDevice} />
-      <DeviceList devices={devices} localDevice={localDevice} /> */}
+      <NetworkMap devices={devices} localDevice={localDevice} />
+      <DeviceList devices={devices} localDevice={localDevice} />
       <Devices devices={devices} />
     </div>
   );

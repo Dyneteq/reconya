@@ -8,11 +8,13 @@ const useDevices = () => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const getDevices = async () => {
+    console.log('effect ran');
+    const getDevices = () => {
       try {
         setIsLoading(true);
-        const data = await fetchDevices();
-        setDevices(data);
+        fetchDevices().then(data => {
+          setDevices(data);
+        });
       } catch (error: any) {
         setError(error);
       } finally {
