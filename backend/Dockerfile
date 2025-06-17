@@ -2,7 +2,7 @@
 FROM golang:1.21-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git gcc musl-dev
+RUN apk add --no-cache git gcc musl-dev sudo
 
 # Set working directory
 WORKDIR /app
@@ -23,7 +23,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o reconya-api ./cmd/main.go
 FROM alpine:latest
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata sqlite nmap
+RUN apk add --no-cache ca-certificates tzdata sqlite nmap sudo
 
 # Set working directory
 WORKDIR /app

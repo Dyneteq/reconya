@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+  "math/rand"
 	"reconya-ai/internal/config"
 	"reconya-ai/internal/device"
 	"reconya-ai/internal/eventlog"
@@ -85,15 +86,20 @@ func (s *PingSweepService) Run() {
 		}
 
 		// Add to the list if eligible for port scan - but limit to max 3 devices per scan
-		if s.DeviceService.EligibleForPortScan(updatedDevice) && len(devicesToPingScan) < 3 {
+		if s.DeviceService.EligibleForPortScan(updatedDevice) {
 			devicesToPingScan = append(devicesToPingScan, *updatedDevice)
 		}
 	}
+  dest := make([]models.Device, len(devicesToPingScan))
+  perm := rand.Perm(len(devicesToPingScan))
+  for i, v := range perm {
+    dest[v] = devicesToPingScan[i]
+  }
 
 	// Run port scans ONE AT A TIME, not concurrently
-	if len(devicesToPingScan) > 0 {
-		log.Printf("Running port scans for %d devices, one at a time", len(devicesToPingScan))
-		for _, deviceToScan := range devicesToPingScan {
+	if len(dest) > 0 {
+		log.Printf("Running port scans for 3 of %d devices, one at a time", len(dest))
+    for _, deviceToScan := range dest[:3] {
 			// Run the port scan synchronously
 			s.PortScanService.Run(deviceToScan)
 			
@@ -113,7 +119,7 @@ func (s *PingSweepService) ExecuteSweepScanCommand(network string) ([]models.Dev
 	// -R: resolve hostnames, --dns-servers: use specific DNS servers for resolution
 	// --system-dns: use system DNS resolution
 	// sudo required on macOS for proper MAC address and vendor detection
-	cmd := exec.Command("sudo", "nmap", "-sn", "--send-ip", "-T4", "-R", "--system-dns", "-oX", "-", network)
+	cmd := exec.Command("/usr/bin/sudo", "nmap", "-sn", "--send-ip", "-T4", "-R", "--system-dns", "-oX", "-", network)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("nmap command failed: %s\n", string(output))
