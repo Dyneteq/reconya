@@ -1,14 +1,14 @@
 // src/hooks/useAuth.ts
-import { API_BASE_URL } from '../config';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { checkAuth } from '../api/axiosConfig';
 
 const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const performAuthCheck = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
         setIsAuthenticated(false);
@@ -16,20 +16,17 @@ const useAuth = () => {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/check-auth`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401 || response.status === 400) {
-        setIsAuthenticated(false);
-        navigate('/login');
-      } else {
+      const isValid = await checkAuth();
+      if (isValid) {
         setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        localStorage.removeItem('token'); // Clear invalid token
+        navigate('/login');
       }
     };
-    checkAuth();
+    
+    performAuthCheck();
   }, [navigate]);
 
   return isAuthenticated;

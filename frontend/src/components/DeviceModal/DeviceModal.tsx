@@ -12,7 +12,6 @@ const DeviceModal: React.FC<DeviceModalProps> = ({ device, onClose }) => {
   if (!device) return null;
   
   // Helper functions to normalize property access
-  const getDeviceID = (d: Device) => d.id || d.ID || '';
   const getDeviceIPv4 = (d: Device) => d.ipv4 || d.IPv4 || '';
   const getDeviceMAC = (d: Device) => d.mac || d.MAC;
   const getDeviceVendor = (d: Device) => d.vendor || d.Vendor;

@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { Device } from '../models/device.model';
 import { SystemStatus } from '../models/systemStatus.model';
 import { EventLog } from '../models/eventLog.model';
@@ -117,6 +117,37 @@ export const fetchNetwork = async (): Promise<Network> => {
   } catch (error) {
     logger.error("Error fetching network:", error);
     throw error;
+  }
+};
+
+// Login function
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  token: string;
+}
+
+export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
+  try {
+    const response = await axiosInstance.post<LoginResponse>('/login', credentials);
+    return response.data;
+  } catch (error) {
+    logger.error("Login error:", error);
+    throw error;
+  }
+};
+
+// Check auth function
+export const checkAuth = async (): Promise<boolean> => {
+  try {
+    const response = await axiosInstance.get('/check-auth');
+    return response.status === 200;
+  } catch (error) {
+    logger.error("Auth check error:", error);
+    return false;
   }
 };
 

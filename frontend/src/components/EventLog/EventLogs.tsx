@@ -3,7 +3,6 @@ import useEventLogs from '../../hooks/useEventLogs'; // Adjust path as needed
 import { EventLog } from '../../models/eventLog.model';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { EventLogIcons } from '../../models/eventLogIcons.model';
-import LoadingSpinner from '../Common/LoadingSpinner';
 
 const EventLogs = () => {
   const { eventLogs, isLoading, error } = useEventLogs();

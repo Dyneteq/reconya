@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../config';
+import { login, LoginCredentials } from '../../api/axiosConfig';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
   const { setIsUserLoggedIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -15,32 +13,30 @@ const Login: React.FC = () => {
     setError(''); // Clear previous errors
     
     try {
-      console.log('Attempting login to:', `${API_BASE_URL}/login`);
-      const response = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      console.log('Attempting login...');
+      const credentials: LoginCredentials = { username, password };
+      const response = await login(credentials);
 
-      console.log('Login response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Login successful, redirecting...');
-        localStorage.setItem('token', data.token);
-        setIsUserLoggedIn(true);
-        // Force page reload to reinitialize auth state
-        window.location.href = '/';
+      console.log('Login successful, redirecting...');
+      localStorage.setItem('token', response.token);
+      setIsUserLoggedIn(true);
+      // Force page reload to reinitialize auth state
+      window.location.href = '/';
+    } catch (error: any) {
+      console.error('Login error:', error);
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        const message = error.response.data?.error || error.response.statusText;
+        setError(`Login failed: ${status} ${message}`);
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('Network error during login:', error);
+        setError('Network error - cannot connect to server');
       } else {
-        const errorData = await response.text();
-        console.error('Login failed:', response.status, errorData);
-        setError(`Login failed: ${response.status} ${response.statusText}`);
+        // Something else happened
+        setError('Login failed - unexpected error');
       }
-    } catch (error) {
-      console.error('Network error during login:', error);
-      setError('Network error - cannot connect to server');
     }
   };
 

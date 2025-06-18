@@ -36,6 +36,20 @@ temp/
 .aider*
 
 # Database files
-backend/data/*.db
-backend/data/*.db-shm
-backend/data/*.db-wal
+backend/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Go binaries
+backend/main
+backend/reconya
+backend/reconya-api
+
+# Coverage reports
+coverage.out
+coverage.html
+
+# Editor backup files
+*~
+.#*
