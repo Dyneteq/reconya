@@ -1,9 +1,11 @@
 import React from 'react';
 import { Device } from '../../models/device.model';
+import { Network } from '../../models/network.model';
 
 interface Props {
   devices: Device[];
   localDevice?: Device;
+  network?: Network;
 }
 
 // Function to generate all IP addresses in a /24 range
@@ -17,6 +19,13 @@ const generateIpRange = (baseIp: string): string[] => {
   }
 
   return ips;
+};
+
+// Function to extract base IP from CIDR notation
+const getBaseIpFromCIDR = (cidr: string): string => {
+  if (!cidr) return '192.168.1.0'; // fallback
+  const [ipPart] = cidr.split('/');
+  return ipPart;
 };
 
 // Helper functions to normalize property access
@@ -48,8 +57,22 @@ const getDeviceContainerCssClasses = (ip: string, devices: Device[], localDevice
   return 'border border-success'; // Default for existing devices
 };
 
-const NetworkMap: React.FC<Props> = ({ devices, localDevice }) => {
-  const baseIp = localDevice ? getDeviceIPv4(localDevice) : '192.168.1.0'; // Adjust the base IP as necessary
+const NetworkMap: React.FC<Props> = ({ devices, localDevice, network }) => {
+  // Use network CIDR if available, otherwise fall back to local device IP, then default
+  let baseIp: string;
+  
+  if (network?.cidr || network?.CIDR) {
+    // Extract base IP from network CIDR (e.g., "10.0.0.0/24" -> "10.0.0.0")
+    const cidr = network.cidr || network.CIDR || '';
+    baseIp = getBaseIpFromCIDR(cidr);
+  } else if (localDevice) {
+    // Fallback to local device IP
+    baseIp = getDeviceIPv4(localDevice);
+  } else {
+    // Default fallback
+    baseIp = '192.168.1.0';
+  }
+  
   const ipRange = generateIpRange(baseIp);
 
   return (
