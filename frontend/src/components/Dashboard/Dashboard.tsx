@@ -43,7 +43,7 @@ const Dashboard: React.FC = () => {
       <div className="row mt-1">
         <div className="col-md-9">
           {/* Interactive D3.js Network Graph */}
-          <NetworkMap devices={devices} localDevice={localDevice} />
+          <NetworkMap devices={devices} localDevice={localDevice} network={network} />
           
           {/* Devices section */}
           <div className="mt-4">
