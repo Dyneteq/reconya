@@ -1,0 +1,1368 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reconYa - IPv4/IPv6 Network Reconnaissance</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#198754',
+                        'secondary': '#20c997',
+                        'bg-dark': '#212529',
+                        'bg-very-dark': '#111111',
+                        'bg-black': '#000000',
+                        'border-success': '#198754',
+                        'border-border-success': 'rgba(25, 135, 84, 0.3)',
+                        'text-muted': '#6c757d',
+                        'text-text-muted': '#adb5bd'
+                    },
+                    fontFamily: {
+                        'orbitron': ['Orbitron', 'monospace'],
+                        'rajdhani': ['Rajdhani', 'sans-serif']
+                    },
+                    animation: {
+                        'border-pulse': 'borderPulse 1.5s ease-in-out infinite',
+                        'fade': 'fade 1.5s linear infinite',
+                        'blink-danger': 'blinkDanger 1s ease-in-out infinite',
+                        'blink-warning': 'blinkWarning 1.5s ease-in-out infinite',
+                        'device-blink': 'deviceBlink 1.8s step-start infinite'
+                    },
+                    keyframes: {
+                        borderPulse: {
+                            '0%, 100%': { borderColor: '#198754' },
+                            '50%': { borderColor: '#20c997' }
+                        },
+                        fade: {
+                            '0%, 100%': { opacity: '0' },
+                            '50%': { opacity: '1' }
+                        },
+                        blinkDanger: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.3' }
+                        },
+                        blinkWarning: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.4' }
+                        },
+                        deviceBlink: {
+                            '50%': { opacity: '0' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
+        
+        
+        /* Make network map container wider */
+        
+        .device-box-btn {
+            min-width: 140px;
+            width: calc(10% - 8px);
+            min-height: 100px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .device-box-btn:active {
+            background: #198754 !important;
+            color: #212529 !important;
+        }
+        
+        .device-box-btn {
+            border: 2px solid transparent !important;
+            transition: border-color 0.3s ease !important;
+        }
+        
+        .device-box-btn:hover {
+            border: 2px solid #198754 !important;
+            animation: borderPulse 1.5s ease-in-out infinite !important;
+        }
+        
+        @keyframes borderPulse {
+            0%, 100% { border-color: #198754; }
+            50% { border-color: #20c997; }
+        }
+        
+        /* Device container flexbox layout to match React */
+        .device-container {
+            flex-flow: row wrap;
+        }
+        
+        .device-mini-box {
+            width: 18px;
+            min-height: 18px;
+            padding-top: 3px;
+        }
+        
+        .deviceFadeInAndOut {
+            opacity: 1;
+            animation: fade 1.5s linear infinite;
+        }
+        
+        @keyframes fade {
+            0%,100% { opacity: 0 }
+            50% { opacity: 1 }
+        }
+        
+        /* React-style blinking animations for status indicators */
+        .blink-danger {
+            animation: blink-danger 1s ease-in-out infinite;
+        }
+        
+        .blink-warning {
+            animation: blink-warning 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes blink-danger {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        @keyframes blink-warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        
+        .deviceBlink {
+            opacity: 1;
+            animation: blinker 1.8s step-start infinite;
+        }
+        
+        @keyframes blinker {
+            50% {
+                opacity: 0;
+            }
+        }
+        
+        .device-modal {
+            min-height: 500px;
+        }
+        
+        /* Network modal specific styles */
+        #networkModal {
+            z-index: 1055 !important;
+        }
+        
+        #networkModal.show {
+            display: block !important;
+        }
+        
+        .modal-backdrop {
+            z-index: 1050 !important;
+        }
+        
+        /* Card styles to match React */
+        .card {
+            background: var(--bg-very-dark);
+            border: 1px solid rgba(25, 135, 84, 0.3);
+            color: #e9ecef;
+        }
+        
+        .card-header {
+            background: rgba(25, 135, 84, 0.1);
+            border-bottom: 1px solid rgba(25, 135, 84, 0.3);
+        }
+        
+        .card-title {
+            font-weight: 600;
+            color: var(--bs-success);
+        }
+        
+        .section-header {
+            color: var(--bs-success);
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .section-header::before { content: "[ "; }
+        .section-header::after { content: " ]"; }
+        
+        /* Device Card Styles */
+        .device-card {
+            background: var(--bg-very-dark);
+            border: 1px solid rgba(108, 117, 125, 0.3);
+            min-width: 205px;
+            min-height: 120px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .device-card:hover {
+            background: rgba(25, 135, 84, 0.1);
+            border-color: var(--bs-success);
+        }
+        
+        .device-ip {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #e9ecef;
+        }
+        
+        .device-hostname {
+            font-size: 0.9rem;
+            color: #adb5bd;
+        }
+        
+        .device-name {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        
+        .status-online { color: #20c997; }
+        .status-offline { color: #dc3545; }
+        .status-idle { color: #ffc107; }
+        
+        /* Network Map styles - matching React exactly */
+        .network-map-container {
+            background: var(--bg-black);
+        }
+        
+        /* HTMX indicators */
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 500ms ease-in;
+        }
+        
+        .htmx-request .htmx-indicator,
+        .htmx-request.htmx-indicator {
+            opacity: 1;
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(25, 135, 84, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #198754;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* System status styles */
+        .system-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .system-icon {
+            color: var(--bs-success);
+        }
+        
+        .blink-online {
+            animation: blink-online 2s infinite;
+        }
+        
+        @keyframes blink-online {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        /* Additional animations from React frontend */
+        .blink-danger {
+            animation: blink-danger 1s ease-in-out infinite;
+        }
+        
+        @keyframes blink-danger {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        .blink-warning {
+            animation: blink-warning 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes blink-warning {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+        
+        .blink-active {
+            animation: blink-active 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes blink-active {
+            0%, 60% { opacity: 1; }
+            61%, 100% { opacity: 0.7; }
+        }
+        
+        /* Traffic core breathing animation */
+        .traffic-core-breathing {
+            animation: traffic-core-breathe 3s ease-in-out infinite;
+        }
+        
+        @keyframes traffic-core-breathe {
+            0%, 100% { 
+                opacity: 0.7; 
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 1; 
+                transform: scale(1.1);
+            }
+        }
+        
+        /* Table styling - very soft and easy on the eyes */
+        .table-dark {
+            --bs-table-bg: var(--bg-very-dark);
+            --bs-table-border-color: rgba(25, 135, 84, 0.1);
+            color: #c9d1d9 !important;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .table thead th {
+            background: rgba(25, 135, 84, 0.15);
+            color: #e6fffa;
+            border-color: rgba(25, 135, 84, 0.2);
+            font-weight: 400;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 1.25rem 1rem;
+            border-bottom: 2px solid rgba(25, 135, 84, 0.2);
+        }
+        
+        .table-dark td {
+            color: var(--bs-success) !important;
+            padding: 1rem;
+            border-color: rgba(25, 135, 84, 0.08) !important;
+            vertical-align: middle;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        
+        .table-dark th {
+            color: #e6fffa !important;
+        }
+        
+        /* Subtle green hover effect */
+        .table-hover tbody tr:hover {
+            background-color: rgba(25, 135, 84, 0.08) !important;
+            color: #e6fffa !important;
+            transition: all 0.2s ease;
+        }
+        
+        /* Row zebra striping for better readability */
+        .table-dark tbody tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.01) !important;
+        }
+        
+        /* Remove specific column font styling to use consistent font across all columns */
+        
+        /* Status text styling */
+        .status-online {
+            color: #22c55e !important;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        
+        .status-idle {
+            color: #eab308 !important;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        
+        .status-offline {
+            color: #ef4444 !important;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        
+        /* Search input styling */
+        .form-control:focus {
+            border-color: rgba(25, 135, 84, 0.5) !important;
+            box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15) !important;
+        }
+        
+        .input-group-text {
+            background-color: var(--bg-very-dark) !important;
+            border-color: rgba(25, 135, 84, 0.3) !important;
+        }
+        
+        /* Override any white text with softer alternatives */
+        .text-white {
+            color: #e9ecef !important;
+        }
+        
+        /* Ensure card text is soft */
+        .card {
+            color: #e9ecef !important;
+        }
+        
+        .badge.bg-success {
+            background: var(--bs-success) !important;
+        }
+        
+        .btn-outline-success {
+            border-color: var(--bs-success);
+            color: var(--bs-success);
+        }
+        
+        .btn-outline-success:hover {
+            background: var(--bs-success);
+            border-color: var(--bs-success);
+        }
+
+        /* Proper Push Sidebar */
+        .layout-wrapper {
+            display: flex;
+            min-height: calc(100vh - 70px); /* Account for navbar height */
+        }
+
+        .sidebar {
+            width: 0;
+            background: var(--bg-black);
+            border-right: 1px solid var(--bs-success);
+            transition: width 0.3s ease;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .sidebar.expanded {
+            width: 280px;
+        }
+
+        .sidebar-content {
+            width: 280px;
+            padding: 0;
+        }
+
+        .main-content {
+            flex: 1;
+            transition: margin-left 0.3s ease;
+            background: var(--bg-black);
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-nav .nav-item {
+            border-bottom: 1px solid rgba(25, 135, 84, 0.3);
+        }
+
+        .sidebar-nav .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: #e9ecef;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .sidebar-nav .nav-link:hover {
+            background: rgba(25, 135, 84, 0.1);
+            color: var(--bs-success);
+            border-left-color: rgba(25, 135, 84, 0.5);
+        }
+
+        .sidebar-nav .nav-link.active {
+            background: rgba(25, 135, 84, 0.2);
+            color: var(--bs-success);
+            border-left-color: var(--bs-success);
+        }
+
+        .sidebar-nav .nav-link i {
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+            width: 20px;
+        }
+
+        .sidebar-toggle-btn {
+            position: absolute !important;
+            left: 260px !important; /* Right of the logo (140px + logo width) */
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            background: transparent;
+            border: none;
+            color: #6c757d;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0.7;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: rgba(25, 135, 84, 0.1);
+            color: var(--bs-success);
+            opacity: 1;
+        }
+
+        /* Logo positioning - always centered in sidebar width */
+        #navbarLogo {
+            position: absolute !important;
+            left: 140px !important; /* Center of 280px sidebar width (280px / 2) */
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            z-index: 10 !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-very-dark">
+        <div class="w-100 d-flex align-items-center px-5" style="position: relative;">
+            <!-- Sidebar Toggle Button -->
+            <button class="sidebar-toggle-btn" id="sidebarToggle" title="Toggle Sidebar">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="toggleIcon">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+            
+            <!-- Logo (positioned absolutely) -->
+            <a href="/" class="navbar-brand" id="navbarLogo">
+                <div class="logo text-success bg-transparent d-inline-block px-3 py-2">
+                    <i class="bi bi-hdd-network me-2"></i>reconYa
+                </div>
+            </a>
+            
+            <!-- Right side content -->
+            <div class="ms-auto d-flex align-items-center">
+                <button class="navbar-toggler me-3" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                
+                <div class="dropdown bg-dark">
+                    <button class="bg-primary hover:bg-green-600 text-white px-4 py-2 rounded transition-colors flex items-center" type="button" id="dropdownMenuButton">
+                        Welcome, human
+                        <i class="bi bi-chevron-down ml-2"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                        <li>
+                            <a href="#" class="dropdown-item" onclick="loadAboutPage(); return false;">
+                                <i class="bi bi-info-circle me-2"></i>About
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="/logout" method="POST" class="d-inline">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Layout Wrapper (starts under navbar) -->
+    <div class="layout-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-content">
+                <nav style="margin-top: 20px;">
+                    <ul class="sidebar-nav">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link active" data-page="dashboard">
+                                <i class="bi bi-house-door"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-page="devices">
+                                <i class="bi bi-router"></i>
+                                Devices
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-page="logs">
+                                <i class="bi bi-file-earmark-text"></i>
+                                Logs
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-page="networks">
+                                <i class="bi bi-diagram-3"></i>
+                                Networks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-page="alerts">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Alerts
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-page="settings">
+                                <i class="bi bi-gear"></i>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="content" class="main-content container-fluid py-4">
+            <!-- Initial content will be loaded here by HTMX -->
+        </main>
+    </div>
+
+    <!-- Device Modal (available globally) -->
+    <div class="modal fade" id="deviceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content d-flex flex-column">
+                <div id="device-modal-content" class="flex-grow-1 overflow-auto">
+                    <!-- Content loaded via HTMX -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Modal (available globally) -->
+    <div class="modal fade" id="networkModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark border-success">
+                <div id="network-modal-content">
+                    <!-- Content loaded via HTMX -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Delete Modal (available globally) -->
+    <div class="modal fade" id="networkDeleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark border-danger">
+                <div id="network-delete-modal-content">
+                    <!-- Content loaded via HTMX -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <script>
+        // Load dashboard content after page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize sidebar functionality
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            // Toggle sidebar expansion
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('expanded');
+                
+                // Change icon based on state
+                if (sidebar.classList.contains('expanded')) {
+                    toggleIcon.innerHTML = '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+                } else {
+                    toggleIcon.innerHTML = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
+                }
+            });
+            
+            // Close sidebar on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sidebar.classList.contains('expanded')) {
+                    sidebar.classList.remove('expanded');
+                    toggleIcon.innerHTML = '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>';
+                }
+            });
+
+            // Handle sidebar navigation
+            const sidebarLinks = document.querySelectorAll('.sidebar-nav .nav-link');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Prevent default navigation for ALL sidebar links
+                    e.preventDefault();
+                    
+                    // Remove active class from all links
+                    sidebarLinks.forEach(l => l.classList.remove('active'));
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Handle special cases for non-HTMX links
+                    const page = this.getAttribute('data-page');
+                    if (page === 'dashboard') {
+                        // Load dashboard content and update URL and title
+                        htmx.ajax('GET', '/home', { target: '#content' });
+                        history.pushState({page: 'dashboard'}, 'Dashboard - reconYa', '/');
+                        document.title = 'Dashboard - reconYa';
+                    } else if (page === 'devices') {
+                        document.getElementById('content').innerHTML = `
+                            <div class="container-fluid py-4">
+                                <h3 class="text-success mb-4">[ NETWORK DEVICES ]</h3>
+                                <div id="device-list-container"></div>
+                            </div>
+                        `;
+                        
+                        // Update URL and title
+                        history.pushState({page: 'devices'}, 'Devices - reconYa', '/devices');
+                        document.title = 'Devices - reconYa';
+                        
+                        // Load device list (table view only)
+                        htmx.ajax('GET', '/api/device-list', { target: '#device-list-container' });
+                    } else if (page === 'logs') {
+                        document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success mb-4">[ EVENT LOGS ]</h3><div id="event-logs-container"></div></div>';
+                        
+                        // Update URL and title
+                        history.pushState({page: 'logs'}, 'Logs - reconYa', '/logs');
+                        document.title = 'Logs - reconYa';
+                        
+                        // Load event logs table into the container
+                        htmx.ajax('GET', '/api/event-logs-table', { target: '#event-logs-container' });
+                    } else if (page === 'networks') {
+                        document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success mb-4">[ NETWORKS ]</h3><div id="networks-container"></div></div>';
+                        
+                        // Update URL and title
+                        history.pushState({page: 'networks'}, 'Networks - reconYa', '/networks');
+                        document.title = 'Networks - reconYa';
+                        
+                        // Load networks list into the container
+                        htmx.ajax('GET', '/api/networks', { target: '#networks-container' });
+                    } else if (page === 'alerts') {
+                        document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success">[ ALERTS ]</h3><p class="text-muted">Alerts functionality coming soon...</p></div>';
+                        
+                        // Update URL and title
+                        history.pushState({page: 'alerts'}, 'Alerts - reconYa', '/alerts');
+                        document.title = 'Alerts - reconYa';
+                    } else if (page === 'settings') {
+                        // Load settings page
+                        fetch('/api/settings')
+                            .then(response => response.text())
+                            .then(html => {
+                                document.getElementById('content').innerHTML = html;
+                            })
+                            .catch(error => {
+                                console.error('Error loading settings:', error);
+                                document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success">[ SETTINGS ]</h3><p class="text-danger">Error loading settings. Please try again.</p></div>';
+                            });
+                        
+                        // Update URL and title
+                        history.pushState({page: 'settings'}, 'Settings - reconYa', '/settings');
+                        document.title = 'Settings - reconYa';
+                    } else if (page === 'about') {
+                        document.getElementById('content').innerHTML = '<div id="about-container"></div>';
+                        
+                        // Update URL and title
+                        history.pushState({page: 'about'}, 'About - reconYa', '/about');
+                        document.title = 'About - reconYa';
+                        
+                        // Load about content via HTMX
+                        htmx.ajax('GET', '/api/about', { target: '#about-container' });
+                    }
+                });
+            });
+
+            // Handle initial page load based on current URL
+            const currentPath = window.location.pathname;
+            let initialPage = 'dashboard';
+            
+            if (currentPath === '/devices') {
+                initialPage = 'devices';
+            } else if (currentPath === '/logs') {
+                initialPage = 'logs';
+            } else if (currentPath === '/networks') {
+                initialPage = 'networks';
+            } else if (currentPath === '/alerts') {
+                initialPage = 'alerts';
+            } else if (currentPath === '/settings') {
+                initialPage = 'settings';
+            } else if (currentPath === '/about') {
+                initialPage = 'about';
+            } else if (currentPath !== '/' && currentPath !== '/home') {
+                // Unknown route - show 404
+                initialPage = '404';
+            }
+            
+            // Set active sidebar link based on current page
+            sidebarLinks.forEach(l => l.classList.remove('active'));
+            const activeLink = document.querySelector(`[data-page="${initialPage}"]`);
+            if (activeLink) activeLink.classList.add('active');
+            
+            // Load the appropriate page content
+            if (initialPage === 'dashboard') {
+                htmx.ajax('GET', '/home', {
+                    target: '#content',
+                    swap: 'innerHTML'
+                }).then(function() {
+                    console.log('Dashboard loaded successfully');
+                    document.title = 'Dashboard - reconYa';
+                }).catch(function(error) {
+                    console.error('Failed to load dashboard:', error);
+                    window.location.href = '/login';
+                });
+            } else if (initialPage === 'devices') {
+                document.getElementById('content').innerHTML = `
+                    <div class="container-fluid py-4">
+                        <h3 class="text-success mb-4">[ NETWORK DEVICES ]</h3>
+                        <div id="device-list-container"></div>
+                    </div>
+                `;
+                document.title = 'Devices - reconYa';
+                htmx.ajax('GET', '/api/device-list', { target: '#device-list-container' });
+            } else if (initialPage === 'logs') {
+                document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success mb-4">[ EVENT LOGS ]</h3><div id="event-logs-container"></div></div>';
+                document.title = 'Logs - reconYa';
+                htmx.ajax('GET', '/api/event-logs-table', { target: '#event-logs-container' });
+            } else if (initialPage === 'networks') {
+                document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success mb-4">[ NETWORKS ]</h3><div id="networks-container"></div></div>';
+                document.title = 'Networks - reconYa';
+                htmx.ajax('GET', '/api/networks', { target: '#networks-container' });
+            } else if (initialPage === 'alerts') {
+                document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success">[ ALERTS ]</h3><p class="text-muted">Alerts functionality coming soon...</p></div>';
+                document.title = 'Alerts - reconYa';
+            } else if (initialPage === 'settings') {
+                // Load settings page
+                fetch('/api/settings')
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('content').innerHTML = html;
+                    })
+                    .catch(error => {
+                        console.error('Error loading settings:', error);
+                        document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success">[ SETTINGS ]</h3><p class="text-danger">Error loading settings. Please try again.</p></div>';
+                    });
+                document.title = 'Settings - reconYa';
+            } else if (initialPage === 'about') {
+                document.getElementById('content').innerHTML = getAboutPageHTML();
+                document.title = 'About - reconYa';
+            } else if (initialPage === '404') {
+                document.getElementById('content').innerHTML = get404PageHTML();
+                document.title = 'Page Not Found - reconYa';
+            }
+
+            // Global modal instance
+            let deviceModalInstance = null;
+
+            // Debug all HTMX requests
+            document.addEventListener('htmx:beforeRequest', function(event) {
+                console.log('HTMX request starting:', event.detail.requestConfig.path);
+            });
+            
+            document.addEventListener('htmx:responseError', function(event) {
+                console.log('HTMX request error:', event.detail);
+            });
+
+            // Handle device modal opening
+            document.addEventListener('htmx:afterRequest', function(event) {
+                if (event.detail.target.id === 'device-modal-content') {
+                    const modalElement = document.getElementById('deviceModal');
+                    
+                    // Dispose of existing modal instance if it exists
+                    if (deviceModalInstance) {
+                        deviceModalInstance.dispose();
+                    }
+                    
+                    // Create new modal instance
+                    deviceModalInstance = new bootstrap.Modal(modalElement, {
+                        backdrop: true,
+                        keyboard: true,
+                        focus: true
+                    });
+                    
+                    // Add event listeners for cleanup
+                    modalElement.addEventListener('hidden.bs.modal', function() {
+                        // Clean up modal instance when hidden
+                        if (deviceModalInstance) {
+                            deviceModalInstance.dispose();
+                            deviceModalInstance = null;
+                        }
+                        
+                        // Ensure backdrop is removed
+                        const backdrop = document.querySelector('.modal-backdrop');
+                        if (backdrop) {
+                            backdrop.remove();
+                        }
+                        
+                        // Ensure body classes are removed
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('padding-right');
+                        document.body.style.removeProperty('overflow');
+                    }, { once: true });
+                    
+                    deviceModalInstance.show();
+                }
+                
+            });
+
+            // Simple network modal function
+            let networkModal = null;
+            
+            window.showNetworkModal = function(url) {
+                const modalElement = document.getElementById('networkModal');
+                const modalContent = document.getElementById('network-modal-content');
+                
+                if (!modalElement || !modalContent) {
+                    console.error('Modal elements not found');
+                    return;
+                }
+                
+                // Load content
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        modalContent.innerHTML = html;
+                        
+                        // Show modal
+                        if (networkModal) {
+                            networkModal.dispose();
+                        }
+                        networkModal = new bootstrap.Modal(modalElement);
+                        networkModal.show();
+                    })
+                    .catch(error => {
+                        console.error('Error loading modal content:', error);
+                        modalContent.innerHTML = '<div class="p-4 text-center text-danger">Error loading content</div>';
+                        if (networkModal) {
+                            networkModal.dispose();
+                        }
+                        networkModal = new bootstrap.Modal(modalElement);
+                        networkModal.show();
+                    });
+            };
+            
+            // Clean up when modal is hidden
+            document.addEventListener('hidden.bs.modal', function(event) {
+                if (event.target.id === 'networkModal') {
+                    const modalContent = document.getElementById('network-modal-content');
+                    if (modalContent) {
+                        modalContent.innerHTML = '';
+                    }
+                    if (networkModal) {
+                        networkModal.dispose();
+                        networkModal = null;
+                    }
+                }
+            });
+
+            // Handle browser back/forward buttons
+            window.addEventListener('popstate', function(event) {
+                if (event.state && event.state.page) {
+                    const page = event.state.page;
+                    
+                    // Update active sidebar link
+                    sidebarLinks.forEach(l => l.classList.remove('active'));
+                    const activeLink = document.querySelector(`[data-page="${page}"]`);
+                    if (activeLink) activeLink.classList.add('active');
+                    
+                    // Load the appropriate page content
+                    if (page === 'dashboard') {
+                        document.title = 'Dashboard - reconYa';
+                        htmx.ajax('GET', '/home', { target: '#content' });
+                    } else if (page === 'devices') {
+                        document.title = 'Devices - reconYa';
+                        document.getElementById('content').innerHTML = `
+                            <div class="container-fluid py-4">
+                                <h3 class="text-success mb-4">[ NETWORK DEVICES ]</h3>
+                                <div id="device-list-container"></div>
+                            </div>
+                        `;
+                        htmx.ajax('GET', '/api/device-list', { target: '#device-list-container' });
+                    } else if (page === 'logs') {
+                        document.title = 'Logs - reconYa';
+                        document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success mb-4">[ EVENT LOGS ]</h3><div id="event-logs-container"></div></div>';
+                        htmx.ajax('GET', '/api/event-logs-table', { target: '#event-logs-container' });
+                    } else if (page === 'networks') {
+                        document.title = 'Networks - reconYa';
+                        document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success mb-4">[ NETWORKS ]</h3><div id="networks-container"></div></div>';
+                        htmx.ajax('GET', '/api/networks', { target: '#networks-container' });
+                    } else if (page === 'alerts') {
+                        document.title = 'Alerts - reconYa';
+                        document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success">[ ALERTS ]</h3><p class="text-muted">Alerts functionality coming soon...</p></div>';
+                    } else if (page === 'settings') {
+                        document.title = 'Settings - reconYa';
+                        // Load settings page
+                        fetch('/api/settings')
+                            .then(response => response.text())
+                            .then(html => {
+                                document.getElementById('content').innerHTML = html;
+                            })
+                            .catch(error => {
+                                console.error('Error loading settings:', error);
+                                document.getElementById('content').innerHTML = '<div class="container-fluid py-4"><h3 class="text-success">[ SETTINGS ]</h3><p class="text-danger">Error loading settings. Please try again.</p></div>';
+                            });
+                    } else if (page === 'about') {
+                        document.title = 'About - reconYa';
+                        document.getElementById('content').innerHTML = getAboutPageHTML();
+                    }
+                }
+            });
+        });
+        
+        // Load about page function
+        function loadAboutPage() {
+            // Remove active class from all sidebar links
+            document.querySelectorAll('.sidebar-nav .nav-link').forEach(l => l.classList.remove('active'));
+            // Add active class to about link
+            const aboutLink = document.querySelector('[data-page="about"]');
+            if (aboutLink) aboutLink.classList.add('active');
+            
+            // Load about content directly
+            document.getElementById('content').innerHTML = getAboutPageHTML();
+            history.pushState({page: 'about'}, 'About - reconYa', '/about');
+            document.title = 'About - reconYa';
+        }
+        
+        // Static about page HTML
+        function getAboutPageHTML() {
+            return `
+                <div class="container-fluid py-4">
+                    <h3 class="text-success mb-4">[ ABOUT RECONYA ]</h3>
+                    <div class="row justify-content-center">
+                        <div class="col-lg-8">
+                            <!-- Header -->
+                            <div class="text-center mb-5">
+                                <h1 class="display-4 text-success mb-3" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 2px;">
+                                    <i class="bi bi-hdd-network me-3"></i>reconYa
+                                </h1>
+                                <p class="lead text-muted">IPv4/IPv6 Network Reconnaissance and Asset Discovery Tool</p>
+                                <div class="badge bg-success fs-6 px-3 py-2">
+                                    Version 0.14
+                                </div>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h3 class="card-title text-success mb-3">
+                                        <i class="bi bi-info-circle me-2"></i>About reconYa
+                                    </h3>
+                                    <p class="card-text">
+                                        reconYa is a comprehensive network reconnaissance and asset discovery tool built with Go and HTMX. 
+                                        It provides real-time IPv4 scanning and IPv6 passive monitoring, device identification, and monitoring 
+                                        capabilities for network administrators, security professionals, and enthusiasts.
+                                    </p>
+                                    <p class="card-text">
+                                        <strong>Key Features:</strong>
+                                    </p>
+                                    <ul class="list-unstyled">
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>IPv4 network scanning with nmap integration</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>IPv6 passive monitoring and discovery</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Dual-stack (IPv4 + IPv6) device support</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Device identification and vendor detection</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Port scanning and service detection</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Web-based dashboard with live updates</li>
+                                        <li><i class="bi bi-check-circle text-success me-2"></i>Event logging and real-time monitoring</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- IPv6 Monitoring -->
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h3 class="card-title text-success mb-3">
+                                        <i class="bi bi-wifi me-2"></i>IPv6 Passive Monitoring
+                                    </h3>
+                                    <p class="card-text">
+                                        reconYa includes advanced IPv6 passive monitoring capabilities that automatically activate during network scans:
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h5 class="text-success">Detection Methods:</h5>
+                                            <ul class="list-unstyled">
+                                                <li><i class="bi bi-arrow-right text-success me-2"></i>Neighbor Discovery Protocol (NDP)</li>
+                                                <li><i class="bi bi-arrow-right text-success me-2"></i>Network interface monitoring</li>
+                                                <li><i class="bi bi-arrow-right text-success me-2"></i>Passive traffic analysis</li>
+                                                <li><i class="bi bi-arrow-right text-success me-2"></i>MAC address correlation</li>
+                                            </ul>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h5 class="text-success">Address Types:</h5>
+                                            <ul class="list-unstyled">
+                                                <li><i class="bi bi-dot text-info me-2"></i><span class="text-info">Global</span> - Internet routable</li>
+                                                <li><i class="bi bi-dot text-warning me-2"></i><span class="text-warning">Unique Local</span> - Private network</li>
+                                                <li><i class="bi bi-dot text-secondary me-2"></i><span class="text-secondary">Link Local</span> - Network segment</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="alert alert-info mt-3">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <strong>Zero Network Impact:</strong> IPv6 monitoring is completely passive - no traffic is generated, 
+                                        only existing network activity is monitored for IPv6 device discovery.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Support Links -->
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h3 class="card-title text-success mb-3">
+                                        <i class="bi bi-heart me-2"></i>Support Development
+                                    </h3>
+                                    <p class="card-text">
+                                        Help support the development of reconYa and enable new features:
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <a href="https://patreon.com/ChrisVeleris" target="_blank" class="border border-gray-300 text-gray-300 hover:bg-gray-300 hover:text-black px-3 py-2 rounded transition-colors inline-flex items-center">
+                                            <i class="bi bi-currency-dollar mr-2"></i>Patreon
+                                        </a>
+                                        <a href="https://github.com/sponsors/chrisvel" target="_blank" class="border border-gray-300 text-gray-300 hover:bg-gray-300 hover:text-black px-3 py-2 rounded transition-colors inline-flex items-center">
+                                            <i class="bi bi-github mr-2"></i>GitHub Sponsors
+                                        </a>
+                                        <a href="https://buymeacoffee.com/chrisveleris" target="_blank" class="border border-gray-300 text-gray-300 hover:bg-gray-300 hover:text-black px-3 py-2 rounded transition-colors inline-flex items-center">
+                                            <i class="bi bi-cup-hot mr-2"></i>Buy Me a Coffee
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Community Links -->
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h3 class="card-title text-success mb-3">
+                                        <i class="bi bi-people me-2"></i>Community
+                                    </h3>
+                                    <p class="card-text">
+                                        Join the reconYa community for support, discussions, and updates:
+                                    </p>
+                                    <div class="d-flex flex-wrap gap-3">
+                                        <a href="https://discord.gg/JW7VtBnNXp" target="_blank" class="border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-2 rounded transition-colors inline-flex items-center">
+                                            <i class="bi bi-discord mr-2"></i>Discord Community
+                                        </a>
+                                        <a href="https://www.reddit.com/r/reconya/" target="_blank" class="border border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white px-3 py-2 rounded transition-colors inline-flex items-center">
+                                            <i class="bi bi-reddit mr-2"></i>Reddit
+                                        </a>
+                                        <a href="https://github.com/Dyneteq/reconya" target="_blank" class="border border-gray-300 text-gray-300 hover:bg-gray-300 hover:text-black px-3 py-2 rounded transition-colors inline-flex items-center">
+                                            <i class="bi bi-github mr-2"></i>GitHub
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- License -->
+                            <div class="card">
+                                <div class="card-body">
+                                    <h3 class="card-title text-success mb-3">
+                                        <i class="bi bi-file-earmark-text me-2"></i>License
+                                    </h3>
+                                    <p class="card-text">
+                                        reconYa is released under the <strong>Creative Commons Attribution-NonCommercial 4.0 International License</strong>. 
+                                        Commercial use requires permission.
+                                    </p>
+                                    <p class="card-text small text-muted">
+                                        Built with <i class="bi bi-heart-fill text-danger"></i> using Go, HTMX, and Bootstrap.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Static 404 page HTML
+        function get404PageHTML() {
+            return `
+                <div class="container-fluid py-4">
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 text-center">
+                            <div class="py-5">
+                                <i class="bi bi-question-circle display-1 text-muted"></i>
+                                <h1 class="text-success mt-4">404</h1>
+                                <h3 class="text-muted">Page Not Found</h3>
+                                <p class="text-muted mb-4">
+                                    The page you're looking for doesn't exist or has been moved.
+                                </p>
+                                <a href="/" class="btn btn-success" onclick="loadDashboard(); return false;">
+                                    <i class="bi bi-house me-1"></i>
+                                    Back to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Load dashboard function
+        function loadDashboard() {
+            // Remove active class from all sidebar links
+            document.querySelectorAll('.sidebar-nav .nav-link').forEach(l => l.classList.remove('active'));
+            // Add active class to dashboard link
+            const dashboardLink = document.querySelector('[data-page="dashboard"]');
+            if (dashboardLink) dashboardLink.classList.add('active');
+            
+            // Load dashboard content
+            htmx.ajax('GET', '/home', { target: '#content' });
+            history.pushState({page: 'dashboard'}, 'Dashboard - reconYa', '/');
+            document.title = 'Dashboard - reconYa';
+        }
+        
+        // Handle HTMX errors globally
+        document.addEventListener('htmx:responseError', function(event) {
+            console.error('HTMX Error:', event.detail);
+            if (event.detail.xhr.status === 401 || event.detail.xhr.status === 403) {
+                window.location.href = '/login';
+            }
+        });
+
+        // Settings functions - globally available
+        function handleScreenshotToggle(checkbox) {
+            console.log('handleScreenshotToggle called with:', checkbox.checked);
+            
+            const status = document.getElementById('screenshotsStatus');
+            if (!status) {
+                console.error('Status element not found');
+                return;
+            }
+            
+            // Show loading state
+            status.innerHTML = '<i class="bi bi-arrow-clockwise" style="animation: spin 1s linear infinite;"></i> Saving...';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('enabled', checkbox.checked ? 'true' : 'false');
+            
+            console.log('Sending request with enabled:', checkbox.checked);
+            
+            // Send the request
+            fetch('/api/settings/screenshots', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (response.ok) {
+                    // Update status
+                    if (checkbox.checked) {
+                        status.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Enabled';
+                    } else {
+                        status.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Disabled';
+                    }
+                    
+                    // Show success message
+                    showSettingsAlert('Settings updated successfully!', 'success');
+                } else {
+                    console.error('Request failed with status:', response.status);
+                    // Revert checkbox state on error
+                    checkbox.checked = !checkbox.checked;
+                    status.innerHTML = checkbox.checked 
+                        ? '<i class="bi bi-check-circle-fill me-1"></i>Enabled'
+                        : '<i class="bi bi-x-circle-fill me-1"></i>Disabled';
+                    showSettingsAlert('Failed to update settings. Please try again.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating settings:', error);
+                // Revert checkbox state on error
+                checkbox.checked = !checkbox.checked;
+                status.innerHTML = checkbox.checked 
+                    ? '<i class="bi bi-check-circle-fill me-1"></i>Enabled'
+                    : '<i class="bi bi-x-circle-fill me-1"></i>Disabled';
+                showSettingsAlert('Failed to update settings. Please try again.', 'error');
+            });
+        }
+
+        function showSettingsAlert(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const icon = type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle';
+            
+            const alert = document.createElement('div');
+            alert.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; width: 300px;';
+            alert.innerHTML = `
+                <i class="bi ${icon} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alert);
+            
+            // Auto-dismiss
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, type === 'success' ? 3000 : 5000);
+        }
+
+        // Global network modal functions - attach to window object
+        window.showNetworkModal = function(url) {
+            console.log('Global: Showing network modal:', url);
+            htmx.ajax('GET', url, { target: '#network-modal-content' });
+        };
+
+        window.showNetworkDeleteModal = function(networkId) {
+            console.log('Global: Showing network delete modal for:', networkId);
+            htmx.ajax('GET', `/api/network-delete-modal/${networkId}`, { 
+                target: '#network-delete-modal-content' 
+            });
+        };
+        
+        console.log('Global network modal functions initialized');
+
+        // Global modal event handlers
+        document.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.target.id === 'network-modal-content') {
+                const modal = new bootstrap.Modal(document.getElementById('networkModal'));
+                modal.show();
+            }
+            
+            if (event.detail.target.id === 'network-delete-modal-content') {
+                const modal = new bootstrap.Modal(document.getElementById('networkDeleteModal'));
+                modal.show();
+            }
+        });
+
+        // Handle network creation/update - listen for HX-Trigger events
+        document.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.target.id === 'network-modal-content' && 
+                event.detail.xhr.status === 200 && 
+                (event.detail.requestConfig.verb === 'post' || event.detail.requestConfig.verb === 'put')) {
+                
+                // Check if this is a successful network save
+                const triggerHeader = event.detail.xhr.getResponseHeader('HX-Trigger');
+                if (triggerHeader && triggerHeader.includes('network-saved')) {
+                    // Close modal immediately and show a toast notification instead
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('networkModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // Show toast notification
+                    showAlert('Network saved successfully!', 'success');
+                    
+                    // Refresh the networks container and scan control
+                    setTimeout(() => {
+                        const networksContainer = document.getElementById('networks-container');
+                        if (networksContainer) {
+                            htmx.ajax('GET', '/api/networks', { target: '#networks-container' });
+                        }
+                        
+                        const scanControlContainer = document.getElementById('scan-control-container');
+                        if (scanControlContainer) {
+                            htmx.trigger(scanControlContainer, 'htmx:load');
+                        }
+                    }, 500);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -25,10 +25,7 @@
         <tbody>
             {{range .Networks}}
             <tr class="network-row {{if and $.ScanState.SelectedNetwork (eq .ID $.ScanState.SelectedNetwork.ID)}}selected-network{{end}}"
-                hx-post="/api/scan/select-network"
-                hx-vals='{"network-id": "{{.ID}}"}'
-                hx-trigger="click"
-                hx-swap="none"
+                onclick="selectNetwork('{{.ID}}')"
                 data-network-id="{{.ID}}">
                 <td>{{or .Name "Unnamed Network"}}</td>
                 <td><code class="text-success">{{.CIDR}}</code></td>
@@ -92,71 +89,60 @@
 </style>
 
 <script>
-// Debug: Check what's available
-console.log('Network list component loaded. Global functions available:', {
-    showNetworkDeleteModal: typeof window.showNetworkDeleteModal,
-    showNetworkModal: typeof window.showNetworkModal
-});
-
-// Ensure functions are always available on window object
-window.showNetworkDeleteModal = function(networkId) {
-    console.log('Network delete modal called for:', networkId);
+// Network management functions
+function selectNetwork(networkId) {
+    const formData = new FormData();
+    formData.append('network-id', networkId);
     
-    // Check if modal container exists
-    const modalContainer = document.getElementById('networkDeleteModal');
-    if (!modalContainer) {
-        console.error('networkDeleteModal container not found!');
-        alert('Modal container not available. Please refresh the page.');
-        return;
-    }
-    
-    // Load the modal content
-    htmx.ajax('GET', `/api/network-delete-modal/${networkId}`, { 
-        target: '#network-delete-modal-content' 
-    });
-};
-
-window.showNetworkModal = function(url) {
-    console.log('Network modal called for:', url);
-    
-    // Check if modal container exists  
-    const modalContainer = document.getElementById('networkModal');
-    if (!modalContainer) {
-        console.error('networkModal container not found!');
-        alert('Modal container not available. Please refresh the page.');
-        return;
-    }
-    
-    // Load the modal content
-    htmx.ajax('GET', url, { target: '#network-modal-content' });
-};
-
-// Ensure modal event handlers are available (avoid duplicate listeners)
-if (!window.networkModalHandlersAttached) {
-    document.addEventListener('htmx:afterRequest', function(event) {
-        if (event.detail.target.id === 'network-delete-modal-content') {
-            const modalEl = document.getElementById('networkDeleteModal');
-            if (modalEl) {
-                const modal = new bootstrap.Modal(modalEl);
-                modal.show();
-            } else {
-                console.error('networkDeleteModal element not found when trying to show modal');
-            }
+    fetch('/api/scan/select-network', {
+        method: 'POST',
+        body: formData
+    })
+    .then(() => {
+        // Refresh network map and devices
+        if (typeof window.loadNetworkMap === 'function') {
+            window.loadNetworkMap();
         }
-        
-        if (event.detail.target.id === 'network-modal-content') {
-            const modalEl = document.getElementById('networkModal');
-            if (modalEl) {
-                const modal = new bootstrap.Modal(modalEl);
-                modal.show();
-            } else {
-                console.error('networkModal element not found when trying to show modal');
-            }
+        if (typeof window.loadDevices === 'function') {
+            window.loadDevices();
         }
+        // Refresh scan control to update selection
+        if (typeof window.loadScanControl === 'function') {
+            window.loadScanControl();
+        }
+    })
+    .catch(error => {
+        console.error('Failed to select network:', error);
     });
-    
-    window.networkModalHandlersAttached = true;
-    console.log('Network modal event handlers attached');
 }
+
+function deleteDevice(deviceId, deviceIP) {
+    if (confirm(`Delete device ${deviceIP}?`)) {
+        fetch(`/api/devices/${deviceId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                // Refresh the device list
+                if (typeof window.loadDevices === 'function') {
+                    window.loadDevices();
+                }
+                if (typeof window.loadDeviceList === 'function') {
+                    window.loadDeviceList();
+                }
+            } else {
+                alert('Failed to delete device');
+            }
+        })
+        .catch(error => {
+            console.error('Failed to delete device:', error);
+            alert('Failed to delete device');
+        });
+    }
+}
+
+// Make functions globally available
+window.selectNetwork = selectNetwork;
+window.deleteDevice = deleteDevice;
 </script>
 {{end}}

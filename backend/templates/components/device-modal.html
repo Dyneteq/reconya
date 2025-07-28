@@ -1,254 +1,153 @@
 {{define "components/device-modal.html"}}
-<div class="modal-body text-success p-4" data-device-id="{{.ID}}" style="overflow-y: auto; flex: 1; background: var(--bg-black) !important; border: none;">
-    <div class="mb-3">
-        <div class="border-bottom border-success pb-2 mb-3 d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-                <span class="orbitron fw-bold fs-2">{{.IPv4}}</span>
+<div class="bg-zinc-800 border border-green-600 text-green-600 p-4 rounded" data-device-id="{{.ID}}" style="max-width: 500px; margin: 0 auto;">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-3 pb-2 border-b border-green-600">
+        <div class="flex items-center">
+            <div class="mr-3">
+                {{if .OS}}
+                    {{if contains .OS.Name "Windows"}}<i class="bi bi-windows text-blue-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Linux"}}<i class="bi bi-ubuntu text-orange-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "macOS"}}<i class="bi bi-apple text-gray-300 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Android"}}<i class="bi bi-android2 text-green-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "iOS"}}<i class="bi bi-phone text-gray-300 text-xl" title="{{.OS.Name}}"></i>{{else}}<i class="bi bi-device-hdd text-gray-400 text-xl" title="{{.OS.Name}}"></i>{{end}}
+                {{else}}
+                    <i class="bi bi-router text-gray-400 text-xl" title="Unknown Device"></i>
+                {{end}}
             </div>
-            <div class="d-flex align-items-center">
-                <div class="d-flex gap-2" id="edit-buttons">
-                    <button type="button" class="btn btn-outline-success btn-sm" onclick="toggleEditMode()" title="Edit device">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                </div>
-                <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div>
+                <div class="font-bold text-xl text-primary">{{.IPv4}}</div>
+                <div class="text-gray-400 text-sm" id="name-display">{{or .Name (deref .Hostname) "Unnamed Device"}}</div>
+                <input type="text" id="name-edit" class="w-full px-2 py-1 bg-zinc-800 text-primary border border-green-600 rounded text-sm" 
+                       value="{{or .Name (deref .Hostname)}}" data-original="{{or .Name (deref .Hostname)}}" placeholder="Device name" style="display: none;">
             </div>
         </div>
+        <div class="flex items-center gap-2">
+            <div id="edit-buttons">
+                <button type="button" class="border border-primary text-primary hover:bg-primary hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="toggleEditMode()" title="Edit device">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </div>
+            <button type="button" class="text-gray-400 hover:text-white text-lg" onclick="closeModal('deviceModal')" aria-label="Close">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
 
-        <table class="text-success w-100 p-2 mb-4">
-            <tbody class="p-2">
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">Name</td>
-                    <td>
-                        <span id="name-display">{{or .Name (deref .Hostname) "-"}}</span>
-                        <input type="text" id="name-edit" class="form-control form-control-sm bg-dark text-success border-success" 
-                               value="{{or .Name (deref .Hostname)}}" data-original="{{or .Name (deref .Hostname)}}" placeholder="Device name" style="display: none;">
-                    </td>
-                </tr>
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">Hostname</td>
-                    <td>{{deref .Hostname}}</td>
-                </tr>
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">H/W vendor</td>
-                    <td>{{deref .Vendor}}</td>
-                </tr>
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">Device Type</td>
-                    <td>
-                        <span class="badge bg-dark border border-success text-success">
-                            {{if .DeviceType}}{{.DeviceType}}{{else}}Unknown{{end}}
-                        </span>
-                    </td>
-                </tr>
-                {{if .OS}}
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">Operating System</td>
-                    <td>
-                        {{.OS.Name}}{{if .OS.Version}} {{.OS.Version}}{{end}}
-                        {{if .OS.Confidence}}<small class="text-muted ms-2">({{.OS.Confidence}}% confidence)</small>{{end}}
-                    </td>
-                </tr>
+    <!-- Key Info Grid -->
+    <div class="grid grid-cols-2 gap-2 mb-3">
+        <div>
+            <div class="text-gray-400 text-sm">Status</div>
+            <div>
+                {{if eq .Status "online"}}
+                    <span class="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium">Online</span>
+                {{else if eq .Status "idle"}}
+                    <span class="bg-yellow-600 text-white px-2 py-1 rounded text-xs font-medium">Idle</span>
+                {{else}}
+                    <span class="bg-gray-600 text-white px-2 py-1 rounded text-xs font-medium">Offline</span>
                 {{end}}
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">MAC Address</td>
-                    <td>{{deref .MAC}}</td>
-                </tr>
-                {{if .IPv6Global}}
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">IPv6 Global</td>
-                    <td>
-                        <span class="text-info">{{.IPv6Global}}</span>
-                        <small class="text-muted ms-2">(Global)</small>
-                    </td>
-                </tr>
+            </div>
+        </div>
+        <div>
+            <div class="text-gray-400 text-sm">Ports</div>
+            <div>
+                {{$open := 0}}
+                {{range .Ports}}
+                    {{if eq .State "open"}}{{$open = add $open 1}}{{end}}
                 {{end}}
-                {{if .IPv6UniqueLocal}}
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">IPv6 Unique Local</td>
-                    <td>
-                        <span class="text-warning">{{.IPv6UniqueLocal}}</span>
-                        <small class="text-muted ms-2">(Unique Local)</small>
-                    </td>
-                </tr>
+                {{if gt $open 0}}
+                    <span class="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">{{$open}} open</span>
+                {{else}}
+                    <span class="text-gray-400">-</span>
                 {{end}}
-                {{if .IPv6LinkLocal}}
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">IPv6 Link Local</td>
-                    <td>
-                        <span class="text-secondary">{{.IPv6LinkLocal}}</span>
-                        <small class="text-muted ms-2">(Link Local)</small>
-                    </td>
-                </tr>
-                {{end}}
-                {{if .IPv6Addresses}}
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">Other IPv6</td>
-                    <td>
-                        {{range .IPv6Addresses}}
-                        <div class="text-light">{{.}}</div>
-                        {{end}}
-                    </td>
-                </tr>
-                {{end}}
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">Status</td>
-                    <td>
-                        {{if eq .Status "online"}}
-                            <i class="bi bi-circle-fill text-success me-2"></i>
-                        {{else if eq .Status "offline"}}
-                            <i class="bi bi-circle-fill text-danger me-2"></i>
-                        {{else if eq .Status "idle"}}
-                            <i class="bi bi-circle-fill text-warning me-2"></i>
-                        {{else}}
-                            <i class="bi bi-circle-fill text-muted me-2"></i>
-                        {{end}}
-                        {{.Status}}
-                    </td>
-                </tr>
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">First appeared</td>
-                    <td>{{formatTime .CreatedAt}}</td>
-                </tr>
-                <tr>
-                    <td class="w-25 ps-2 fw-bold">Last seen online</td>
-                    <td>{{formatTime (deref .LastSeenOnlineAt)}}</td>
-                </tr>
-            </tbody>
-        </table>
+            </div>
+        </div>
+        {{if deref .MAC}}
+        <div>
+            <div class="text-gray-400 text-sm">MAC Address</div>
+            <div><code class="text-blue-400 text-xs bg-zinc-900 px-2 py-1 rounded">{{deref .MAC}}</code></div>
+        </div>
+        {{end}}
+        {{if deref .Vendor}}
+        <div>
+            <div class="text-gray-400 text-sm">Vendor</div>
+            <div class="text-sm">{{deref .Vendor}}</div>
+        </div>
+        {{end}}
+        {{if .OS}}
+        <div class="col-span-2">
+            <div class="text-gray-400 text-sm">Operating System</div>
+            <div>{{.OS.Name}}{{if .OS.Version}} {{.OS.Version}}{{end}}</div>
+        </div>
+        {{end}}
+        <div>
+            <div class="text-gray-400 text-sm">Last Seen</div>
+            <div class="text-sm">{{formatTimeAgo (deref .LastSeenOnlineAt)}}</div>
+        </div>
+    </div>
 
-        <h6>[ COMMENTS ]</h6>
-        <div class="mb-4 p-3" style="border: 1px solid rgba(25, 135, 84, 0.3);">
+    <!-- Comments Section -->
+    {{if or (deref .Comment) (eq "true" "true")}}
+    <div class="mb-3">
+        <div class="text-gray-400 text-sm mb-2">Comments</div>
+        <div class="border border-green-600 rounded p-2">
             <div id="comment-display-section" style="{{if not (deref .Comment)}}display: none;{{end}}">
-                <div class="text-success mb-2" style="white-space: pre-wrap;" id="comment-display">{{deref .Comment}}</div>
+                <div class="text-primary text-sm whitespace-pre-wrap" id="comment-display">{{deref .Comment}}</div>
             </div>
             <div id="comment-edit-section" style="display: none;">
-                <textarea id="comment-edit" class="form-control text-success border border-success" 
-                          placeholder="Add a comment about this device..." 
-                          style="resize: vertical; min-height: 80px;" 
+                <textarea id="comment-edit" class="w-full px-2 py-1 bg-zinc-800 text-primary border border-green-600 rounded text-sm resize-y" 
+                          placeholder="Add a comment..." 
+                          style="min-height: 60px;" 
                           data-original="{{deref .Comment}}"
                           oninput="autoExpandTextarea(this)">{{deref .Comment}}</textarea>
             </div>
             <div id="comment-empty-section" style="{{if (deref .Comment)}}display: none;{{end}}">
-                <div class="text-muted text-center py-3">
-                    <i class="bi bi-chat-text me-2"></i>No comments yet. Click edit to add one.
+                <div class="text-gray-400 text-sm text-center py-2">
+                    <i class="bi bi-chat-text mr-1"></i>No comments yet
                 </div>
             </div>
         </div>
+    </div>
+    {{end}}
 
-        <h6>[ PORTS ]</h6>
-        <table class="text-success w-100 p-2 mb-4">
-            <tbody class="p-2">
-                {{range .Ports}}
-                <tr>
-                    <td class="ps-2 fw-bold" style="width: 15%;">
-                        {{.Number}}
-                    </td>
-                    <td style="width: 15%;">
-                        <span class="badge bg-black border border-dark text-success">
-                            {{if eq .State "open"}}
-                                <i class="bi bi-circle-fill text-danger me-2" style="font-size: 0.6rem;"></i>
-                            {{else if eq .State "filtered"}}
-                                <i class="bi bi-circle-fill text-warning me-2" style="font-size: 0.6rem;"></i>
-                            {{end}}
-                            {{.State}}
-                        </span>
-                    </td>
-                    <td style="width: 20%;">
-                        {{upper .Protocol}}
-                    </td>
-                    <td>{{or .Service "Unknown"}}</td>
-                    <td>
-                        {{$portNum := .Number}}
-                        {{$ipAddr := $.IPv4}}
-                        {{if or (eq $portNum "80") (eq $portNum "8080") (eq $portNum "8000")}}
-                            <a href="http://{{$ipAddr}}:{{$portNum}}" target="_blank" rel="noopener noreferrer" class="ms-2 text-light">
-                                <i class="bi bi-box-arrow-up-right text-success"></i>
-                            </a>
-                        {{else if or (eq $portNum "443") (eq $portNum "8443")}}
-                            <a href="https://{{$ipAddr}}:{{$portNum}}" target="_blank" rel="noopener noreferrer" class="ms-2 text-light">
-                                <i class="bi bi-box-arrow-up-right text-success"></i>
-                            </a>
-                        {{end}}
-                    </td>
-                </tr>
+    <!-- Open Ports -->
+    {{if gt $open 0}}
+    <div class="mb-3">
+        <div class="text-gray-400 text-sm mb-2">Ports ({{$open}})</div>
+        <div class="flex flex-wrap gap-1">
+            {{range .Ports}}
+                {{if eq .State "open"}}
+                <span class="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
+                    {{.Number}}
+                    {{$portNum := .Number}}
+                    {{$ipAddr := $.IPv4}}
+                    {{if or (eq $portNum "80") (eq $portNum "8080") (eq $portNum "8000") (eq $portNum "443") (eq $portNum "8443")}}
+                        <a href="{{if or (eq $portNum "443") (eq $portNum "8443")}}https{{else}}http{{end}}://{{$ipAddr}}:{{$portNum}}" target="_blank" rel="noopener noreferrer" class="text-white ml-1">
+                            <i class="bi bi-box-arrow-up-right text-xs"></i>
+                        </a>
+                    {{end}}
+                </span>
                 {{end}}
-            </tbody>
-        </table>
-
-        {{if and $.ScreenshotsEnabled .WebServices}}
-        <h6>[ WEB SERVICES ]</h6>
-        <div class="web-services-container">
-            {{range .WebServices}}
-            <div class="web-service-card mb-3 p-3 border border-success">
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="me-2">
-                                {{if eq .Protocol "https"}}
-                                    <i class="bi bi-lock text-success me-2"></i>
-                                {{else}}
-                                    <i class="bi bi-globe text-success me-2"></i>
-                                {{end}}
-                            </span>
-                            <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" class="text-success text-decoration-none fw-bold">
-                                {{.URL}}
-                                <i class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.8rem;"></i>
-                            </a>
-                        </div>
-                        <div class="mb-2">
-                            <strong class="text-success">{{or .Title "No title"}}</strong>
-                        </div>
-                        <div class="d-flex gap-3 text-muted small">
-                            <span>
-                                {{if and (ge .StatusCode 200) (lt .StatusCode 300)}}
-                                    <span class="badge bg-success text-dark">{{.StatusCode}}</span>
-                                {{else if and (ge .StatusCode 400) (lt .StatusCode 500)}}
-                                    <span class="badge bg-warning text-dark">{{.StatusCode}}</span>
-                                {{else if ge .StatusCode 500}}
-                                    <span class="badge bg-danger text-dark">{{.StatusCode}}</span>
-                                {{else}}
-                                    <span class="badge bg-secondary text-dark">{{.StatusCode}}</span>
-                                {{end}}
-                            </span>
-                            {{if .Server}}
-                            <span>Server: {{.Server}}</span>
-                            {{end}}
-                            <span>Size: {{if .Size}}{{formatFileSize .Size}}{{else}}N/A{{end}}</span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        {{if $.ScreenshotsEnabled}}
-                            {{if .Screenshot}}
-                            <div class="screenshot-container text-center">
-                                <img src="data:image/png;base64,{{.Screenshot}}" alt="Screenshot of {{.URL}}" 
-                                     class="img-thumbnail" 
-                                     style="max-width: 150px; max-height: 100px; object-fit: contain; cursor: pointer;"
-                                     onclick="openScreenshotModal('{{.URL}}', '{{.Screenshot}}')">
-                                <div class="small text-muted mt-1">Click to enlarge</div>
-                            </div>
-                            {{else}}
-                            <div class="text-center text-muted small">
-                                <div class="border border-secondary p-3" style="height: 100px; display: flex; align-items: center; justify-content: center;">
-                                    No screenshot available
-                                </div>
-                            </div>
-                            {{end}}
-                        {{else}}
-                        <div class="text-center text-muted small">
-                            <div class="border border-secondary p-3" style="height: 100px; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-eye-slash me-2"></i>
-                                Screenshots disabled
-                            </div>
-                        </div>
-                        {{end}}
-                    </div>
-                </div>
-            </div>
             {{end}}
+        </div>
+    </div>
+    {{end}}
+
+    <!-- Web Services -->
+    {{if and $.ScreenshotsEnabled .WebServices}}
+    <div class="mb-3">
+        <div class="text-gray-400 text-sm mb-2">Web Services ({{len .WebServices}})</div>
+        {{range .WebServices}}
+        <div class="border border-green-600 rounded p-2 mb-2">
+            <div class="flex items-center justify-between">
+                <div>
+                    <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" class="text-primary no-underline text-sm">
+                        {{if eq .Protocol "https"}}<i class="bi bi-lock mr-1"></i>{{else}}<i class="bi bi-globe mr-1"></i>{{end}}
+                        {{.URL}} <i class="bi bi-box-arrow-up-right ml-1 text-xs"></i>
+                    </a>
+                    <div class="text-gray-400 text-xs">{{or .Title "No title"}}</div>
+                </div>
+                <span class="px-2 py-1 rounded text-xs font-medium {{if and (ge .StatusCode 200) (lt .StatusCode 300)}}bg-green-600 text-white{{else if and (ge .StatusCode 400) (lt .StatusCode 500)}}bg-yellow-600 text-black{{else if ge .StatusCode 500}}bg-red-600 text-white{{else}}bg-gray-600 text-white{{end}}">{{.StatusCode}}</span>
+            </div>
         </div>
         {{end}}
     </div>
+    {{end}}
 </div>
 
 <script>
@@ -292,10 +191,10 @@ function toggleEditMode() {
         }, 10);
         
         editButtons.innerHTML = `
-            <button type="button" class="btn btn-success btn-sm" onclick="saveChanges()" title="Save changes">
+            <button type="button" class="bg-primary hover:bg-green-600 text-white px-2 py-1 rounded text-sm transition-colors" onclick="saveChanges()" title="Save changes">
                 <i class="bi bi-check"></i>
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelEdit()" title="Cancel editing">
+            <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="cancelEdit()" title="Cancel editing">
                 <i class="bi bi-x"></i>
             </button>
         `;
@@ -311,7 +210,7 @@ function toggleEditMode() {
         commentEmptySection.style.display = hasComment ? 'none' : 'block';
         
         editButtons.innerHTML = `
-            <button type="button" class="btn btn-outline-success btn-sm" onclick="toggleEditMode()" title="Edit device">
+            <button type="button" class="border border-primary text-primary hover:bg-primary hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="toggleEditMode()" title="Edit device">
                 <i class="bi bi-pencil"></i>
             </button>
         `;
@@ -336,13 +235,13 @@ function saveChanges() {
         return;
     }
     
-    const modalBody = editButtons.closest('.modal-body');
-    if (!modalBody) {
-        console.error('Modal body not found!');
+    const modalContent = editButtons.closest('[data-device-id]');
+    if (!modalContent) {
+        console.error('Modal content not found!');
         return;
     }
     
-    const deviceId = modalBody.dataset.deviceId;
+    const deviceId = modalContent.dataset.deviceId;
     if (!deviceId) {
         console.error('Device ID not found in modal data!');
         return;
@@ -365,8 +264,8 @@ function saveChanges() {
     
     // Show saving indicator
     editButtons.innerHTML = `
-        <button type="button" class="btn btn-success btn-sm" disabled>
-            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+        <button type="button" class="bg-primary text-white px-2 py-1 rounded text-sm opacity-50 cursor-not-allowed" disabled>
+            <span class="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent inline-block mr-1"></span>
             Saving...
         </button>
     `;
@@ -426,40 +325,39 @@ function saveChanges() {
         console.log('Device updated successfully');
         
         // Show success toast notification
+        const toastId = 'deviceSavedToast_' + Date.now();
         const toastHtml = `
-            <div class="toast-container position-fixed top-0 end-0 p-3">
-                <div id="deviceSavedToast" class="toast bg-dark border-success" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="toast-header bg-dark text-success border-success">
-                        <i class="bi bi-check-circle-fill text-success me-2"></i>
-                        <strong class="me-auto">Success</strong>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            <div class="fixed top-4 right-4 z-50">
+                <div id="${toastId}" class="bg-zinc-800 border border-green-600 rounded p-4 shadow-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <i class="bi bi-check-circle-fill text-primary mr-2"></i>
+                            <strong class="text-primary">Success</strong>
+                        </div>
+                        <button type="button" class="text-gray-400 hover:text-white" onclick="document.getElementById('${toastId}').remove()">
+                            <i class="bi bi-x"></i>
+                        </button>
                     </div>
-                    <div class="toast-body text-light">
+                    <div class="text-gray-200 text-sm">
                         Device updated successfully!
                     </div>
                 </div>
             </div>
         `;
         
-        // Add toast to body and show it
+        // Add toast to body
         document.body.insertAdjacentHTML('beforeend', toastHtml);
-        const toastElement = document.getElementById('deviceSavedToast');
-        const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
-        toast.show();
         
-        // Remove toast from DOM after it's hidden
-        toastElement.addEventListener('hidden.bs.toast', () => {
-            toastElement.parentElement.remove();
-        });
+        // Auto-remove toast after 3 seconds
+        setTimeout(() => {
+            const toastElement = document.getElementById(toastId);
+            if (toastElement) {
+                toastElement.remove();
+            }
+        }, 3000);
         
         // Close the modal
-        const modalElement = document.getElementById('deviceModal');
-        if (modalElement) {
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
-        }
+        closeModal('deviceModal');
     }).catch(function(error) {
         // Error handling
         console.error('Failed to update device:', error);
@@ -467,10 +365,10 @@ function saveChanges() {
         
         // Reset edit buttons
         editButtons.innerHTML = `
-            <button type="button" class="btn btn-success btn-sm" onclick="saveChanges()" title="Save changes">
+            <button type="button" class="bg-primary hover:bg-green-600 text-white px-2 py-1 rounded text-sm transition-colors" onclick="saveChanges()" title="Save changes">
                 <i class="bi bi-check"></i>
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="cancelEdit()" title="Cancel editing">
+            <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="cancelEdit()" title="Cancel editing">
                 <i class="bi bi-x"></i>
             </button>
         `;
@@ -482,16 +380,12 @@ function saveChanges() {
 
 function openScreenshotModal(url, screenshot) {
     const modal = document.createElement('div');
-    modal.className = 'modal show d-block';
-    modal.style.cssText = 'background-color: rgba(0,0,0,0.8); z-index: 2000;';
+    modal.className = 'modal show';
+    modal.style.cssText = 'display: flex; background-color: rgba(0,0,0,0.8); z-index: 2000;';
     
     // Cleanup function
     const closeModal = () => {
         modal.remove();
-        // Ensure body classes are properly managed
-        document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('padding-right');
-        document.body.style.removeProperty('overflow');
     };
     
     modal.onclick = (e) => {
@@ -501,20 +395,24 @@ function openScreenshotModal(url, screenshot) {
     };
     
     modal.innerHTML = `
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content bg-black border-success">
-                <div class="modal-header border-success">
-                    <h5 class="modal-title text-success">Screenshot - ${url}</h5>
-                    <button type="button" class="btn-close btn-close-white" onclick="closeScreenshotModal(this)"></button>
+        <div class="flex justify-center items-center w-full">
+            <div class="bg-black border border-green-600 rounded max-w-6xl w-full mx-4">
+                <div class="border-b border-green-600 p-4">
+                    <div class="flex justify-between items-center">
+                        <h5 class="text-primary font-bold">Screenshot - ${url}</h5>
+                        <button type="button" class="text-gray-400 hover:text-white text-lg" onclick="closeScreenshotModal(this)">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="modal-body text-center p-2">
+                <div class="text-center p-2">
                     <img src="data:image/png;base64,${screenshot}" alt="Screenshot of ${url}" 
-                         class="img-fluid" style="max-width: 100%; max-height: 80vh; object-fit: contain;">
+                         class="max-w-full max-h-80vh object-contain">
                 </div>
-                <div class="modal-footer border-success">
-                    <button type="button" class="btn btn-secondary" onclick="closeScreenshotModal(this)">Close</button>
-                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn btn-success">
-                        Open Website <i class="bi bi-box-arrow-up-right ms-1"></i>
+                <div class="border-t border-green-600 p-4 flex justify-end gap-2">
+                    <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded text-sm" onclick="closeScreenshotModal(this)">Close</button>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="bg-primary hover:bg-green-600 text-white px-3 py-2 rounded text-sm">
+                        Open Website <i class="bi bi-box-arrow-up-right ml-1"></i>
                     </a>
                 </div>
             </div>
@@ -527,10 +425,6 @@ function openScreenshotModal(url, screenshot) {
         if (modal) {
             modal.remove();
         }
-        // Ensure body classes are properly managed
-        document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('padding-right');
-        document.body.style.removeProperty('overflow');
     };
     
     document.body.appendChild(modal);
@@ -538,12 +432,8 @@ function openScreenshotModal(url, screenshot) {
 
 // Reset editing state when modal is closed
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.querySelector('.modal');
-    if (modal) {
-        modal.addEventListener('hidden.bs.modal', function() {
-            window.deviceModalIsEditing = false;
-        });
-    }
+    // Reset editing state when device modal is closed (handled by closeModal function)
+    window.deviceModalIsEditing = false;
 });
 </script>
 {{end}}

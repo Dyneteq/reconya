@@ -534,7 +534,8 @@ func (h *WebHandler) Home(w http.ResponseWriter, r *http.Request) {
 		networksSlice = []models.Network{} // Ensure it's an empty slice, not nil
 	}
 
-	data := PageData{
+	// Create page data with dashboard page and the prepared data
+	pageData := PageData{
 		Page:         "dashboard",
 		User:         user,
 		SystemStatusData: systemStatusData,
@@ -544,7 +545,7 @@ func (h *WebHandler) Home(w http.ResponseWriter, r *http.Request) {
 		ScanState:    &scanState,
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "home.html", data); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "index.html", pageData); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -575,6 +576,126 @@ func (h *WebHandler) About(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates.ExecuteTemplate(w, "about.html", data); err != nil {
 		log.Printf("About template execution error: %v", err)
 		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+	}
+}
+
+func (h *WebHandler) Devices(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	user := h.getUserFromSession(session)
+	if user == nil {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/login")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := PageData{
+		Page: "devices",
+		User: user,
+	}
+
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		log.Printf("Devices template execution error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (h *WebHandler) Networks(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	user := h.getUserFromSession(session)
+	if user == nil {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/login")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := PageData{
+		Page: "networks",
+		User: user,
+	}
+
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		log.Printf("Networks template execution error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (h *WebHandler) Logs(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	user := h.getUserFromSession(session)
+	if user == nil {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/login")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := PageData{
+		Page: "logs",
+		User: user,
+	}
+
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		log.Printf("Logs template execution error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (h *WebHandler) Alerts(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	user := h.getUserFromSession(session)
+	if user == nil {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/login")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := PageData{
+		Page: "alerts",
+		User: user,
+	}
+
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		log.Printf("Alerts template execution error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (h *WebHandler) Settings(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	user := h.getUserFromSession(session)
+	if user == nil {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/login")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := PageData{
+		Page: "settings",
+		User: user,
+	}
+
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+		log.Printf("Settings template execution error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -642,10 +763,17 @@ func (h *WebHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 // API Handlers for HTMX
 func (h *WebHandler) APIDevices(w http.ResponseWriter, r *http.Request) {
+	log.Printf("APIDevices: Request received from %s", r.RemoteAddr)
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	user := h.getUserFromSession(session)
+	log.Printf("APIDevices: User session: %v", user != nil)
 	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Unauthorized",
+			"success": false,
+		})
 		return
 	}
 
@@ -676,23 +804,26 @@ func (h *WebHandler) APIDevices(w http.ResponseWriter, r *http.Request) {
 	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
 
 	viewMode := r.URL.Query().Get("view")
-	data := struct {
-		Devices            []*models.Device
-		ViewMode           string
-		ScreenshotsEnabled bool
-	}{
-		Devices:            devices,
-		ViewMode:           viewMode,
-		ScreenshotsEnabled: screenshotsEnabled,
-	}
 
 	log.Printf("APIDevices: Found %d devices, viewMode: %s", len(devices), viewMode)
 	if len(devices) > 0 {
 		log.Printf("First device: ID=%s, IPv4=%s, Status=%s", devices[0].ID, devices[0].IPv4, devices[0].Status)
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/device-grid.html", data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"devices":            devices,
+		"viewMode":           viewMode,
+		"screenshotsEnabled": screenshotsEnabled,
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode JSON response in APIDevices: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Failed to encode response",
+			"success": false,
+		})
 	}
 }
 
@@ -725,16 +856,13 @@ func (h *WebHandler) APIDeviceModal(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Device %s IPv6 data: LinkLocal=%v, UniqueLocal=%v, Global=%v, Addresses=%v", 
 		device.ID, device.IPv6LinkLocal, device.IPv6UniqueLocal, device.IPv6Global, device.IPv6Addresses)
 
-	// Create template data with device and settings
-	data := struct {
-		*models.Device
-		ScreenshotsEnabled bool
-	}{
-		Device:             device,
-		ScreenshotsEnabled: screenshotsEnabled,
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"device":             device,
+		"screenshotsEnabled": screenshotsEnabled,
 	}
-
-	if err := h.templates.ExecuteTemplate(w, "components/device-modal.html", data); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -772,21 +900,15 @@ func (h *WebHandler) APIUpdateDevice(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Successfully updated device %s", deviceID)
 
-	// Get user's screenshot setting to match APIDeviceModal template data structure
-	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
-
-	// Create template data with device and settings (matching APIDeviceModal structure)
-	data := struct {
-		*models.Device
-		ScreenshotsEnabled bool
-	}{
-		Device:             device,
-		ScreenshotsEnabled: screenshotsEnabled,
+	// Return JSON response for API call
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"success": true,
+		"device":  device,
+		"message": "Device updated successfully",
 	}
-
-	if err := h.templates.ExecuteTemplate(w, "components/device-modal.html", data); err != nil {
-		log.Printf("Template execution error for device %s: %v", deviceID, err)
-		http.Error(w, "Failed to render device modal", http.StatusInternalServerError)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -937,8 +1059,10 @@ func (h *WebHandler) APISystemStatus(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("APISystemStatus: returning data: %+v", data)
 
-	if err := h.templates.ExecuteTemplate(w, "components/system-status.html", data); err != nil {
-		log.Printf("Error executing template for system status: %v", err)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("Error encoding system status JSON: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -963,13 +1087,11 @@ func (h *WebHandler) APIEventLogs(w http.ResponseWriter, r *http.Request) {
 		eventLogs[i] = &eventLogSlice[i]
 	}
 
-	data := struct {
-		EventLogs []*models.EventLog
-	}{
-		EventLogs: eventLogs,
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"logs": eventLogs,
 	}
-
-	if err := h.templates.ExecuteTemplate(w, "components/event-logs.html", data); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1010,7 +1132,9 @@ func (h *WebHandler) APINetworkMap(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	user := h.getUserFromSession(session)
 	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
 		return
 	}
 
@@ -1037,7 +1161,9 @@ func (h *WebHandler) APINetworkMap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	networkMap := h.buildNetworkMap(devices)
-	if err := h.templates.ExecuteTemplate(w, "components/network-map.html", networkMap); err != nil {
+	
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(networkMap); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1243,21 +1369,48 @@ func (h *WebHandler) APITrafficCore(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
-	devices, err := h.deviceService.FindAll()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	user := h.getUserFromSession(session)
+	if user == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Unauthorized",
+			"success": false,
+		})
 		return
 	}
 
-
-	data := struct {
-		Devices []*models.Device
-	}{
-		Devices: devices,
+	devices, err := h.deviceService.FindAll()
+	if err != nil {
+		log.Printf("Failed to get devices: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Failed to retrieve devices",
+			"success": false,
+		})
+		return
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/device-list.html", data); err != nil {
-		log.Printf("Error executing template for device list: %v", err)
+	// Get user's screenshot setting
+	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
+
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"devices":            devices,
+		"screenshotsEnabled": screenshotsEnabled,
+		"success":           true,
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode JSON response in APIDeviceList: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Failed to encode response",
+			"success": false,
+		})
 	}
 }
 
@@ -1336,16 +1489,13 @@ func (h *WebHandler) APINetworks(w http.ResponseWriter, r *http.Request) {
 	// Get scan state for network selection highlighting
 	scanState := h.scanManager.GetState()
 	
-	data := struct {
-		Networks  []*models.Network
-		ScanState *scan.ScanState
-	}{
-		Networks:  networks,
-		ScanState: &scanState,
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"networks":  networks,
+		"scanState": scanState,
 	}
-
-	if err := h.templates.ExecuteTemplate(w, "components/network-list.html", data); err != nil {
-		log.Printf("Error executing template for networks: %v", err)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding networks JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1361,24 +1511,23 @@ func (h *WebHandler) APINetworkModal(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	networkID := vars["id"]
 
-	data := struct {
-		Network *models.Network
-		Error   string
-	}{
-		Network: &models.Network{},
+	response := map[string]interface{}{
+		"network": &models.Network{},
+		"error":   "",
 	}
 
 	// If editing existing network, load it
 	if networkID != "" {
 		network, err := h.networkService.FindByID(networkID)
 		if err != nil {
-			data.Error = "Network not found"
+			response["error"] = "Network not found"
 		} else if network != nil {
-			data.Network = network
+			response["network"] = network
 		}
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/network-modal.html", data); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1775,7 +1924,8 @@ func (h *WebHandler) APINetworkDeleteModal(w http.ResponseWriter, r *http.Reques
 		deleteInfo.Message = "Are you sure you want to delete this network?"
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/network-delete-modal.html", deleteInfo); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(deleteInfo); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1811,32 +1961,49 @@ func (h *WebHandler) APIScanStart(w http.ResponseWriter, r *http.Request) {
 	
 	if networkID == "" {
 		log.Printf("APIScanStart: No network ID provided")
-		// Return scan control component with error message
-		h.APIScanControlWithError(w, r, "Please select a network to scan")
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"success": false,
+			"error":   "Please select a network to scan",
+		}
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
 	err := h.scanManager.StartScan(networkID)
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		}
 		if scanErr, ok := err.(*scan.ScanError); ok {
 			switch scanErr.Type {
 			case scan.AlreadyRunning:
-				http.Error(w, scanErr.Message, http.StatusConflict)
+				w.WriteHeader(http.StatusConflict)
 			case scan.NetworkNotFound:
-				http.Error(w, scanErr.Message, http.StatusNotFound)
+				w.WriteHeader(http.StatusNotFound)
 			default:
-				http.Error(w, scanErr.Message, http.StatusBadRequest)
+				w.WriteHeader(http.StatusBadRequest)
 			}
 		} else {
-			http.Error(w, fmt.Sprintf("Failed to start scan: %v", err), http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
 	// Note: Scan started event is logged by scan_manager.go to avoid duplicates
 
-	// Return updated scan control component
-	h.APIScanControl(w, r)
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Scan started successfully",
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // APIScanStop stops the current scan
@@ -1850,24 +2017,37 @@ func (h *WebHandler) APIScanStop(w http.ResponseWriter, r *http.Request) {
 
 	err := h.scanManager.StopScan()
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		}
 		if scanErr, ok := err.(*scan.ScanError); ok {
 			switch scanErr.Type {
 			case scan.NotRunning:
-				http.Error(w, scanErr.Message, http.StatusConflict)
+				w.WriteHeader(http.StatusConflict)
 			default:
-				http.Error(w, scanErr.Message, http.StatusBadRequest)
+				w.WriteHeader(http.StatusBadRequest)
 			}
 		} else {
-			http.Error(w, fmt.Sprintf("Failed to stop scan: %v", err), http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
+		json.NewEncoder(w).Encode(response)
 		return
 	}
 
 	// Log the event
 	h.eventLogService.Log(models.ScanStopped, "Network scan stopped", "")
 
-	// Return updated scan control component
-	h.APIScanControl(w, r)
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Scan stopped successfully",
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // APIScanControl returns the scan control component
@@ -1883,6 +2063,7 @@ func (h *WebHandler) APIScanControl(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
+	w.Header().Set("Content-Type", "application/json")
 
 	// Get networks and scan state
 	networksSlice, err := h.networkService.FindAll()
@@ -1893,13 +2074,13 @@ func (h *WebHandler) APIScanControl(w http.ResponseWriter, r *http.Request) {
 
 	scanState := h.scanManager.GetState()
 
-	data := PageData{
-		Networks:  networksSlice,
-		ScanState: &scanState,
+	response := map[string]interface{}{
+		"networks":  networksSlice,
+		"scanState": scanState,
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/scan-control-inner.html", data); err != nil {
-		log.Printf("Error rendering scan control template: %v", err)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding scan control JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1986,12 +2167,26 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 		publicIP = *status.PublicIP
 	}
 
+	// Calculate network saturation
+	var saturation float64 = 0.0
+	if currentNetwork != nil && len(networkMapData.IPRange) > 0 {
+		// Total possible addresses in the range
+		totalAddresses := len(networkMapData.IPRange)
+		// Devices found in the range
+		devicesInRange := len(devices)
+		// Calculate saturation percentage
+		if totalAddresses > 0 {
+			saturation = (float64(devicesInRange) / float64(totalAddresses)) * 100
+		}
+	}
+
 	metrics := map[string]interface{}{
 		"networkRange":    networkCIDR,
 		"publicIP":        publicIP,
 		"devicesFound":    len(devices),
 		"devicesOnline":   networkMapData.NetworkInfo.OnlineDevices,
 		"devicesOffline":  networkMapData.NetworkInfo.OfflineDevices,
+		"saturation":      saturation,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -2043,15 +2238,14 @@ func (h *WebHandler) APIAbout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := struct {
-		Version string
-	}{
-		Version: "0.14",
+	response := map[string]interface{}{
+		"version": "0.14",
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/about.html", data); err != nil {
-		log.Printf("About component template execution error: %v", err)
-		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("About component JSON encoding error: %v", err)
+		http.Error(w, fmt.Sprintf("JSON encoding error: %v", err), http.StatusInternalServerError)
 	}
 }
 
@@ -2371,15 +2565,14 @@ func (h *WebHandler) APISettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := struct {
-		Settings *models.Settings
-	}{
-		Settings: settings,
+	response := map[string]interface{}{
+		"settings": settings,
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/settings.html", data); err != nil {
-		log.Printf("Error executing settings template: %v", err)
-		http.Error(w, "Failed to render settings", http.StatusInternalServerError)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding settings JSON: %v", err)
+		http.Error(w, "Failed to encode settings", http.StatusInternalServerError)
 		return
 	}
 }
@@ -2389,13 +2582,18 @@ func (h *WebHandler) APISettingsScreenshots(w http.ResponseWriter, r *http.Reque
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	user := h.getUserFromSession(session)
 	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Unauthorized",
+		})
 		return
 	}
 
 	// Parse the enabled parameter - checkbox sends value when checked, nothing when unchecked
-	enabledStr := r.FormValue("enabled")
-	enabled := enabledStr == "true"
+	enabledStr := r.FormValue("screenshots_enabled")
+	enabled := enabledStr == "true" || enabledStr == "on"
 	
 	log.Printf("Screenshot settings update: enabled=%s, parsed=%v", enabledStr, enabled)
 
@@ -2407,12 +2605,24 @@ func (h *WebHandler) APISettingsScreenshots(w http.ResponseWriter, r *http.Reque
 	_, err := h.settingsService.UpdateUserSettings(fmt.Sprintf("%d", user.ID), updates)
 	if err != nil {
 		log.Printf("Error updating screenshot settings: %v", err)
-		http.Error(w, "Failed to update settings", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Failed to update settings",
+		})
 		return
 	}
 
 	log.Printf("Updated screenshot settings for user %d: enabled=%v", user.ID, enabled)
+	
+	// Return JSON success response
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Settings updated successfully",
+	})
 }
 
 // APIDetectedNetworks returns detected networks that don't exist in the database

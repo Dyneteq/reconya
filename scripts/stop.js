@@ -80,13 +80,12 @@ class ServiceStopper {
       // Kill any processes that might be reconYa backend
       if (Utils.isWindows()) {
         // Windows: Find and kill Go processes running reconYa
-        const { stdout } = await Utils.runCommandWithOutput('tasklist', ['/FI', 'IMAGENAME eq go.exe']);
+        const { stdout } = await Utils.runCommandWithOutput('wmic', ['process', 'where', "CommandLine like '%reconya%' and Name='go.exe'", 'get', 'ProcessId,CommandLine']);
         const lines = stdout.split('\n');
-        
         for (const line of lines) {
-          if (line.includes('go.exe')) {
-            const parts = line.split(/\s+/);
-            const pid = parts[1];
+          if (line.includes('go.exe') && line.includes('reconya')) {
+            const parts = line.trim().split(/\s+/);
+            const pid = parts[parts.length - 1];
             if (pid && !isNaN(pid)) {
               await Utils.killProcess(parseInt(pid), true);
               Utils.log.info(`Killed Go process ${pid}`);
@@ -94,21 +93,19 @@ class ServiceStopper {
           }
         }
       } else {
-        // Unix-like: Kill processes by specific reconYa pattern
+        // Unix-like: Only kill Go processes running reconya backend (not any process with 'reconya' in command line)
         try {
-          // More specific pattern to avoid killing other applications
-          await Utils.runCommand('pkill', ['-f', 'go run.*reconya.*cmd'], { silent: true });
+          // Only kill processes that match 'go run' with reconya/cmd/main.go
+          await Utils.runCommand('pkill', ['-f', 'go run .*reconya/cmd/main.go'], { silent: true });
         } catch {
           // Ignore errors - process might not exist
         }
-        
         try {
-          // Also try killing processes with the binary name
-          await Utils.runCommand('pkill', ['-f', 'reconya'], { silent: true });
+          // Also try killing compiled reconya binary in backend/cmd
+          await Utils.runCommand('pkill', ['-f', 'backend/cmd/reconya'], { silent: true });
         } catch {
           // Ignore errors - process might not exist
         }
-
       }
     } catch (error) {
       // Ignore errors in this cleanup phase

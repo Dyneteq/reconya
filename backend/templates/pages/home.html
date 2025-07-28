@@ -1,46 +1,46 @@
-<div class="row g-4 p-4">
+<div class="flex gap-4 p-4">
     <!-- Left Column - Main Content -->
-    <div class="col-lg-9">
+    <div class="flex-1 lg:w-3/4">
         <!-- System Overview Widgets -->
-        <div class="row g-3 mb-4">
-            <div class="col">
-                <div class="bg-very-dark text-center p-4 d-flex flex-column justify-content-center" style="height: 120px;">
-                    <i class="bi bi-hdd-network text-success mb-2" style="font-size: 1.8rem;"></i>
-                    <small class="text-muted d-block">Network Range</small>
-                    <div class="fw-bold text-success" id="network-range" style="font-size: 1.3rem;">Loading...</div>
+        <div class="grid grid-cols-5 gap-3 mb-4">
+            <div>
+                <div class="bg-zinc-900 text-center p-4 flex flex-col justify-center h-30">
+                    <i class="bi bi-hdd-network text-primary mb-2 text-3xl"></i>
+                    <small class="text-gray-400 block">Network Range</small>
+                    <div class="font-bold text-primary text-xl" id="network-range">Loading...</div>
                 </div>
             </div>
-            <div class="col">
-                <div class="bg-very-dark text-center p-4 d-flex flex-column justify-content-center" style="height: 120px;">
-                    <i class="bi bi-globe text-success mb-2" style="font-size: 1.8rem;"></i>
-                    <small class="text-muted d-block">Public IP</small>
-                    <div class="fw-bold text-success" id="public-ip" style="font-size: 1.3rem;">Loading...</div>
+            <div>
+                <div class="bg-zinc-900 text-center p-4 flex flex-col justify-center h-30">
+                    <i class="bi bi-globe text-primary mb-2 text-3xl"></i>
+                    <small class="text-gray-400 block">Public IP</small>
+                    <div class="font-bold text-primary text-xl" id="public-ip">Loading...</div>
                 </div>
             </div>
-            <div class="col">
-                <div class="bg-very-dark text-center p-4 d-flex flex-column justify-content-center" style="height: 120px;">
-                    <i class="bi bi-router text-success mb-2" style="font-size: 1.8rem;"></i>
-                    <small class="text-muted d-block">Devices Found</small>
-                    <div class="fw-bold text-success" id="devices-found" style="font-size: 1.3rem;">0</div>
+            <div>
+                <div class="bg-zinc-900 text-center p-4 flex flex-col justify-center h-30">
+                    <i class="bi bi-router text-primary mb-2 text-3xl"></i>
+                    <small class="text-gray-400 block">Devices Found</small>
+                    <div class="font-bold text-primary text-xl" id="devices-found">0</div>
                 </div>
             </div>
-            <div class="col">
-                <div class="bg-very-dark text-center p-4 d-flex flex-column justify-content-center" style="height: 120px;">
-                    <i class="bi bi-wifi text-success mb-2" style="font-size: 1.8rem;"></i>
-                    <small class="text-muted d-block">Online</small>
-                    <div class="fw-bold text-success" id="devices-online" style="font-size: 1.3rem;">0</div>
+            <div>
+                <div class="bg-zinc-900 text-center p-4 flex flex-col justify-center h-30">
+                    <i class="bi bi-wifi text-primary mb-2 text-3xl"></i>
+                    <small class="text-gray-400 block">Online</small>
+                    <div class="font-bold text-primary text-xl" id="devices-online">0</div>
                 </div>
             </div>
-            <div class="col">
-                <div class="bg-very-dark text-center d-flex flex-column justify-content-center" style="height: 120px; position: relative;">
+            <div>
+                <div class="bg-zinc-900 text-center flex flex-col justify-center h-30 relative">
                     <div class="p-4">
-                        <i class="bi bi-pie-chart text-success mb-2" style="font-size: 1.8rem;"></i>
-                        <small class="text-muted d-block">Saturation</small>
-                        <div class="fw-bold text-success" id="network-saturation" style="font-size: 1.3rem;">0%</div>
+                        <i class="bi bi-pie-chart text-primary mb-2 text-3xl"></i>
+                        <small class="text-gray-400 block">Saturation</small>
+                        <div class="font-bold text-primary text-xl" id="network-saturation">0%</div>
                     </div>
                     <!-- Progress bar at bottom -->
-                    <div class="position-absolute bottom-0 w-100" style="height: 4px; background: rgba(0,0,0,0.3);">
-                        <div id="saturation-progress" class="h-100" style="width: 0%; background: linear-gradient(90deg, #198754, #28a745, #20c997); transition: width 0.5s ease;"></div>
+                    <div class="absolute bottom-0 w-full h-1 bg-black bg-opacity-30">
+                        <div id="saturation-progress" class="h-full w-0 bg-gradient-to-r from-primary to-secondary transition-all duration-500 ease-out"></div>
                     </div>
                 </div>
             </div>
@@ -48,18 +48,18 @@
         
         <!-- Network Suggestions Alert -->
         <div id="network-suggestions" class="mb-4" style="display: none;">
-            <div class="alert alert-info border-success bg-very-dark" role="alert">
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-info-circle-fill text-success me-3" style="font-size: 1.2rem;"></i>
-                    <div class="flex-grow-1">
-                        <h6 class="text-success mb-1">New Network Detected</h6>
-                        <p class="mb-2" id="suggestion-text">A new network was detected. Do you want to create it?</p>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-success btn-sm" id="create-network-btn">
-                                <i class="bi bi-plus-circle me-1"></i>Create Network
+            <div class="bg-blue-600 bg-opacity-10 border border-primary rounded p-4">
+                <div class="flex items-center">
+                    <i class="bi bi-info-circle-fill text-primary mr-3 text-xl"></i>
+                    <div class="flex-1">
+                        <h6 class="text-primary mb-1 font-bold">New Network Detected</h6>
+                        <p class="mb-2 text-gray-200" id="suggestion-text">A new network was detected. Do you want to create it?</p>
+                        <div class="flex gap-2">
+                            <button type="button" class="bg-primary hover:bg-green-600 text-white px-3 py-1 rounded text-sm" id="create-network-btn">
+                                <i class="bi bi-plus-circle mr-1"></i>Create Network
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="dismiss-suggestion-btn">
-                                <i class="bi bi-x-circle me-1"></i>Dismiss
+                            <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-1 rounded text-sm" id="dismiss-suggestion-btn">
+                                <i class="bi bi-x-circle mr-1"></i>Dismiss
                             </button>
                         </div>
                     </div>
@@ -68,11 +68,11 @@
         </div>
         
         <!-- Network Map -->
-        <div class="network-map-container mb-4 p0 sticky-top">
+        <div class="mb-4 sticky top-0">
             <div id="network-map" hx-get="/api/network-map" hx-trigger="load, every 8s" hx-swap="innerHTML">
-                <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Loading...</span>
+                <div class="flex justify-center items-center h-50">
+                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent">
+                        <span class="sr-only">Loading...</span>
                     </div>
                 </div>
             </div>
@@ -80,11 +80,11 @@
         
         <!-- Network Devices Cards -->
         <div class="mb-4">
-            <h5 class="section-header">NETWORK DEVICES</h5>
+            <h6 class="text-primary block w-full mb-3 font-bold">[ NETWORK DEVICES ]</h6>
             <div id="devices-container" hx-get="/api/devices" hx-trigger="load, every 10s" hx-swap="innerHTML">
-                <div class="d-flex justify-content-center align-items-center" style="height: 100px;">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Loading devices...</span>
+                <div class="flex justify-center items-center h-25">
+                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent">
+                        <span class="sr-only">Loading devices...</span>
                     </div>
                 </div>
             </div>
@@ -92,16 +92,16 @@
     </div>
 
     <!-- Right Column - Scan Control & Event Logs -->
-    <div class="col-lg-3">
+    <div class="w-full lg:w-1/4">
         <!-- Scan Control Panel -->
         <div class="mb-4">
             <div id="scan-control-container" 
                  hx-get="/api/scan/control" 
                  hx-trigger="load" 
                  hx-swap="innerHTML">
-                <div class="bg-very-dark p-4 d-flex align-items-center justify-content-center">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Loading scan control...</span>
+                <div class="bg-zinc-900 p-4 flex items-center justify-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent">
+                        <span class="sr-only">Loading scan control...</span>
                     </div>
                 </div>
             </div>
@@ -109,13 +109,19 @@
         
         
         <!-- Event Logs Section -->
-        <div class="">
-            <div class="p-0" style="max-height: 600px; overflow-y: auto;">
-                <div id="event-logs" hx-get="/api/event-logs" hx-trigger="load, every 4s" hx-swap="innerHTML">
-                    <div class="d-flex justify-content-center align-items-center" style="height: 200px;">
-                        <div class="spinner-border text-success" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
+        <div>
+            <div class="p-0 max-h-64 overflow-y-auto">
+                <div id="event-logs" class="space-y-2 text-sm text-gray-400">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-700">
+                        <span>System initialized</span>
+                        <span class="text-xs text-gray-500">Just now</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2 border-b border-gray-700">
+                        <span>Dashboard loaded</span>
+                        <span class="text-xs text-gray-500">1 min ago</span>
+                    </div>
+                    <div class="text-center text-gray-500 py-4">
+                        Click "Logs" to view full event history
                     </div>
                 </div>
             </div>
@@ -124,10 +130,10 @@
 </div>
 
 <!-- Device Modal -->
-<div class="modal fade" id="deviceModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content d-flex flex-column">
-            <div id="device-modal-content" class="flex-grow-1 overflow-auto">
+<div class="modal" id="deviceModal">
+    <div class="flex justify-center items-center">
+        <div class="flex flex-col">
+            <div id="device-modal-content" class="flex-1 overflow-auto">
                 <!-- Content loaded via HTMX -->
             </div>
         </div>
@@ -135,9 +141,9 @@
 </div>
 
 <!-- Network Modal -->
-<div class="modal fade" id="networkModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content bg-dark border-success">
+<div class="modal" id="networkModal">
+    <div class="flex justify-center items-center">
+        <div class="bg-zinc-800 border border-green-600">
             <div id="network-modal-content">
                 <!-- Content loaded via HTMX -->
             </div>
@@ -146,9 +152,9 @@
 </div>
 
 <!-- Network Delete Modal -->
-<div class="modal fade" id="networkDeleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content bg-dark border-danger">
+<div class="modal" id="networkDeleteModal">
+    <div class="flex justify-center items-center">
+        <div class="bg-zinc-800 border border-red-500">
             <div id="network-delete-modal-content">
                 <!-- Content loaded via HTMX -->
             </div>
@@ -185,8 +191,7 @@
     // Device modal handling
     document.addEventListener('htmx:afterRequest', function(event) {
         if (event.detail.target.id === 'device-modal-content') {
-            const modal = new bootstrap.Modal(document.getElementById('deviceModal'));
-            modal.show();
+            showModal('deviceModal');
         }
     });
 
@@ -342,26 +347,32 @@
         .then(data => {
             if (data.success) {
                 // Show success message
-                const toast = document.createElement('div');
-                toast.className = 'toast-container position-fixed top-0 end-0 p-3';
-                toast.innerHTML = `
-                    <div class="toast bg-dark border-success show" role="alert">
-                        <div class="toast-header bg-dark text-success border-success">
-                            <i class="bi bi-check-circle-fill text-success me-2"></i>
-                            <strong class="me-auto">Success</strong>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-                        </div>
-                        <div class="toast-body text-light">
-                            ${data.message}
+                const toastId = 'networkCreatedToast_' + Date.now();
+                const toastHtml = `
+                    <div class="fixed top-4 right-4 z-50">
+                        <div id="${toastId}" class="bg-zinc-800 border border-green-600 rounded p-4 shadow-lg">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <i class="bi bi-check-circle-fill text-primary mr-2"></i>
+                                    <strong class="text-primary">Success</strong>
+                                </div>
+                                <button type="button" class="text-gray-400 hover:text-white" onclick="document.getElementById('${toastId}').remove()">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                            <div class="text-gray-200 text-sm">
+                                ${data.message}
+                            </div>
                         </div>
                     </div>
                 `;
-                document.body.appendChild(toast);
+                document.body.insertAdjacentHTML('beforeend', toastHtml);
 
                 // Auto-remove toast after 3 seconds
                 setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.remove();
+                    const toastElement = document.getElementById(toastId);
+                    if (toastElement) {
+                        toastElement.remove();
                     }
                 }, 3000);
 

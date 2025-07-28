@@ -1,0 +1,69 @@
+<div class="flex gap-4 p-4">
+    <!-- Main Content -->
+    <div class="flex-1">
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-green-500">[ EVENT LOGS ]</h1>
+                <div class="flex gap-2">
+                    <button type="button" 
+                            class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" 
+                            onclick="refreshLogs()">
+                        <i class="bi bi-arrow-clockwise mr-1"></i>Refresh
+                    </button>
+                    <button type="button" 
+                            class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm" 
+                            onclick="clearLogs()">
+                        <i class="bi bi-trash mr-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Logs Table -->
+            <div class="bg-gray-800 rounded-lg">
+                <div id="logs-container">
+                    <div class="flex justify-center items-center h-32">
+                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
+                        <span class="ml-3 text-gray-400">Loading event logs...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load logs content
+document.addEventListener('DOMContentLoaded', function() {
+    // Load logs immediately - this endpoint already returns HTML
+    loadLogs();
+    
+    // Set up periodic refresh
+    setInterval(loadLogs, 30000);
+});
+
+function loadLogs() {
+    const container = document.getElementById('logs-container');
+    if (!container) return;
+    
+    fetch('/api/event-logs-table')
+        .then(response => response.text())
+        .then(html => {
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Failed to load logs:', error);
+            container.innerHTML = '<div class="text-red-400 p-4">Failed to load event logs</div>';
+        });
+}
+
+function refreshLogs() {
+    loadLogs();
+}
+
+function clearLogs() {
+    if (confirm('Are you sure you want to clear all event logs? This action cannot be undone.')) {
+        // TODO: Implement clear logs API endpoint
+        alert('Clear logs functionality not yet implemented');
+    }
+}
+</script>

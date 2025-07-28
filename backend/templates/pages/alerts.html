@@ -1,0 +1,80 @@
+<div class="flex gap-4 p-4">
+    <!-- Main Content -->
+    <div class="flex-1">
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-green-500">[ ALERTS ]</h1>
+                <div class="flex gap-2">
+                    <button type="button" 
+                            class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" 
+                            onclick="refreshAlerts()">
+                        <i class="bi bi-arrow-clockwise mr-1"></i>Refresh
+                    </button>
+                    <button type="button" 
+                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm" 
+                            onclick="markAllRead()">
+                        <i class="bi bi-check-all mr-1"></i>Mark All Read
+                    </button>
+                </div>
+            </div>
+
+            <!-- Alerts Content -->
+            <div id="alerts-container">
+                <!-- No alerts message -->
+                <div class="bg-gray-800 rounded-lg p-8 text-center">
+                    <i class="bi bi-check-circle-fill text-green-500 text-6xl mb-4"></i>
+                    <h4 class="text-green-500 text-xl font-bold mb-2">All Clear!</h4>
+                    <p class="text-gray-400">No alerts at this time. Your network is operating normally.</p>
+                </div>
+                
+                <!-- Example alert structure (hidden by default) -->
+                <div class="bg-gray-800 rounded-lg p-4 mb-3" style="display: none;">
+                    <div class="flex items-start">
+                        <div class="mr-3">
+                            <i class="bi bi-exclamation-triangle-fill text-yellow-500 text-2xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h6 class="text-white font-bold mb-1">New Device Detected</h6>
+                            <p class="text-gray-300 mb-2">
+                                A new device with IP 192.168.1.100 has been detected on the network.
+                            </p>
+                            <small class="text-gray-400">
+                                <i class="bi bi-clock mr-1"></i>2 minutes ago
+                            </small>
+                        </div>
+                        <div class="ml-3">
+                            <button type="button" 
+                                    class="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-sm" 
+                                    onclick="dismissAlert(this)">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshAlerts() {
+    // TODO: Implement alerts API endpoint
+    console.log('Refresh alerts');
+}
+
+function markAllRead() {
+    // TODO: Implement mark all read functionality
+    console.log('Mark all alerts as read');
+}
+
+function dismissAlert(button) {
+    const alertCard = button.closest('.bg-gray-800');
+    if (alertCard) {
+        alertCard.style.transition = 'opacity 0.3s ease';
+        alertCard.style.opacity = '0';
+        setTimeout(() => {
+            alertCard.remove();
+        }, 300);
+    }
+}
+</script>

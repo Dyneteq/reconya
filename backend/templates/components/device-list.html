@@ -8,7 +8,7 @@
         <input type="text" 
                class="form-control bg-very-dark border-success text-light" 
                id="deviceSearch" 
-               placeholder="Search devices by IP, IPv6, name, MAC, vendor..."
+               placeholder="Search devices..."
                style="background-color: var(--bg-very-dark) !important; border-color: rgba(25, 135, 84, 0.3) !important; color: #e9ecef !important;">
     </div>
 </div>
@@ -17,82 +17,80 @@
     <table class="table table-dark table-sm" id="devicesTable">
         <thead>
             <tr>
-                <th>IP Address</th>
-                <th>IPv6 Address</th>
-                <th>Name</th>
-                <th>MAC Address</th>
-                <th>Vendor</th>
-                <th>OS</th>
+                <th>Device</th>
+                <th>Network Info</th>
                 <th>Status</th>
                 <th>Ports</th>
-                <th>Last Seen</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {{range .Devices}}
-            <tr style="cursor: pointer;">
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">{{.IPv4}}</td>
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">
-                    {{if .IPv6Global}}
-                        <span class="text-info" title="Global IPv6">{{.IPv6Global}}</span>
-                    {{else if .IPv6UniqueLocal}}
-                        <span class="text-warning" title="Unique Local IPv6">{{.IPv6UniqueLocal}}</span>
-                    {{else if .IPv6LinkLocal}}
-                        <span class="text-secondary" title="Link Local IPv6">{{.IPv6LinkLocal}}</span>
+            <tr style="cursor: pointer;" onclick="loadDeviceModal('{{.ID}}')">
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            {{if .OS}}
+                                {{if contains .OS.Name "Windows"}}<i class="bi bi-windows text-info" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Linux"}}<i class="bi bi-ubuntu text-warning" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "macOS"}}<i class="bi bi-apple text-light" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Android"}}<i class="bi bi-android2 text-success" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "iOS"}}<i class="bi bi-phone text-light" title="{{.OS.Name}}"></i>{{else}}<i class="bi bi-device-hdd text-secondary" title="{{.OS.Name}}"></i>{{end}}
+                            {{else}}
+                                <i class="bi bi-router text-muted" title="Unknown Device"></i>
+                            {{end}}
+                        </div>
+                        <div>
+                            <div class="fw-bold text-success">{{.IPv4}}</div>
+                            {{if or .Name (deref .Hostname)}}
+                                <small class="text-muted">{{or .Name (deref .Hostname)}}</small>
+                            {{end}}
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div>
+                        {{if deref .MAC}}
+                            <code class="text-info small">{{deref .MAC}}</code>
+                        {{end}}
+                        {{if deref .Vendor}}
+                            <div><small class="text-muted">{{deref .Vendor}}</small></div>
+                        {{end}}
+                    </div>
+                </td>
+                <td>
+                    {{if eq .Status "online"}}
+                        <span class="badge bg-success">Online</span>
+                    {{else if eq .Status "idle"}}
+                        <span class="badge bg-warning">Idle</span>
                     {{else}}
-                        <span class="text-muted">-</span>
+                        <span class="badge bg-secondary">Offline</span>
+                    {{end}}
+                    {{if .LastSeenOnlineAt}}
+                        <div><small class="text-muted">{{formatTimeAgo .LastSeenOnlineAt}}</small></div>
                     {{end}}
                 </td>
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">{{or .Name (deref .Hostname) "-"}}</td>
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">{{deref .MAC}}</td>
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">{{deref .Vendor}}</td>
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">
-                    {{if .OS}}
-                        {{if contains .OS.Name "Windows"}}<i class="bi bi-windows" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Linux"}}<i class="bi bi-ubuntu" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "macOS"}}<i class="bi bi-apple" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Android"}}<i class="bi bi-android2" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "iOS"}}<i class="bi bi-phone" title="{{.OS.Name}}"></i>{{else}}<i class="bi bi-device-hdd" title="{{.OS.Name}}"></i>{{end}}
-                    {{else}}
-                        <i class="bi bi-question-circle text-muted" title="Unknown OS"></i>
-                    {{end}}
-                </td>
-                <td class="status-{{string .Status}}" hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">
-                    {{.Status}}
-                </td>
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">
-                    {{$filtered := 0}}{{$open := 0}}
+                <td>
+                    {{$open := 0}}
                     {{range .Ports}}
-                        {{if eq .State "filtered"}}{{$filtered = add $filtered 1}}{{end}}
                         {{if eq .State "open"}}{{$open = add $open 1}}{{end}}
                     {{end}}
-                    {{if and (gt $filtered 0) (gt $open 0)}}
-                        <span class="text-warning">{{$filtered}}</span> / <span class="text-danger">{{$open}}</span>
-                    {{else if gt $filtered 0}}
-                        <span class="text-warning">{{$filtered}}</span>
-                    {{else if gt $open 0}}
-                        <span class="text-danger">{{$open}}</span>
+                    {{if gt $open 0}}
+                        <span class="badge bg-danger">{{$open}} open</span>
                     {{else}}
                         <span class="text-muted">-</span>
                     {{end}}
                 </td>
-                <td hx-get="/api/devices/{{.ID}}/modal" hx-target="#device-modal-content" hx-trigger="click">{{formatTimeAgo .LastSeenOnlineAt}}</td>
                 <td>
-                    <button class="btn btn-outline-danger btn-sm" 
-                            hx-delete="/api/devices/{{.ID}}" 
-                            hx-trigger="click"
-                            hx-confirm="Are you sure you want to delete device {{.IPv4}}?"
-                            hx-target="closest tr"
-                            hx-swap="outerHTML"
-                            hx-on::before-request="console.log('Delete request starting for device {{.ID}}')"
-                            hx-on::after-request="console.log('Delete request completed:', event.detail.xhr.status)"
-                            hx-on::response-error="alert('Error deleting device: ' + event.detail.xhr.responseText)"
-                            onclick="event.stopPropagation()"
-                            title="Delete Device">
+                    <button class="px-2 py-1 text-red-400 border border-red-400 rounded text-sm hover:bg-red-400 hover:text-white transition-colors" 
+                            onclick="event.stopPropagation(); deleteDevice('{{.ID}}', '{{.IPv4}}')"
+                            title="Delete">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
             </tr>
             {{else}}
             <tr>
-                <td colspan="10" class="text-center text-muted">No devices found.</td>
+                <td colspan="5" class="text-center text-muted">
+                    <i class="bi bi-router me-2"></i>
+                    No devices found.
+                </td>
             </tr>
             {{end}}
         </tbody>

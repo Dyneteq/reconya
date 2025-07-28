@@ -1,0 +1,213 @@
+<div class="flex gap-4 p-4">
+    <!-- Main Content -->
+    <div class="flex-1">
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-green-500">[ DEVICES ]</h1>
+                <div class="flex gap-2">
+                    <input type="radio" class="btn-check" name="view-mode" id="view-grid" autocomplete="off" checked>
+                    <label class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" for="view-grid">
+                        <i class="bi bi-grid-3x3-gap mr-1"></i>Grid
+                    </label>
+                    <input type="radio" class="btn-check" name="view-mode" id="view-list" autocomplete="off">
+                    <label class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" for="view-list">
+                        <i class="bi bi-list mr-1"></i>List
+                    </label>
+                </div>
+            </div>
+
+            <!-- Grid View -->
+            <div id="devices-container">
+                <div class="flex justify-center items-center h-32">
+                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
+                    <span class="ml-3 text-gray-400">Loading devices...</span>
+                </div>
+            </div>
+
+            <!-- List View (hidden by default) -->
+            <div id="device-list-container" style="display: none;">
+                <!-- Content loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Device Modal -->
+<div class="modal" id="deviceModal">
+    <div class="flex justify-center items-center">
+        <div class="flex flex-col">
+            <div id="device-modal-content" class="flex-1 overflow-auto">
+                <!-- Content loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load devices content
+document.addEventListener('DOMContentLoaded', function() {
+    // Load devices immediately
+    loadDevices();
+    
+    // Set up periodic refresh
+    setInterval(loadDevices, 10000);
+});
+
+function loadDevices() {
+    const container = document.getElementById('devices-container');
+    if (!container || container.style.display === 'none') return;
+    
+    fetch('/api/devices')
+        .then(response => response.json())
+        .then(data => {
+            container.innerHTML = renderDeviceGrid(data.devices || []);
+        })
+        .catch(error => {
+            console.error('Failed to load devices:', error);
+            container.innerHTML = '<div class="text-red-400 p-4">Failed to load devices</div>';
+        });
+}
+
+function renderDeviceGrid(devices) {
+    if (!devices || devices.length === 0) {
+        return `
+            <div class="text-center py-8 text-gray-400">
+                <i class="bi bi-router text-4xl mb-3"></i>
+                <p>No devices found</p>
+                <p class="text-sm">Start a network scan to discover devices</p>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            ${devices.map(device => `
+                <div class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700 hover:border-green-500" 
+                     onclick="loadDeviceModal('${device.id}')">
+                    <div class="text-green-500 text-xl font-mono mb-2">${device.ipv4}</div>
+                    ${device.mac ? `<div class="text-blue-400 text-sm font-mono mb-2">${device.mac}</div>` : ''}
+                    ${device.hostname ? `<div class="text-gray-300 text-sm mb-2">${device.hostname}</div>` : ''}
+                    <div class="flex justify-between items-center">
+                        <span class="px-2 py-1 rounded text-xs ${getStatusColor(device.status)}">${device.status || 'unknown'}</span>
+                        ${device.ports && device.ports.length > 0 ? 
+                            `<span class="text-gray-400 text-xs">${device.ports.filter(p => p.state === 'open').length} ports</span>` 
+                            : ''
+                        }
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function getStatusColor(status) {
+    switch(status) {
+        case 'online': return 'bg-green-600 text-white';
+        case 'idle': return 'bg-yellow-600 text-white';
+        case 'offline': return 'bg-gray-600 text-white';
+        default: return 'bg-gray-600 text-white';
+    }
+}
+
+function loadDeviceList() {
+    const container = document.getElementById('device-list-container');
+    if (!container) return;
+    
+    fetch('/api/device-list')
+        .then(response => response.json())
+        .then(data => {
+            container.innerHTML = renderDeviceList(data.devices || []);
+        })
+        .catch(error => {
+            console.error('Failed to load device list:', error);
+            container.innerHTML = '<div class="text-red-400 p-4">Failed to load device list</div>';
+        });
+}
+
+function renderDeviceList(devices) {
+    if (!devices || devices.length === 0) {
+        return `
+            <div class="text-center py-8 text-gray-400">
+                <i class="bi bi-router text-4xl mb-3"></i>
+                <p>No devices found</p>
+                <p class="text-sm">Start a network scan to discover devices</p>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-900">
+                    <tr>
+                        <th class="text-left p-3 text-green-500">IP Address</th>
+                        <th class="text-left p-3 text-green-500">MAC Address</th>
+                        <th class="text-left p-3 text-green-500">Hostname</th>
+                        <th class="text-left p-3 text-green-500">Status</th>
+                        <th class="text-left p-3 text-green-500">Ports</th>
+                        <th class="text-left p-3 text-green-500">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${devices.map(device => `
+                        <tr class="border-t border-gray-700 hover:bg-gray-700 cursor-pointer" onclick="loadDeviceModal('${device.id}')">
+                            <td class="p-3">
+                                <div class="text-green-500 font-mono">${device.ipv4}</div>
+                                ${device.hostname ? `<div class="text-gray-400 text-xs">${device.hostname}</div>` : ''}
+                            </td>
+                            <td class="p-3">
+                                ${device.mac ? `<div class="text-blue-400 font-mono text-sm">${device.mac}</div>` : '<span class="text-gray-500">-</span>'}
+                            </td>
+                            <td class="p-3">
+                                ${device.hostname ? `<span class="text-gray-300">${device.hostname}</span>` : '<span class="text-gray-500">-</span>'}
+                            </td>
+                            <td class="p-3">
+                                <span class="px-2 py-1 rounded text-xs ${getStatusColor(device.status)}">${device.status || 'unknown'}</span>
+                            </td>
+                            <td class="p-3">
+                                ${device.ports && device.ports.length > 0 ? 
+                                    `<div class="text-sm text-gray-400">${device.ports.filter(p => p.state === 'open').length} open</div>` 
+                                    : '<span class="text-gray-500">-</span>'
+                                }
+                            </td>
+                            <td class="p-3">
+                                <button class="px-2 py-1 text-red-400 border border-red-400 rounded text-sm hover:bg-red-400 hover:text-white transition-colors" 
+                                        onclick="event.stopPropagation(); deleteDevice('${device.id}', '${device.ipv4}')"
+                                        title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// View mode toggle
+document.addEventListener('change', function(event) {
+    if (event.target.name === 'view-mode') {
+        const viewMode = event.target.id.includes('grid') ? 'grid' : 'list';
+        const devicesContainer = document.getElementById('devices-container');
+        const listContainer = document.getElementById('device-list-container');
+        
+        if (viewMode === 'grid') {
+            if (devicesContainer) devicesContainer.style.display = 'block';
+            if (listContainer) listContainer.style.display = 'none';
+            loadDevices();
+        } else {
+            if (devicesContainer) devicesContainer.style.display = 'none';
+            if (listContainer) listContainer.style.display = 'block';
+            loadDeviceList();
+        }
+    }
+});
+
+// Device modal handling
+document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.target.id === 'device-modal-content') {
+        showModal('deviceModal');
+    }
+});
+</script>

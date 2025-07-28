@@ -17,13 +17,13 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	r.HandleFunc("/logout", h.Logout).Methods("POST")
 	r.HandleFunc("/targets", h.Targets).Methods("GET")
 
-	// SPA routes - all serve the main index template
-	r.HandleFunc("/devices", h.Index).Methods("GET")
-	r.HandleFunc("/logs", h.Index).Methods("GET")
-	r.HandleFunc("/networks", h.Index).Methods("GET")
-	r.HandleFunc("/alerts", h.Index).Methods("GET")
-	r.HandleFunc("/settings", h.Index).Methods("GET")
-	r.HandleFunc("/about", h.Index).Methods("GET")
+	// Page routes - each serves with specific page context
+	r.HandleFunc("/devices", h.Devices).Methods("GET")
+	r.HandleFunc("/logs", h.Logs).Methods("GET")
+	r.HandleFunc("/networks", h.Networks).Methods("GET")
+	r.HandleFunc("/alerts", h.Alerts).Methods("GET")
+	r.HandleFunc("/settings", h.Settings).Methods("GET")
+	r.HandleFunc("/about", h.About).Methods("GET")
 
 	// HTMX API endpoints
 	api := r.PathPrefix("/api").Subrouter()

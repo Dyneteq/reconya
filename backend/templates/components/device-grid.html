@@ -12,9 +12,7 @@
     <button type="button"
             class="device-box-btn bg-very-dark d-block p-2 me-2 mb-2 text-decoration-none text-start {{$textColor}}"
             style="min-width: 205px; height: 130px; opacity: {{$opacity}}; position: relative;"
-            hx-get="/api/devices/{{.ID}}/modal" 
-            hx-target="#device-modal-content" 
-            hx-trigger="click">
+            onclick="loadDeviceModal('{{.ID}}')">
         
         <!-- Top row: IP, MAC, and Name -->
         <div style="position: absolute; top: 8px; left: 8px; right: 8px;">
