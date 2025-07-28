@@ -69,17 +69,29 @@
                         <i class="bi bi-list text-xl"></i>
                     </button>
                     
-                    <!-- User Menu -->
-                    <div class="relative">
-                        <button class="flex items-center px-3 py-2 text-gray-300 hover:text-green-500" id="dropdownMenuButton">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    <!-- Theme Toggle and User Menu -->
+                    <div class="flex items-center gap-3">
+                        <!-- Theme Toggle Button -->
+                        <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 focus:outline-none bg-gray-700 rounded transition-colors">
+                            <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                             </svg>
-                            Welcome, human
-                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                             </svg>
                         </button>
+                        
+                        <!-- User Menu -->
+                        <div class="relative">
+                            <button class="flex items-center px-3 py-2 text-gray-300 hover:text-green-500" id="dropdownMenuButton">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                Welcome, human
+                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
                         <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded shadow-lg hidden" id="dropdownMenu">
                             <a href="#" class="block px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700" onclick="loadAboutPage(); return false;">
                                 <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,6 +108,7 @@
                                     Logout
                                 </button>
                             </form>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -512,11 +525,109 @@
         .modal.show .modal-content {
             transform: scale(1);
         }
+        
+        /* Theme System */
+        :root {
+            /* Dark theme variables (default) */
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-tertiary: #374151;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --text-muted: #9ca3af;
+            --text-accent: #10b981;
+            --border-color: #4b5563;
+            --border-accent: #10b981;
+        }
+        
+        [data-theme="light"] {
+            /* Light theme variables */
+            --bg-primary: #f9fafb;
+            --bg-secondary: #f3f4f6;
+            --bg-tertiary: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #374151;
+            --text-muted: #6b7280;
+            --text-accent: #059669;
+            --border-color: #d1d5db;
+            --border-accent: #059669;
+        }
+        
+        /* Apply theme variables */
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        .bg-gray-900 { background-color: var(--bg-primary) !important; }
+        .bg-gray-800 { background-color: var(--bg-secondary) !important; }
+        .bg-gray-700 { background-color: var(--bg-tertiary) !important; }
+        
+        .text-white { color: var(--text-primary) !important; }
+        .text-gray-200 { color: var(--text-primary) !important; }
+        .text-gray-300 { color: var(--text-secondary) !important; }
+        .text-gray-400 { color: var(--text-muted) !important; }
+        .text-green-500 { color: var(--text-accent) !important; }
+        
+        .border-gray-700 { border-color: var(--border-color) !important; }
+        .border-gray-600 { border-color: var(--border-color) !important; }
+        .border-green-500 { border-color: var(--border-accent) !important; }
+        .border-green-600 { border-color: var(--border-accent) !important; }
+        
+        /* Theme transition */
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
     </style>
     
     <script>
+        // Theme functionality
+        function initTheme() {
+            const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            
+            // Get saved theme or default to dark
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            
+            // Apply saved theme
+            if (savedTheme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+            
+            // Theme toggle functionality
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    const currentTheme = document.documentElement.getAttribute('data-theme');
+                    
+                    if (currentTheme === 'light') {
+                        // Switch to dark
+                        document.documentElement.removeAttribute('data-theme');
+                        sunIcon.classList.remove('hidden');
+                        moonIcon.classList.add('hidden');
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        // Switch to light
+                        document.documentElement.setAttribute('data-theme', 'light');
+                        sunIcon.classList.add('hidden');
+                        moonIcon.classList.remove('hidden');
+                        localStorage.setItem('theme', 'light');
+                    }
+                });
+            }
+        }
+        
         // Sidebar functionality
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize theme first
+            initTheme();
+            
             const sidebar = document.getElementById('sidebar');
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebarToggleIcon = sidebarToggle ? sidebarToggle.querySelector('i') : null;
@@ -546,20 +657,7 @@
                 });
             }
             
-            // Close sidebar when clicking outside
-            document.addEventListener('click', function(e) {
-                // Don't close if clicking on nav items
-                if (e.target.closest('.nav-item')) {
-                    return;
-                }
-                
-                if (!sidebar.contains(e.target) && 
-                    !sidebarToggle.contains(e.target) && 
-                    !sidebar.classList.contains('collapsed')) {
-                    sidebar.classList.add('collapsed');
-                    mainContent.style.marginLeft = '0';
-                }
-            });
+            // Note: Removed auto-collapse on outside clicks - sidebar stays open until toggle is clicked
             
             // Test if sidebar clicks work at all
             sidebar.addEventListener('click', function(e) {
@@ -589,7 +687,7 @@
                         // Add active class to clicked item
                         this.classList.add('active');
                         
-                        // Close sidebar on mobile after navigation
+                        // Close sidebar only on mobile after navigation (keep open on desktop)
                         if (window.innerWidth <= 1024) {
                             sidebar.classList.add('collapsed');
                             mainContent.style.marginLeft = '0';
@@ -620,13 +718,13 @@
             // Mobile responsive behavior
             function handleResize() {
                 if (window.innerWidth <= 1024) {
-                    // Mobile view - always start collapsed
+                    // Mobile view - collapse sidebar for overlay behavior
                     if (!sidebar.classList.contains('collapsed')) {
                         sidebar.classList.add('collapsed');
                     }
                     mainContent.style.marginLeft = '0';
                 } else {
-                    // Desktop view
+                    // Desktop view - maintain current sidebar state
                     if (sidebar.classList.contains('collapsed')) {
                         mainContent.style.marginLeft = '0';
                     } else {
