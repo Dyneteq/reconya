@@ -1,0 +1,218 @@
+// Main initialization file
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize core functionality
+    if (typeof initTheme === 'function') {
+        initTheme();
+    }
+    
+    if (typeof initSidebar === 'function') {
+        initSidebar();
+    }
+    
+    if (typeof initNetworkSuggestions === 'function') {
+        initNetworkSuggestions();
+    }
+    
+    // Initialize dropdown menu
+    initDropdownMenu();
+    
+    // Initialize page-specific content based on current page
+    initPageContent();
+    
+    console.log('Main application initialized');
+});
+
+// Page initialization
+function initPageContent() {
+    const currentPath = window.location.pathname;
+    
+    switch (currentPath) {
+        case '/':
+        case '/home':
+            // Initialize dashboard components
+            if (typeof loadDevices === 'function') {
+                loadDevices();
+            }
+            if (typeof loadScanControl === 'function') {
+                loadScanControl();
+            }
+            if (typeof startNetworkMapUpdates === 'function') {
+                startNetworkMapUpdates();
+            }
+            if (typeof loadRecentActivity === 'function') {
+                loadRecentActivity();
+            }
+            if (typeof loadDashboardMetrics === 'function') {
+                loadDashboardMetrics();
+                // Update dashboard metrics periodically
+                setInterval(loadDashboardMetrics, 30000);
+            }
+            break;
+        case '/devices':
+            if (typeof loadDeviceList === 'function') {
+                loadDeviceList();
+            } else if (typeof loadDevices === 'function') {
+                loadDevices();
+            }
+            if (typeof startNetworkMapUpdates === 'function') {
+                startNetworkMapUpdates();
+            }
+            break;
+        case '/networks':
+            if (typeof loadNetworkList === 'function') {
+                loadNetworkList();
+            }
+            break;
+        case '/logs':
+            // Load event logs page
+            if (typeof loadEventLogs === 'function') {
+                loadEventLogs();
+            } else if (typeof loadRecentActivity === 'function') {
+                loadRecentActivity();
+            }
+            break;
+        case '/settings':
+            if (typeof loadSettings === 'function') {
+                loadSettings();
+            }
+            break;
+        default:
+            // Default initialization for other pages
+            console.log('Default page initialization for:', currentPath);
+            break;
+    }
+}
+
+// Dropdown menu functionality
+function initDropdownMenu() {
+    const dropdownButton = document.getElementById('dropdownMenuButton');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    
+    if (dropdownButton && dropdownMenu) {
+        // Toggle dropdown on button click
+        dropdownButton.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('hidden');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+        
+        // Close dropdown when pressing Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+    }
+}
+
+// Also run immediately for HTMX loaded content
+if (typeof initTheme === 'function') {
+    initTheme();
+}
+
+if (typeof initSidebar === 'function') {
+    initSidebar();
+}
+
+if (typeof initNetworkSuggestions === 'function') {
+    initNetworkSuggestions();
+}
+
+// Initialize dropdown menu immediately too
+initDropdownMenu();
+
+// About page functionality
+function loadAboutPage() {
+    // Show about content in a modal instead of navigating
+    showAboutModal();
+}
+
+function showAboutModal() {
+    const aboutContent = `
+        <div class="p-6 max-w-4xl">
+            <!-- Header -->
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-green-500 mb-3">
+                    <i class="bi bi-hdd-network mr-2"></i>reconYa
+                </h1>
+                <p class="text-lg text-gray-300 mb-3">Network Reconnaissance and Asset Discovery Tool</p>
+                <div class="inline-block bg-green-500 text-black px-3 py-1 rounded text-sm font-semibold">
+                    Version 1.0.0
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-4 border border-green-500/30">
+                <h3 class="text-lg font-semibold text-green-500 mb-3">
+                    <i class="bi bi-info-circle mr-2"></i>About reconYa
+                </h3>
+                <p class="text-gray-300 mb-3 text-sm">
+                    reconYa is a comprehensive network reconnaissance and asset discovery tool built with Go and modern web technologies. 
+                    It provides real-time network scanning, device identification, and monitoring capabilities for 
+                    network administrators, security professionals, and enthusiasts.
+                </p>
+                <p class="text-gray-300 mb-2 text-sm">
+                    <strong class="text-white">Key Features:</strong>
+                </p>
+                <ul class="space-y-1 text-sm">
+                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Real-time network scanning with nmap integration</li>
+                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Device identification and vendor detection</li>
+                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Port scanning and service detection</li>
+                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Web-based dashboard with live updates</li>
+                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Event logging and monitoring</li>
+                </ul>
+            </div>
+
+            <!-- Community Links -->
+            <div class="bg-gray-800 rounded-lg p-4 mb-4 border border-green-500/30">
+                <h3 class="text-lg font-semibold text-green-500 mb-3">
+                    <i class="bi bi-people mr-2"></i>Community & Support
+                </h3>
+                <div class="flex flex-wrap gap-2 text-sm">
+                    <a href="https://discord.gg/JW7VtBnNXp" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors">
+                        <i class="bi bi-discord mr-1"></i>Discord
+                    </a>
+                    <a href="https://github.com/Dyneteq/reconya" target="_blank" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded border border-gray-600 transition-colors">
+                        <i class="bi bi-github mr-1"></i>GitHub
+                    </a>
+                    <a href="https://www.reddit.com/r/reconya/" target="_blank" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded transition-colors">
+                        <i class="bi bi-reddit mr-1"></i>Reddit
+                    </a>
+                </div>
+            </div>
+
+            <!-- Legal -->
+            <div class="bg-gray-800 rounded-lg p-4 border border-green-500/30">
+                <h3 class="text-lg font-semibold text-green-500 mb-3">
+                    <i class="bi bi-file-earmark-text mr-2"></i>License
+                </h3>
+                <p class="text-gray-300 mb-2 text-sm">
+                    reconYa is released under the <strong class="text-white">Creative Commons Attribution-NonCommercial 4.0 International License</strong>. 
+                    Commercial use requires permission.
+                </p>
+                <p class="text-gray-500 text-xs">
+                    Built with <i class="bi bi-heart-fill text-red-500"></i> using Go, Tailwind CSS, and modern web technologies.
+                </p>
+            </div>
+        </div>
+    `;
+    
+    // Create and show modal
+    const modalEl = document.getElementById('aboutModal');
+    if (modalEl) {
+        const contentEl = document.getElementById('about-modal-content');
+        if (contentEl) {
+            contentEl.innerHTML = aboutContent;
+            showModal('aboutModal');
+        }
+    }
+}
+
+// Make function globally available
+window.loadAboutPage = loadAboutPage;

@@ -1,0 +1,373 @@
+// Device functionality
+function loadDevices(showSpinner = true) {
+    const devicesContainer = document.getElementById('devices-container');
+    if (!devicesContainer) return;
+    
+    if (showSpinner) {
+        devicesContainer.innerHTML = `
+            <div class="flex justify-center items-center h-25">
+                <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent">
+                    <span class="sr-only">Loading devices...</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    fetch('/api/devices')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Devices API response:', data);
+            renderDeviceGrid(data.devices || []);
+        })
+        .catch(error => {
+            console.error('Error loading devices:', error);
+            devicesContainer.innerHTML = '<div class="text-red-500 text-center py-4">Failed to load devices</div>';
+        });
+}
+
+function renderDeviceGrid(devices) {
+    const devicesContainer = document.getElementById('devices-container');
+    if (!devicesContainer) return;
+    
+    if (!devices || devices.length === 0) {
+        devicesContainer.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+                <i class="bi bi-router text-4xl mb-2 block"></i>
+                <p>No devices found</p>
+                <p class="text-sm text-gray-500">Start a network scan to discover devices</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let gridHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">';
+    
+    devices.forEach(device => {
+        // Count ports
+        let openPorts = 0;
+        let filteredPorts = 0;
+        if (device.ports && Array.isArray(device.ports)) {
+            device.ports.forEach(port => {
+                if (port.state === 'open') openPorts++;
+                else if (port.state === 'filtered') filteredPorts++;
+            });
+        }
+        
+        // Check if device is currently being port scanned
+        const isPortScanning = device.port_scan_started_at && !device.port_scan_ended_at;
+        
+        gridHTML += `
+            <div class="rounded-lg p-4 transition-colors cursor-pointer relative min-h-[150px] flex flex-col" 
+                 style="background: var(--bg-secondary);" 
+                 onmouseover="this.style.background='var(--bg-tertiary)'" 
+                 onmouseout="this.style.background='var(--bg-secondary)'" 
+                 onclick="loadDeviceModal('${device.id}')">
+                ${openPorts > 0 ? `<div class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" title="${openPorts} open ports"></div>` : ''}
+                ${filteredPorts > 0 ? `<div class="absolute top-2 right-${openPorts > 0 ? '5' : '2'} w-2 h-2 bg-yellow-500 rounded-full" title="${filteredPorts} filtered ports"></div>` : ''}
+                <div class="text-white font-semibold text-xl mb-2 break-all">${device.ipv4}</div>
+                ${device.mac ? `<div class="text-gray-600 text-xs mb-4">${device.mac}</div>` : '<div class="mb-4"></div>'}
+                <div class="flex-1 flex items-end justify-between">
+                    <div class="text-gray-500 text-sm truncate opacity-75">${(device.hostname || device.name) ? (device.hostname || device.name) : ''}</div>
+                    <div class="flex items-center gap-1">
+                        ${isPortScanning ? `<i class="bi bi-search text-blue-400 text-xs animate-pulse" title="Port scanning in progress"></i>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    gridHTML += '</div>';
+    devicesContainer.innerHTML = gridHTML;
+}
+
+function loadDeviceModal(deviceId) {
+    fetch(`/api/devices/${deviceId}/modal`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('loadDeviceModal data:', data);
+            const modalContent = document.getElementById('device-modal-content');
+            if (modalContent) {
+                modalContent.innerHTML = renderDeviceModal(data.device, data.screenshotsEnabled);
+                showModal('deviceModal');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading device modal:', error);
+        });
+}
+
+function renderDeviceModal(device, screenshotsEnabled = false) {
+    return `
+        <div class="p-6">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-600">
+                <div class="flex items-center">
+                    <div class="w-4 h-4 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
+                    <h3 class="text-xl font-bold text-green-500">${device.ipv4}</h3>
+                </div>
+                <button type="button" class="text-gray-400 hover:text-white text-xl" onclick="closeModal('deviceModal')">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Device Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h4 class="text-green-500 font-semibold mb-3">Device Info</h4>
+                    <div class="space-y-3 text-sm">
+                        <div><span class="text-gray-400">IP Address:</span> <span class="text-white">${device.ipv4}</span></div>
+                        ${device.mac ? `<div><span class="text-gray-400">MAC Address:</span> <span class="text-blue-400">${device.mac}</span></div>` : ''}
+                        ${device.hostname ? `<div><span class="text-gray-400">Hostname:</span> <span class="text-white">${device.hostname}</span></div>` : ''}
+                        <div><span class="text-gray-400">Status:</span> <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span></div>
+                        ${device.LastSeen ? `<div><span class="text-gray-400">Last Seen:</span> <span class="text-white">${formatLogTime(device.LastSeen)}</span></div>` : ''}
+                    </div>
+                </div>
+                
+                ${device.os ? `
+                    <div>
+                        <h4 class="text-green-500 font-semibold mb-2">Operating System</h4>
+                        <div class="space-y-2 text-sm">
+                            <div><span class="text-gray-400">OS:</span> <span class="text-white">${device.os.name || 'Unknown'}</span></div>
+                            ${device.os.version ? `<div><span class="text-gray-400">Version:</span> <span class="text-white">${device.os.version}</span></div>` : ''}
+                            ${device.os.cpe ? `<div><span class="text-gray-400">CPE:</span> <span class="text-gray-300 text-xs">${device.os.cpe}</span></div>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <!-- Editable Fields -->
+            <div class="mb-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Editable Name Field -->
+                    <div>
+                        <label class="text-green-500 font-semibold block mb-2">Device Name</label>
+                        <input type="text" 
+                               id="device-name-${device.id}" 
+                               value="${device.name || ''}" 
+                               placeholder="Enter device name"
+                               class="px-4 py-3 rounded w-full focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 transition-colors"
+                               style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                    </div>
+                </div>
+                
+                <!-- Editable Comment Field - Full Width -->
+                <div>
+                    <label class="text-green-500 font-semibold block mb-2">Comments & Notes</label>
+                    <textarea id="device-comment-${device.id}" 
+                              placeholder="Add comments, notes, or observations about this device..."
+                              rows="6"
+                              class="px-4 py-3 rounded w-full focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 resize-y transition-colors"
+                              style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">${device.comment || ''}</textarea>
+                </div>
+            </div>
+            
+            <!-- Ports -->
+            ${device.ports && device.ports.length > 0 ? `
+                <div class="mb-3">
+                    <h4 class="text-green-500 font-semibold mb-1 text-sm">Ports</h4>
+                    <div class="bg-gray-900 rounded p-2 max-h-32 overflow-y-auto">
+                        <div class="space-y-0.5">
+                            ${device.ports.filter(port => port.state === 'open' || port.state === 'filtered').map(port => `
+                                <div class="flex items-center justify-between text-xs py-0.5">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-green-400 font-medium">${port.number || port.Port}/${port.protocol || port.Protocol}</span>
+                                        <span class="text-gray-300">${port.service || port.Service || 'unknown'}</span>
+                                    </div>
+                                    <span class="text-xs font-bold uppercase ${port.state === 'open' ? 'text-red-500' : port.state === 'filtered' ? 'text-yellow-500' : 'text-gray-500'}">${port.state}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+            
+            <!-- Actions -->
+            <div class="flex justify-between pt-3" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="px-4 py-2 rounded transition-colors" style="color: var(--text-muted); border: 1px solid var(--border-color); background: none;" onclick="closeModal('deviceModal')">
+                    Close
+                </button>
+                <div class="flex gap-3">
+                    <button type="button" class="px-4 py-2" style="background: var(--bs-success); color: #fff; border-radius: 0.375rem;" onclick="saveDeviceChanges('${device.id}')">
+                        Save Changes
+                    </button>
+                    <button type="button" class="p-2" style="color: #f87171; border: 1px solid #f87171; border-radius: 0.375rem; background: none;" onmouseover="this.style.background='#f87171'; this.style.color='#fff';" onmouseout="this.style.background='none'; this.style.color='#f87171';" onclick="deleteDevice('${device.id}', '${device.ipv4}'); closeModal('deviceModal')" title="Delete Device">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getStatusBadgeColor(status) {
+    switch (status) {
+        case 'online': return 'bg-green-500 text-white';
+        case 'offline': return 'bg-red-500 text-white';
+        case 'idle': return 'bg-yellow-500 text-black';
+        default: return 'bg-gray-500 text-white';
+    }
+}
+
+function formatLogTime(dateString) {
+    if (!dateString) return 'Never';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    } catch (error) {
+        return 'Invalid date';
+    }
+}
+
+function saveDeviceChanges(deviceId) {
+    const nameInput = document.getElementById(`device-name-${deviceId}`);
+    const commentInput = document.getElementById(`device-comment-${deviceId}`);
+    
+    if (!nameInput || !commentInput) {
+        console.error('Device input fields not found');
+        return;
+    }
+    
+    const data = {
+        name: nameInput.value.trim(),
+        comment: commentInput.value.trim()
+    };
+    
+    fetch(`/api/devices/${deviceId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            // Show success feedback
+            const saveButton = document.querySelector(`[onclick="saveDeviceChanges('${deviceId}')"]`);
+            if (saveButton) {
+                const originalText = saveButton.textContent;
+                saveButton.textContent = 'Saved!';
+                saveButton.disabled = true;
+                setTimeout(() => {
+                    saveButton.textContent = originalText;
+                    saveButton.disabled = false;
+                }, 3000);
+            }
+        } else {
+            alert('Failed to save device changes: ' + (result.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error saving device changes:', error);
+        alert('Failed to save device changes');
+    });
+}
+
+function deleteDevice(deviceId, deviceIP) {
+    if (confirm(`Are you sure you want to delete device ${deviceIP}? This action cannot be undone.`)) {
+        fetch(`/api/devices/${deviceId}`, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                loadDevices(); // Reload the device list
+            } else {
+                alert('Failed to delete device');
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting device:', error);
+            alert('Failed to delete device');
+        });
+    }
+}
+
+function loadDeviceList() {
+    const targetEl = document.getElementById('device-list-container');
+    if (targetEl) {
+        targetEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading devices...</span></div>';
+        
+        fetch('/api/device-list')
+            .then(response => response.json())
+            .then(data => {
+                targetEl.innerHTML = renderDeviceTable(data.devices || []);
+            })
+            .catch(error => {
+                console.error('Error loading device list:', error);
+                targetEl.innerHTML = '<div class="text-red-400">Failed to load devices</div>';
+            });
+    }
+}
+
+function renderDeviceTable(devices) {
+    if (!devices || devices.length === 0) {
+        return '<div class="text-center text-gray-400 py-8">No devices found</div>';
+    }
+    
+    return `
+        <div class="rounded-lg overflow-hidden" style="background: var(--bg-secondary);">
+            <table class="w-full">
+                <thead style="background: var(--bg-primary);">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-green-500">IP Address</th>
+                        <th class="px-4 py-3 text-left text-green-500">Name</th>
+                        <th class="px-4 py-3 text-left text-green-500">Network Info</th>
+                        <th class="px-4 py-3 text-left text-green-500">Status</th>
+                        <th class="px-4 py-3 text-left text-green-500">Ports</th>
+                        <th class="px-4 py-3 text-left text-green-500">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${devices.map(device => `
+                        <tr class="cursor-pointer" style="transition: background 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='';" onclick="loadDeviceModal('${device.id}')">
+                            <td class="px-4 py-3">
+                                <div class="flex items-center">
+                                    <div class="w-3 h-3 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
+                                    <div class="text-white text-lg">${device.ipv4}</div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3">
+                                ${device.name || device.hostname ? `<div class="text-gray-300">${device.name || device.hostname}</div>` : '<span class="text-gray-500">-</span>'}
+                            </td>
+                            <td class="px-4 py-3">
+                                ${device.mac ? `<div class="text-blue-400 text-sm">${device.mac}</div>` : ''}
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                ${device.ports && device.ports.length > 0 ? 
+                                    `<div class="text-sm text-gray-400">${device.ports.filter(p => p.state === 'open').length} open</div>` 
+                                    : '<span class="text-gray-500">-</span>'
+                                }
+                            </td>
+                            <td class="px-4 py-3">
+                                <button class="px-2 py-1 text-red-400 rounded text-sm hover:bg-red-400 hover:text-white transition-colors" 
+                                        onclick="event.stopPropagation(); deleteDevice('${device.id}', '${device.ipv4}')"
+                                        title="Delete">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Make functions available globally
+window.loadDevices = loadDevices;
+window.loadDeviceList = loadDeviceList;
+window.renderDeviceGrid = renderDeviceGrid;
+window.renderDeviceTable = renderDeviceTable;
+window.loadDeviceModal = loadDeviceModal;
+window.renderDeviceModal = renderDeviceModal;
+window.getStatusBadgeColor = getStatusBadgeColor;
+window.formatLogTime = formatLogTime;
+window.saveDeviceChanges = saveDeviceChanges;
+window.deleteDevice = deleteDevice;
