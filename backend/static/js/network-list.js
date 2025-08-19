@@ -116,19 +116,24 @@ function editNetwork(networkId) {
 }
 
 function deleteNetwork(networkId) {
-    fetch(`/api/network-delete-modal/${networkId}`)
-        .then(response => response.text())
-        .then(html => {
-            const modalContent = document.getElementById('network-delete-modal-content');
-            if (modalContent) {
-                modalContent.innerHTML = html;
-                showModal('networkDeleteModal');
+    if (confirm('Are you sure you want to delete this network? This action cannot be undone.')) {
+        fetch(`/api/networks/${networkId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (response.ok) {
+                loadNetworkList(); // Refresh the networks list
+                alert('Network deleted successfully');
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         })
         .catch(error => {
-            console.error('Failed to load delete modal:', error);
-            alert('Failed to load delete confirmation');
+            console.error('Failed to delete network:', error);
+            alert('Failed to delete network: ' + error.message);
         });
+    }
 }
 
 function selectNetwork(networkId) {

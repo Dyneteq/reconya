@@ -6,12 +6,12 @@ function initSidebar() {
     const mainContent = document.getElementById('main-content');
     const navItems = document.querySelectorAll('.nav-item');
         
-    // Start with sidebar collapsed
+    // Start with sidebar expanded
     if (sidebar) {
-        sidebar.classList.add('collapsed');
+        sidebar.classList.remove('collapsed');
     }
     if (mainContent) {
-        mainContent.style.marginLeft = '0';
+        mainContent.style.marginLeft = '16rem'; // 256px
     }
     
     // Single sidebar toggle functionality
@@ -44,11 +44,7 @@ function initSidebar() {
                 // Add active class to clicked item
                 this.classList.add('active');
                 
-                // Close sidebar only on mobile after navigation (keep open on desktop)
-                if (window.innerWidth <= 1024) {
-                    sidebar.classList.add('collapsed');
-                    mainContent.style.marginLeft = '0';
-                }
+                // Keep sidebar open after navigation
                 
                 // Navigate to page
                 setTimeout(() => {
@@ -70,17 +66,10 @@ function initSidebar() {
         activeItem.classList.add('active');
     }
     
-    // Mobile responsive behavior
+    // Mobile responsive behavior - disabled auto-collapse
     function handleResize() {
-        if (window.innerWidth <= 1024) {
-            // Mobile view - collapse sidebar for overlay behavior
-            if (!sidebar.classList.contains('collapsed')) {
-                sidebar.classList.add('collapsed');
-            }
-            mainContent.style.marginLeft = '0';
-        } else {
-            // Desktop view - sidebar behavior is unchanged
-        }
+        // Sidebar stays in its current state regardless of screen size
+        // Manual toggle still works via the toggle button
     }
     
     // Listen for window resize

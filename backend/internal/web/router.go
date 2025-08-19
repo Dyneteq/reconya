@@ -25,7 +25,7 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	r.HandleFunc("/login", h.Login).Methods("GET", "POST")
 	r.HandleFunc("/logout", h.Logout).Methods("POST")
 
-	// HTMX API endpoints
+	// API endpoints
 	api := r.PathPrefix("/api").Subrouter()
 	api.HandleFunc("/devices", h.APIDevices).Methods("GET")
 	api.HandleFunc("/devices/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/modal", h.APIDeviceModal).Methods("GET")
@@ -61,7 +61,7 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/scan/control", h.APIScanControl).Methods("GET")
 	api.HandleFunc("/scan/select-network", h.APIScanSelectNetwork).Methods("POST")
 	api.HandleFunc("/about", h.APIAbout).Methods("GET")
-	
+
 	// Settings endpoints
 	api.HandleFunc("/settings", h.APISettings).Methods("GET")
 	api.HandleFunc("/settings/screenshots", h.APISettingsScreenshots).Methods("POST")
@@ -80,7 +80,6 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 
 	return r
 }
-
 
 func (h *WebHandler) APIRescanDevice(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

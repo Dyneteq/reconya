@@ -64,3 +64,8 @@ function confirmNetworkDelete(networkId) {
             alert('Failed to load delete confirmation. Please try again.');
         });
 }
+
+// Make functions available globally
+window.showModal = showModal;
+window.closeModal = closeModal;
+window.confirmNetworkDelete = confirmNetworkDelete;

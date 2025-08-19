@@ -195,5 +195,6 @@ function showAboutModal() {
     }
 }
 
-// Make function globally available
+// Make functions globally available
 window.loadAboutPage = loadAboutPage;
+window.showAboutModal = showAboutModal;

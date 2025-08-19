@@ -1,7 +1,11 @@
 // Device functionality
 function loadDevices(showSpinner = true) {
+    console.log('loadDevices called with showSpinner:', showSpinner);
     const devicesContainer = document.getElementById('devices-container');
-    if (!devicesContainer) return;
+    if (!devicesContainer) {
+        console.log('devices-container not found');
+        return;
+    }
     
     if (showSpinner) {
         devicesContainer.innerHTML = `
@@ -13,24 +17,18 @@ function loadDevices(showSpinner = true) {
         `;
     }
     
+    console.log('Making fetch request to /api/devices');
     fetch('/api/devices', { credentials: 'include' })
         .then(response => {
-            if (response.status === 400) {
-                // No network selected
-                return response.text().then(text => {
-                    if (text.includes('network') || text.includes('select')) {
-                        showNoNetworkSelected();
-                        return null;
-                    }
-                    throw new Error(text);
-                });
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             return response.json();
         })
         .then(data => {
-            if (data !== null) {
-                renderDeviceGrid(data.devices || []);
-            }
+            console.log('Devices data received:', data);
+            renderDeviceGrid(data.devices || []);
         })
         .catch(error => {
             console.error('Error loading devices:', error);
@@ -53,10 +51,16 @@ function showNoNetworkSelected() {
 }
 
 function renderDeviceGrid(devices) {
+    console.log('renderDeviceGrid called with devices:', devices);
     const devicesContainer = document.getElementById('devices-container');
-    if (!devicesContainer) return;
+    if (!devicesContainer) {
+        console.log('devices-container not found in renderDeviceGrid');
+        return;
+    }
     
+    console.log('Devices length:', devices ? devices.length : 'null/undefined');
     if (!devices || devices.length === 0) {
+        console.log('No devices found, showing empty message');
         devicesContainer.innerHTML = `
             <div class="text-center py-8 text-gray-400">
                 <i class="ti ti-router text-4xl mb-2 block"></i>
@@ -66,6 +70,8 @@ function renderDeviceGrid(devices) {
         `;
         return;
     }
+    
+    console.log('Rendering', devices.length, 'devices');
     
     let gridHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">';
     
