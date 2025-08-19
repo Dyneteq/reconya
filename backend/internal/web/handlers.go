@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -415,25 +414,41 @@ func NewWebHandler(
 }
 
 // Page Handlers
+// ServePage serves the main application page with the specified page context
+func (h *WebHandler) ServePage(pageName string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, _ := h.sessionStore.Get(r, "reconya-session")
+		user := h.getUserFromSession(session)
+		if user == nil {
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Redirect", "/login")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+
+		// Map root path to dashboard
+		if pageName == "" {
+			pageName = "dashboard"
+		}
+
+		data := PageData{
+			Page: pageName,
+			User: user,
+		}
+
+		if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
+			log.Printf("%s template execution error: %v", pageName, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+// Legacy handlers for backward compatibility
 func (h *WebHandler) Index(w http.ResponseWriter, r *http.Request) {
-	// Check if user is authenticated before showing the main page
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := PageData{
-		Page: "dashboard", // This is the page name for the layout
-		User: user,
-	}
-
-	log.Printf("Index: Attempting to execute index.html template")
-	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
-		log.Printf("Index: Template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	h.ServePage("dashboard")(w, r)
 }
 
 func (h *WebHandler) Home(w http.ResponseWriter, r *http.Request) {
@@ -575,123 +590,23 @@ func (h *WebHandler) About(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebHandler) Devices(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/login")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := PageData{
-		Page: "devices",
-		User: user,
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
-		log.Printf("Devices template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	h.ServePage("devices")(w, r)
 }
 
 func (h *WebHandler) Networks(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/login")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := PageData{
-		Page: "networks",
-		User: user,
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
-		log.Printf("Networks template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	h.ServePage("networks")(w, r)
 }
 
 func (h *WebHandler) Logs(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/login")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := PageData{
-		Page: "logs",
-		User: user,
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
-		log.Printf("Logs template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	h.ServePage("logs")(w, r)
 }
 
 func (h *WebHandler) Alerts(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/login")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := PageData{
-		Page: "alerts",
-		User: user,
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
-		log.Printf("Alerts template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	h.ServePage("alerts")(w, r)
 }
 
 func (h *WebHandler) Settings(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/login")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := PageData{
-		Page: "settings",
-		User: user,
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
-		log.Printf("Settings template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	h.ServePage("settings")(w, r)
 }
 
 func (h *WebHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -1113,12 +1028,13 @@ func (h *WebHandler) APIEventLogsTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		EventLogs []*models.EventLog
+		EventLogs []*models.EventLog `json:"eventLogs"`
 	}{
 		EventLogs: eventLogs,
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/event-logs-table.html", data); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1331,16 +1247,17 @@ func (h *WebHandler) APITargets(w http.ResponseWriter, r *http.Request) {
 
 	viewMode := r.URL.Query().Get("view")
 	data := struct {
-		Devices            []*models.Device
-		ViewMode           string
-		ScreenshotsEnabled bool
+		Devices            []*models.Device `json:"devices"`
+		ViewMode           string           `json:"viewMode"`
+		ScreenshotsEnabled bool             `json:"screenshotsEnabled"`
 	}{
 		Devices:            devices,
 		ViewMode:           viewMode,
 		ScreenshotsEnabled: screenshotsEnabled,
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/device-grid.html", data); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1353,12 +1270,13 @@ func (h *WebHandler) APITrafficCore(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Devices []*models.Device
+		Devices []*models.Device `json:"devices"`
 	}{
 		Devices: devices,
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/traffic-core.html", data); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -2248,304 +2166,6 @@ func (h *WebHandler) APIAbout(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// WorldMapData holds geolocation information for the world map component
-type WorldMapData struct {
-	PublicIP   string
-	Location   string
-	Latitude   string
-	Longitude  string
-	Country    string
-	City       string
-	Timezone   string
-	ISP        string
-	PinX       int // X coordinate for pin position on map (0-400)
-	PinY       int // Y coordinate for pin position on map (0-200)
-}
-
-// GeolocationResponse represents the response from ipapi.co
-type GeolocationResponse struct {
-	IP          string  `json:"ip"`
-	City        string  `json:"city"`
-	Region      string  `json:"region"`
-	Country     string  `json:"country_name"`
-	CountryCode string  `json:"country_code"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Timezone    string  `json:"timezone"`
-	ISP         string  `json:"org"`
-}
-
-// APIWorldMap handles the world map component data with caching
-func (h *WebHandler) APIWorldMap(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	ctx := context.Background()
-
-	// Get system status to access public IP
-	systemStatus, err := h.systemStatusService.GetLatest()
-	if err != nil {
-		log.Printf("Error getting system status for world map: %v", err)
-		// Provide fallback data
-		unknown := "Unknown"
-		systemStatus = &models.SystemStatus{
-			PublicIP: &unknown,
-		}
-	}
-
-	// Extract public IP string
-	publicIP := "Unknown"
-	if systemStatus.PublicIP != nil && *systemStatus.PublicIP != "" {
-		publicIP = *systemStatus.PublicIP
-	}
-
-	// Initialize with default values
-	worldMapData := &WorldMapData{
-		PublicIP:  publicIP,
-		Location:  "Unknown Location",
-		Latitude:  "0.0000",
-		Longitude: "0.0000",
-		Country:   "Unknown",
-		City:      "Unknown",
-		Timezone:  "UTC",
-		ISP:       "Unknown ISP",
-		PinX:      200, // Center of map
-		PinY:      100, // Center of map
-	}
-
-	// Get geolocation data if we have a valid public IP
-	if h.isValidPublicIP(publicIP) {
-		geoData := h.getCachedGeolocationData(ctx, publicIP)
-		if geoData != nil && h.geolocationRepository.IsValidCache(geoData) {
-			worldMapData = h.buildWorldMapDataFromCache(geoData)
-		} else {
-			log.Printf("Using fallback data for IP: %s (cache invalid or missing)", publicIP)
-		}
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "components/world-map.html", worldMapData); err != nil {
-		log.Printf("Template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// getGeolocationData fetches geolocation data with fallback mechanisms
-func (h *WebHandler) getGeolocationData(ip string) *GeolocationResponse {
-	// Try ipapi.co first
-	if geoData := h.tryIPApiCo(ip); geoData != nil {
-		return geoData
-	}
-
-	// Fallback to hardcoded data for common IPs
-	return h.getFallbackGeolocation(ip)
-}
-
-// tryIPApiCo attempts to get geolocation from ipapi.co
-func (h *WebHandler) tryIPApiCo(ip string) *GeolocationResponse {
-	client := &http.Client{
-		Timeout: 3 * time.Second,
-	}
-
-	url := fmt.Sprintf("https://ipapi.co/%s/json/", ip)
-	resp, err := client.Get(url)
-	if err != nil {
-		log.Printf("Error fetching from ipapi.co: %v", err)
-		return nil
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("ipapi.co returned status: %d", resp.StatusCode)
-		return nil
-	}
-
-	var geoResponse GeolocationResponse
-	if err := json.NewDecoder(resp.Body).Decode(&geoResponse); err != nil {
-		log.Printf("Error parsing ipapi.co response: %v", err)
-		return nil
-	}
-
-	// Check for error in response
-	if geoResponse.City == "" && geoResponse.Country == "" {
-		return nil
-	}
-
-	return &geoResponse
-}
-
-// isValidPublicIP checks if the IP is a valid public IP address
-func (h *WebHandler) isValidPublicIP(ip string) bool {
-	return ip != "Unknown" && ip != "" &&
-		!strings.HasPrefix(ip, "192.168.") &&
-		!strings.HasPrefix(ip, "10.") &&
-		!strings.HasPrefix(ip, "172.16.") &&
-		!strings.HasPrefix(ip, "127.") &&
-		!strings.HasPrefix(ip, "169.254.")
-}
-
-// getCachedGeolocationData retrieves geolocation data with caching logic
-func (h *WebHandler) getCachedGeolocationData(ctx context.Context, ip string) *models.GeolocationCache {
-	// First try to get from cache
-	cachedData, err := h.geolocationRepository.FindByIP(ctx, ip)
-	if err == nil && h.geolocationRepository.IsValidCache(cachedData) {
-		log.Printf("Using cached geolocation data for IP: %s", ip)
-		return cachedData
-	}
-
-	// Cache miss or invalid data - fetch fresh data
-	log.Printf("Cache miss or invalid for IP: %s, fetching fresh data", ip)
-	geoResponse := h.getGeolocationData(ip)
-	if geoResponse == nil {
-		log.Printf("Failed to fetch geolocation data for IP: %s", ip)
-		return nil
-	}
-
-	// Convert response to cache model
-	cache := &models.GeolocationCache{
-		IP:          ip,
-		City:        geoResponse.City,
-		Region:      geoResponse.Region,
-		Country:     geoResponse.Country,
-		CountryCode: geoResponse.CountryCode,
-		Latitude:    geoResponse.Latitude,
-		Longitude:   geoResponse.Longitude,
-		Timezone:    geoResponse.Timezone,
-		ISP:         geoResponse.ISP,
-		Source:      "api",
-	}
-
-	// Determine source type based on data quality
-	if geoResponse.City == "" || geoResponse.Country == "" || geoResponse.CountryCode == "XX" {
-		cache.Source = "fallback"
-	}
-
-	// Save to cache
-	if err := h.geolocationRepository.Upsert(ctx, cache); err != nil {
-		log.Printf("Failed to cache geolocation data: %v", err)
-	} else {
-		log.Printf("Cached geolocation data for IP: %s", ip)
-	}
-
-	return cache
-}
-
-// buildWorldMapDataFromCache converts cached geolocation data to world map data
-func (h *WebHandler) buildWorldMapDataFromCache(cache *models.GeolocationCache) *WorldMapData {
-	// Convert lat/lon to map coordinates (400x200 SVG)
-	// Longitude: -180 to 180 -> 0 to 400
-	// Latitude: 90 to -90 -> 0 to 200 (inverted)
-	pinX := int((cache.Longitude + 180) * 400 / 360)
-	pinY := int((90 - cache.Latitude) * 200 / 180)
-
-	// Clamp values to stay within bounds
-	if pinX < 0 {
-		pinX = 0
-	}
-	if pinX > 400 {
-		pinX = 400
-	}
-	if pinY < 0 {
-		pinY = 0
-	}
-	if pinY > 200 {
-		pinY = 200
-	}
-
-	location := fmt.Sprintf("%s, %s", cache.City, cache.Country)
-	if cache.City == "" || cache.Country == "" {
-		location = "Unknown Location"
-	}
-
-	return &WorldMapData{
-		PublicIP:  cache.IP,
-		Location:  location,
-		Latitude:  fmt.Sprintf("%.4f", cache.Latitude),
-		Longitude: fmt.Sprintf("%.4f", cache.Longitude),
-		Country:   cache.CountryCode,
-		City:      cache.City,
-		Timezone:  cache.Timezone,
-		ISP:       cache.ISP,
-		PinX:      pinX,
-		PinY:      pinY,
-	}
-}
-
-// getFallbackGeolocation provides hardcoded geolocation for common IPs
-func (h *WebHandler) getFallbackGeolocation(ip string) *GeolocationResponse {
-	switch {
-	case strings.HasPrefix(ip, "8.8."):
-		// Google DNS
-		return &GeolocationResponse{
-			IP:          ip,
-			City:        "Mountain View",
-			Region:      "California",
-			Country:     "United States",
-			CountryCode: "US",
-			Latitude:    37.4419,
-			Longitude:   -122.1430,
-			Timezone:    "America/Los_Angeles",
-			ISP:         "Google LLC",
-		}
-	case strings.HasPrefix(ip, "1.1."):
-		// Cloudflare DNS
-		return &GeolocationResponse{
-			IP:          ip,
-			City:        "San Francisco",
-			Region:      "California",
-			Country:     "United States",
-			CountryCode: "US",
-			Latitude:    37.7749,
-			Longitude:   -122.4194,
-			Timezone:    "America/Los_Angeles",
-			ISP:         "Cloudflare Inc",
-		}
-	case strings.HasPrefix(ip, "208.67."):
-		// OpenDNS
-		return &GeolocationResponse{
-			IP:          ip,
-			City:        "San Francisco",
-			Region:      "California",
-			Country:     "United States",
-			CountryCode: "US",
-			Latitude:    37.7749,
-			Longitude:   -122.4194,
-			Timezone:    "America/Los_Angeles",
-			ISP:         "Cisco OpenDNS",
-		}
-	default:
-		// Try to guess based on IP range patterns
-		if strings.HasPrefix(ip, "5.") || strings.HasPrefix(ip, "31.") || strings.HasPrefix(ip, "46.") {
-			// European IP ranges
-			return &GeolocationResponse{
-				IP:          ip,
-				City:        "London",
-				Region:      "England",
-				Country:     "United Kingdom",
-				CountryCode: "GB",
-				Latitude:    51.5074,
-				Longitude:   -0.1278,
-				Timezone:    "Europe/London",
-				ISP:         "European ISP",
-			}
-		}
-		// Default location (center of map)
-		return &GeolocationResponse{
-			IP:          ip,
-			City:        "Unknown",
-			Region:      "Unknown",
-			Country:     "Unknown",
-			CountryCode: "XX",
-			Latitude:    0.0,
-			Longitude:   0.0,
-			Timezone:    "UTC",
-			ISP:         "Internet Service Provider",
-		}
-	}
-}
 
 // APISettings returns the settings page
 func (h *WebHandler) APISettings(w http.ResponseWriter, r *http.Request) {

@@ -3,13 +3,13 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-3 pb-2 border-b border-green-600">
         <div class="flex items-center">
-            <i class="bi bi-hdd-network text-primary mr-3 text-xl"></i>
+            <i class="ti ti-network text-primary mr-3 text-xl"></i>
             <span class="font-bold text-lg">
                 {{if .Network.ID}}Edit Network{{else}}Add New Network{{end}}
             </span>
         </div>
         <button type="button" class="text-gray-400 hover:text-white text-lg" onclick="closeModal('networkModal')" aria-label="Close">
-            <i class="bi bi-x"></i>
+            <i class="ti ti-x"></i>
         </button>
     </div>
 
@@ -18,7 +18,7 @@
         
         {{if .Error}}
         <div class="bg-red-600 bg-opacity-10 border border-red-500 rounded p-2 mb-3">
-            <i class="bi bi-exclamation-triangle mr-2 text-red-400"></i>
+            <i class="ti ti-alert-triangle mr-2 text-red-400"></i>
             <span class="text-red-400">{{.Error}}</span>
         </div>
         {{end}}
@@ -57,17 +57,17 @@
 
         {{if not .Network.ID}}
         <div class="bg-blue-600 bg-opacity-10 border border-blue-500 rounded p-2 mb-3">
-            <i class="bi bi-info-circle mr-2 text-blue-400"></i>
+            <i class="ti ti-info-circle mr-2 text-blue-400"></i>
             <span class="text-blue-400 text-sm">After adding, you can scan this network to discover devices.</span>
         </div>
         {{end}}
 
         <div class="flex justify-end gap-2 pt-2 border-t border-green-600">
             <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded text-sm transition-colors" onclick="closeModal('networkModal')">
-                <i class="bi bi-x-lg mr-1"></i>Cancel
+                <i class="ti ti-x mr-1"></i>Cancel
             </button>
             <button type="submit" class="bg-primary hover:bg-green-600 text-white px-3 py-2 rounded text-sm transition-colors">
-                <i class="bi bi-{{if .Network.ID}}pencil{{else}}plus-circle{{end}} mr-1"></i>
+                <i class="ti ti-{{if .Network.ID}}edit{{else}}plus{{end}} mr-1"></i>
                 {{if .Network.ID}}Update{{else}}Add{{end}}
             </button>
         </div>

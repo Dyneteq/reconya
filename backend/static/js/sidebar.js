@@ -1,18 +1,10 @@
 // Sidebar functionality
 function initSidebar() {
-    console.log('Initializing sidebar...');
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebarToggleIcon = sidebarToggle ? sidebarToggle.querySelector('i') : null;
     const mainContent = document.getElementById('main-content');
     const navItems = document.querySelectorAll('.nav-item');
-    
-    console.log('Sidebar elements found:', { 
-        sidebar: !!sidebar, 
-        sidebarToggle: !!sidebarToggle, 
-        mainContent: !!mainContent, 
-        navItemsCount: navItems.length 
-    });
         
     // Start with sidebar collapsed
     if (sidebar) {
@@ -24,23 +16,17 @@ function initSidebar() {
     
     // Single sidebar toggle functionality
     if (sidebarToggle) {
-        console.log('Adding sidebar toggle click handler');
         sidebarToggle.addEventListener('click', function(e) {
-            console.log('Sidebar toggle clicked!');
             e.stopPropagation(); // Prevent click from bubbling
             
             if (sidebar.classList.contains('collapsed')) {
-                console.log('Opening sidebar');
                 sidebar.classList.remove('collapsed');
                 if (mainContent) mainContent.style.marginLeft = '16rem'; // 256px
             } else {
-                console.log('Closing sidebar');
                 sidebar.classList.add('collapsed');
                 if (mainContent) mainContent.style.marginLeft = '0';
             }
         });
-    } else {
-        console.log('Sidebar toggle button not found!');
     }
     
     // Navigation functionality
@@ -72,8 +58,6 @@ function initSidebar() {
                         window.location.href = `/${page}`;
                     }
                 }, 100);
-            } else {
-                console.log('No data-page found on clicked item');
             }
         });
     });

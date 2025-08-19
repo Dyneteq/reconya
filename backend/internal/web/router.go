@@ -10,20 +10,20 @@ import (
 func (h *WebHandler) SetupRoutes() *mux.Router {
 	r := mux.NewRouter()
 
-	// Web pages
-	r.HandleFunc("/", h.Index).Methods("GET")
-	r.HandleFunc("/home", h.Home).Methods("GET")
+	// Web pages - consolidated page serving
+	r.HandleFunc("/", h.ServePage("dashboard")).Methods("GET")
+	r.HandleFunc("/home", h.Home).Methods("GET") // Home has complex logic, keep separate
+	r.HandleFunc("/devices", h.ServePage("devices")).Methods("GET")
+	r.HandleFunc("/networks", h.ServePage("networks")).Methods("GET")
+	r.HandleFunc("/logs", h.ServePage("logs")).Methods("GET")
+	r.HandleFunc("/alerts", h.ServePage("alerts")).Methods("GET")
+	r.HandleFunc("/settings", h.ServePage("settings")).Methods("GET")
+	r.HandleFunc("/about", h.ServePage("about")).Methods("GET")
+	r.HandleFunc("/targets", h.ServePage("targets")).Methods("GET")
+
+	// Authentication
 	r.HandleFunc("/login", h.Login).Methods("GET", "POST")
 	r.HandleFunc("/logout", h.Logout).Methods("POST")
-	r.HandleFunc("/targets", h.Targets).Methods("GET")
-
-	// Page routes - each serves with specific page context
-	r.HandleFunc("/devices", h.Devices).Methods("GET")
-	r.HandleFunc("/logs", h.Logs).Methods("GET")
-	r.HandleFunc("/networks", h.Networks).Methods("GET")
-	r.HandleFunc("/alerts", h.Alerts).Methods("GET")
-	r.HandleFunc("/settings", h.Settings).Methods("GET")
-	r.HandleFunc("/about", h.About).Methods("GET")
 
 	// HTMX API endpoints
 	api := r.PathPrefix("/api").Subrouter()
@@ -42,7 +42,6 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/network-map", h.APINetworkMap).Methods("GET")
 	api.HandleFunc("/traffic-core", h.APITrafficCore).Methods("GET")
 	api.HandleFunc("/device-list", h.APIDeviceList).Methods("GET")
-	api.HandleFunc("/world-map", h.APIWorldMap).Methods("GET")
 	api.HandleFunc("/devices/cleanup-names", h.APICleanupDeviceNames).Methods("POST")
 	api.HandleFunc("/devices/cleanup-network-broadcast", h.APICleanupNetworkBroadcastDevices).Methods("POST")
 	api.HandleFunc("/networks", h.APINetworks).Methods("GET")
@@ -82,23 +81,6 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	return r
 }
 
-func (h *WebHandler) Targets(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := PageData{
-		Page: "targets",
-		User: user,
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 func (h *WebHandler) APIRescanDevice(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -129,20 +111,22 @@ func (h *WebHandler) APINewScan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	modalHTML := `
-<div class="modal-header">
-    <h5 class="modal-title text-success">{{.Title}}</h5>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<div class="flex justify-between items-center mb-4 pb-3 border-b border-green-600">
+    <h5 class="text-xl font-bold text-green-500">{{.Title}}</h5>
+    <button type="button" class="text-gray-400 hover:text-white text-xl" onclick="closeModal()">
+        <i class="ti ti-x"></i>
+    </button>
 </div>
-<div class="modal-body">
-    <p>{{.Message}}</p>
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle me-2"></i>
-        This will perform a network scan on the selected IP address to detect any devices.
+<div class="mb-4">
+    <p class="text-gray-300 mb-4">{{.Message}}</p>
+    <div class="bg-blue-600 bg-opacity-10 border border-blue-500 rounded p-3">
+        <i class="ti ti-info-circle mr-2 text-blue-400"></i>
+        <span class="text-blue-400">This will perform a network scan on the selected IP address to detect any devices.</span>
     </div>
 </div>
-<div class="modal-footer">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-    <button type="button" class="btn btn-success" onclick="startScan()">{{.Action}}</button>
+<div class="flex justify-end gap-2 pt-3 border-t border-green-600">
+    <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded text-sm transition-colors" onclick="closeModal()">Cancel</button>
+    <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors" onclick="startScan()">{{.Action}}</button>
 </div>
 <script>
 function startScan() {

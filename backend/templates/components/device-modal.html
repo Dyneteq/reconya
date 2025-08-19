@@ -1,30 +1,33 @@
 {{define "components/device-modal.html"}}
-<div class="bg-zinc-800 border border-green-600 text-green-600 p-4 rounded" data-device-id="{{.ID}}" style="max-width: 500px; margin: 0 auto;">
+<div class="bg-gray-800 border border-green-500 text-green-500 p-6 rounded-lg" data-device-id="{{.ID}}" style="max-width: 800px; margin: 0 auto; width: 90vw;">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-3 pb-2 border-b border-green-600">
+    <div class="flex justify-between items-center mb-4 pb-3 border-b border-green-500">
         <div class="flex items-center">
             <div class="mr-3">
                 {{if .OS}}
-                    {{if contains .OS.Name "Windows"}}<i class="bi bi-windows text-blue-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Linux"}}<i class="bi bi-ubuntu text-orange-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "macOS"}}<i class="bi bi-apple text-gray-300 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Android"}}<i class="bi bi-android2 text-green-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "iOS"}}<i class="bi bi-phone text-gray-300 text-xl" title="{{.OS.Name}}"></i>{{else}}<i class="bi bi-device-hdd text-gray-400 text-xl" title="{{.OS.Name}}"></i>{{end}}
+                    {{if contains .OS.Name "Windows"}}<i class="ti ti-brand-windows text-blue-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Linux"}}<i class="ti ti-brand-ubuntu text-orange-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "macOS"}}<i class="ti ti-brand-apple text-gray-300 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "Android"}}<i class="ti ti-brand-android text-green-400 text-xl" title="{{.OS.Name}}"></i>{{else if contains .OS.Name "iOS"}}<i class="ti ti-device-mobile text-gray-300 text-xl" title="{{.OS.Name}}"></i>{{else}}<i class="ti ti-device-desktop text-gray-400 text-xl" title="{{.OS.Name}}"></i>{{end}}
                 {{else}}
-                    <i class="bi bi-router text-gray-400 text-xl" title="Unknown Device"></i>
+                    <i class="ti ti-router text-gray-400 text-xl" title="Unknown Device"></i>
                 {{end}}
             </div>
             <div>
-                <div class="font-bold text-xl text-primary">{{.IPv4}}</div>
-                <div class="text-gray-400 text-sm" id="name-display">{{or .Name (deref .Hostname) "Unnamed Device"}}</div>
-                <input type="text" id="name-edit" class="w-full px-2 py-1 bg-zinc-800 text-primary border border-green-600 rounded text-sm" 
+                <div class="font-bold text-xl text-white">{{.IPv4}}</div>
+                <div class="text-gray-300 text-sm" id="name-display">{{or .Name (deref .Hostname) "Unnamed Device"}}</div>
+                <input type="text" id="name-edit" class="w-full px-3 py-2 bg-gray-700 text-white border border-green-500 rounded text-sm" 
                        value="{{or .Name (deref .Hostname)}}" data-original="{{or .Name (deref .Hostname)}}" placeholder="Device name" style="display: none;">
             </div>
         </div>
         <div class="flex items-center gap-2">
             <div id="edit-buttons">
-                <button type="button" class="border border-primary text-primary hover:bg-primary hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="toggleEditMode()" title="Edit device">
-                    <i class="bi bi-pencil"></i>
+                <button type="button" class="border border-green-500 text-green-500 hover:bg-green-500 hover:text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="toggleEditMode()" title="Edit device">
+                    <i class="ti ti-edit"></i>
                 </button>
             </div>
-            <button type="button" class="text-gray-400 hover:text-white text-lg" onclick="closeModal('deviceModal')" aria-label="Close">
-                <i class="bi bi-x"></i>
+            <button type="button" class="text-red-500 hover:text-red-400 px-2 py-1 rounded" onclick="deleteDevice('{{.ID}}', '{{.IPv4}}')" title="Delete device">
+                <i class="ti ti-trash"></i>
+            </button>
+            <button type="button" class="text-gray-400 hover:text-white text-xl" onclick="closeModal('deviceModal')" aria-label="Close">
+                <i class="ti ti-x"></i>
             </button>
         </div>
     </div>
@@ -60,7 +63,7 @@
         {{if deref .MAC}}
         <div>
             <div class="text-gray-400 text-sm">MAC Address</div>
-            <div><code class="text-blue-400 text-xs bg-zinc-900 px-2 py-1 rounded">{{deref .MAC}}</code></div>
+            <div><code class="text-blue-400 text-xs bg-gray-900 px-2 py-1 rounded">{{deref .MAC}}</code></div>
         </div>
         {{end}}
         {{if deref .Vendor}}
@@ -85,12 +88,12 @@
     {{if or (deref .Comment) (eq "true" "true")}}
     <div class="mb-3">
         <div class="text-gray-400 text-sm mb-2">Comments</div>
-        <div class="border border-green-600 rounded p-2">
+        <div class="border border-green-500 rounded p-3">
             <div id="comment-display-section" style="{{if not (deref .Comment)}}display: none;{{end}}">
-                <div class="text-primary text-sm whitespace-pre-wrap" id="comment-display">{{deref .Comment}}</div>
+                <div class="text-gray-200 text-sm whitespace-pre-wrap" id="comment-display">{{deref .Comment}}</div>
             </div>
             <div id="comment-edit-section" style="display: none;">
-                <textarea id="comment-edit" class="w-full px-2 py-1 bg-zinc-800 text-primary border border-green-600 rounded text-sm resize-y" 
+                <textarea id="comment-edit" class="w-full px-3 py-2 bg-gray-700 text-white border border-green-500 rounded text-sm resize-y" 
                           placeholder="Add a comment..." 
                           style="min-height: 60px;" 
                           data-original="{{deref .Comment}}"
@@ -98,7 +101,7 @@
             </div>
             <div id="comment-empty-section" style="{{if (deref .Comment)}}display: none;{{end}}">
                 <div class="text-gray-400 text-sm text-center py-2">
-                    <i class="bi bi-chat-text mr-1"></i>No comments yet
+                    <i class="ti ti-message mr-1"></i>No comments yet
                 </div>
             </div>
         </div>
@@ -118,7 +121,7 @@
                     {{$ipAddr := $.IPv4}}
                     {{if or (eq $portNum "80") (eq $portNum "8080") (eq $portNum "8000") (eq $portNum "443") (eq $portNum "8443")}}
                         <a href="{{if or (eq $portNum "443") (eq $portNum "8443")}}https{{else}}http{{end}}://{{$ipAddr}}:{{$portNum}}" target="_blank" rel="noopener noreferrer" class="text-white ml-1">
-                            <i class="bi bi-box-arrow-up-right text-xs"></i>
+                            <i class="ti ti-external-link text-xs"></i>
                         </a>
                     {{end}}
                 </span>
@@ -133,12 +136,12 @@
     <div class="mb-3">
         <div class="text-gray-400 text-sm mb-2">Web Services ({{len .WebServices}})</div>
         {{range .WebServices}}
-        <div class="border border-green-600 rounded p-2 mb-2">
+        <div class="border border-green-500 rounded p-3 mb-2">
             <div class="flex items-center justify-between">
                 <div>
-                    <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" class="text-primary no-underline text-sm">
-                        {{if eq .Protocol "https"}}<i class="bi bi-lock mr-1"></i>{{else}}<i class="bi bi-globe mr-1"></i>{{end}}
-                        {{.URL}} <i class="bi bi-box-arrow-up-right ml-1 text-xs"></i>
+                    <a href="{{.URL}}" target="_blank" rel="noopener noreferrer" class="text-green-400 no-underline text-sm hover:text-green-300">
+                        {{if eq .Protocol "https"}}<i class="ti ti-lock mr-1"></i>{{else}}<i class="ti ti-world mr-1"></i>{{end}}
+                        {{.URL}} <i class="ti ti-external-link ml-1 text-xs"></i>
                     </a>
                     <div class="text-gray-400 text-xs">{{or .Title "No title"}}</div>
                 </div>
@@ -191,11 +194,11 @@ function toggleEditMode() {
         }, 10);
         
         editButtons.innerHTML = `
-            <button type="button" class="bg-primary hover:bg-green-600 text-white px-2 py-1 rounded text-sm transition-colors" onclick="saveChanges()" title="Save changes">
-                <i class="bi bi-check"></i>
+            <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="saveChanges()" title="Save changes">
+                <i class="ti ti-check"></i>
             </button>
-            <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="cancelEdit()" title="Cancel editing">
-                <i class="bi bi-x"></i>
+            <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="cancelEdit()" title="Cancel editing">
+                <i class="ti ti-x"></i>
             </button>
         `;
     } else {
@@ -210,8 +213,8 @@ function toggleEditMode() {
         commentEmptySection.style.display = hasComment ? 'none' : 'block';
         
         editButtons.innerHTML = `
-            <button type="button" class="border border-primary text-primary hover:bg-primary hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="toggleEditMode()" title="Edit device">
-                <i class="bi bi-pencil"></i>
+            <button type="button" class="border border-green-500 text-green-500 hover:bg-green-500 hover:text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="toggleEditMode()" title="Edit device">
+                <i class="ti ti-edit"></i>
             </button>
         `;
     }
@@ -264,7 +267,7 @@ function saveChanges() {
     
     // Show saving indicator
     editButtons.innerHTML = `
-        <button type="button" class="bg-primary text-white px-2 py-1 rounded text-sm opacity-50 cursor-not-allowed" disabled>
+        <button type="button" class="bg-green-600 text-white px-3 py-1.5 rounded text-sm opacity-50 cursor-not-allowed" disabled>
             <span class="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent inline-block mr-1"></span>
             Saving...
         </button>
@@ -328,14 +331,14 @@ function saveChanges() {
         const toastId = 'deviceSavedToast_' + Date.now();
         const toastHtml = `
             <div class="fixed top-4 right-4 z-50">
-                <div id="${toastId}" class="bg-zinc-800 border border-green-600 rounded p-4 shadow-lg">
+                <div id="${toastId}" class="bg-gray-800 border border-green-500 rounded p-4 shadow-lg">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center">
-                            <i class="bi bi-check-circle-fill text-primary mr-2"></i>
-                            <strong class="text-primary">Success</strong>
+                            <i class="ti ti-circle-check-filled text-green-500 mr-2"></i>
+                            <strong class="text-green-500">Success</strong>
                         </div>
                         <button type="button" class="text-gray-400 hover:text-white" onclick="document.getElementById('${toastId}').remove()">
-                            <i class="bi bi-x"></i>
+                            <i class="ti ti-x"></i>
                         </button>
                     </div>
                     <div class="text-gray-200 text-sm">
@@ -365,11 +368,11 @@ function saveChanges() {
         
         // Reset edit buttons
         editButtons.innerHTML = `
-            <button type="button" class="bg-primary hover:bg-green-600 text-white px-2 py-1 rounded text-sm transition-colors" onclick="saveChanges()" title="Save changes">
-                <i class="bi bi-check"></i>
+            <button type="button" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="saveChanges()" title="Save changes">
+                <i class="ti ti-check"></i>
             </button>
-            <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-2 py-1 rounded text-sm transition-colors" onclick="cancelEdit()" title="Cancel editing">
-                <i class="bi bi-x"></i>
+            <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="cancelEdit()" title="Cancel editing">
+                <i class="ti ti-x"></i>
             </button>
         `;
         
@@ -396,12 +399,12 @@ function openScreenshotModal(url, screenshot) {
     
     modal.innerHTML = `
         <div class="flex justify-center items-center w-full">
-            <div class="bg-black border border-green-600 rounded max-w-6xl w-full mx-4">
-                <div class="border-b border-green-600 p-4">
+            <div class="bg-gray-900 border border-green-500 rounded max-w-6xl w-full mx-4">
+                <div class="border-b border-green-500 p-4">
                     <div class="flex justify-between items-center">
-                        <h5 class="text-primary font-bold">Screenshot - ${url}</h5>
+                        <h5 class="text-green-500 font-bold">Screenshot - ${url}</h5>
                         <button type="button" class="text-gray-400 hover:text-white text-lg" onclick="closeScreenshotModal(this)">
-                            <i class="bi bi-x"></i>
+                            <i class="ti ti-x"></i>
                         </button>
                     </div>
                 </div>
@@ -409,10 +412,10 @@ function openScreenshotModal(url, screenshot) {
                     <img src="data:image/png;base64,${screenshot}" alt="Screenshot of ${url}" 
                          class="max-w-full max-h-80vh object-contain">
                 </div>
-                <div class="border-t border-green-600 p-4 flex justify-end gap-2">
+                <div class="border-t border-green-500 p-4 flex justify-end gap-2">
                     <button type="button" class="border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded text-sm" onclick="closeScreenshotModal(this)">Close</button>
-                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="bg-primary hover:bg-green-600 text-white px-3 py-2 rounded text-sm">
-                        Open Website <i class="bi bi-box-arrow-up-right ml-1"></i>
+                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm">
+                        Open Website <i class="ti ti-external-link ml-1"></i>
                     </a>
                 </div>
             </div>

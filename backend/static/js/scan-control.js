@@ -4,7 +4,18 @@ function renderScanControlFromData(data) {
     const scanState = data.scanState || {};
     const isScanning = scanState.is_running && !scanState.is_stopping;
     const isStopping = scanState.is_stopping;
-    const selectedNetwork = scanState.selected_network;
+    let selectedNetwork = scanState.selected_network;
+    
+    // Auto-select the first detected network if none is selected and we have detected networks
+    if (!selectedNetwork && window.detectedNetworks && window.detectedNetworks.length > 0) {
+        const detectedCidr = window.detectedNetworks[0].cidr;
+        const matchingNetwork = networks.find(n => n.cidr === detectedCidr);
+        if (matchingNetwork) {
+            selectedNetwork = matchingNetwork.id;
+            // Automatically select this network on the server side
+            selectNetwork(matchingNetwork.id);
+        }
+    }
     
     // Find selected network info
     let selectedNetworkName = 'Target Network';

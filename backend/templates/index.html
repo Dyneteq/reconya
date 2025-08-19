@@ -15,13 +15,15 @@
     <script src="/static/js/devices.js"></script>
     <script src="/static/js/network-map.js"></script>
     <script src="/static/js/network-list.js"></script>
+    <script src="/static/js/network-suggestions.js"></script>
     <script src="/static/js/scan-control.js"></script>
     <script src="/static/js/settings.js"></script>
     <script src="/static/js/dashboard.js"></script>
     
     <!-- Main initialization (load last) -->
     <script src="/static/js/main.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Tabler Icons - lightweight SVG icons that work great with Tailwind -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/tabler-icons.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&display=swap" rel="stylesheet">
@@ -33,7 +35,7 @@
             <!-- Sidebar Header -->
             <div class="sidebar-header bg-gray-800 p-4 border-b border-gray-700 flex items-center justify-center">
                 <div class="brand flex items-center">
-                    <i class="bi bi-hdd-network text-green-500 text-xl mr-2"></i>
+                    <i class="ti ti-network text-green-500 text-xl mr-2"></i>
                     <span class="brand-text text-lg font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 2px;">reconYa</span>
                 </div>
             </div>
@@ -43,25 +45,25 @@
                 <ul class="space-y-1">
                     <li>
                         <a href="/" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="home">
-                            <i class="bi bi-house-door nav-icon text-lg mr-3"></i>
+                            <i class="ti ti-home nav-icon text-lg mr-3"></i>
                             <span class="nav-text">Dashboard</span>
                         </a>
                     </li>
                     <li>
                         <a href="/devices" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="devices">
-                            <i class="bi bi-router nav-icon text-lg mr-3"></i>
+                            <i class="ti ti-router nav-icon text-lg mr-3"></i>
                             <span class="nav-text">Devices</span>
                         </a>
                     </li>
                     <li>
                         <a href="/networks" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="networks">
-                            <i class="bi bi-globe nav-icon text-lg mr-3"></i>
+                            <i class="ti ti-world nav-icon text-lg mr-3"></i>
                             <span class="nav-text">Networks</span>
                         </a>
                     </li>
                     <li>
                         <a href="/settings" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="settings">
-                            <i class="bi bi-gear nav-icon text-lg mr-3"></i>
+                            <i class="ti ti-settings nav-icon text-lg mr-3"></i>
                             <span class="nav-text">Settings</span>
                         </a>
                     </li>
@@ -75,8 +77,10 @@
             <header class="bg-gray-800 p-4 border-b border-gray-700">
                 <div class="flex items-center justify-between w-full">
                     <!-- Sidebar Toggle Button -->
-                    <button id="sidebarToggle" class="p-2 text-gray-300 hover:text-white focus:outline-none bg-gray-700 rounded">
-                        <i class="bi bi-list text-xl"></i>
+                    <button id="sidebarToggle" class="p-2 text-gray-300 hover:text-white focus:outline-none bg-gray-700 rounded" title="Toggle Sidebar">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
                     </button>
                     
                     <!-- Theme Toggle and User Menu -->
@@ -102,7 +106,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
                             </button>
-                        <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded shadow-lg hidden" id="dropdownMenu">
+                            <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded shadow-lg hidden z-50" id="dropdownMenu">
                             <a href="#" class="block px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700" onclick="loadAboutPage(); return false;">
                                 <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -157,7 +161,7 @@
                                     <button type="button" 
                                             class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
                                             onclick="loadNetworkModal()">
-                                        <i class="bi bi-plus-circle mr-1"></i>Add Network
+                                        <i class="ti ti-plus mr-1"></i>Add Network
                                     </button>
                                 </div>
 
@@ -183,12 +187,12 @@
                                         <button type="button" 
                                                 class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" 
                                                 onclick="refreshAlerts()">
-                                            <i class="bi bi-arrow-clockwise mr-1"></i>Refresh
+                                            <i class="ti ti-refresh mr-1"></i>Refresh
                                         </button>
                                         <button type="button" 
                                                 class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm" 
                                                 onclick="markAllRead()">
-                                            <i class="bi bi-check-all mr-1"></i>Mark All Read
+                                            <i class="ti ti-checks mr-1"></i>Mark All Read
                                         </button>
                                     </div>
                                 </div>
@@ -197,7 +201,7 @@
                                 <div id="alerts-container">
                                     <!-- No alerts message -->
                                     <div class="bg-gray-800 rounded-lg p-8 text-center">
-                                        <i class="bi bi-check-circle-fill text-green-500 text-6xl mb-4"></i>
+                                        <i class="ti ti-circle-check-filled text-green-500 text-6xl mb-4"></i>
                                         <h4 class="text-green-500 text-xl font-bold mb-2">All Clear!</h4>
                                         <p class="text-gray-400">No alerts at this time. Your network is operating normally.</p>
                                     </div>
@@ -229,7 +233,7 @@
                         <div class="w-full lg:w-1/4">
                             <div class="bg-gray-800 rounded-lg p-4">
                                 <div class="flex items-center mb-3">
-                                    <i class="bi bi-info-circle text-green-500 mr-2"></i>
+                                    <i class="ti ti-info-circle text-green-500 mr-2"></i>
                                     <h6 class="text-green-500 font-bold">Settings Help</h6>
                                 </div>
                                 <div class="space-y-3 text-sm text-gray-300">
@@ -249,58 +253,88 @@
                 {{else}}
                     <!-- Dashboard Content (default) -->
                     <div class="space-y-6">
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <div class="bg-gray-800 p-6 rounded-lg text-center">
-                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                            </svg>
-                            <p class="text-gray-400 text-sm mb-1">Network Range</p>
-                            <p class="text-xl font-bold text-gray-200" id="network-range">Loading...</p>
-                        </div>
-                        
-                        <div class="bg-gray-800 p-6 rounded-lg text-center">
-                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-                            </svg>
-                            <p class="text-gray-400 text-sm mb-1">Devices Found</p>
-                            <p class="text-xl font-bold text-gray-200" id="devices-found">0</p>
-                        </div>
-                        
-                        <div class="bg-gray-800 p-6 rounded-lg text-center">
-                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                            </svg>
-                            <p class="text-gray-400 text-sm mb-1">Online</p>
-                            <p class="text-xl font-bold text-gray-200" id="devices-online">0</p>
-                        </div>
-                        
-                        <div class="bg-gray-800 p-6 rounded-lg text-center">
-                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                            </svg>
-                            <p class="text-gray-400 text-sm mb-1">Public IP</p>
-                            <p class="text-xl font-bold text-gray-200" id="public-ip">Loading...</p>
-                        </div>
-                        
-                        <div class="bg-gray-800 p-6 rounded-lg text-center relative">
-                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
-                            </svg>
-                            <p class="text-gray-400 text-sm mb-1">Saturation</p>
-                            <p class="text-xl font-bold text-gray-200" id="network-saturation">0%</p>
-                            <!-- Progress bar at bottom -->
-                            <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-900 bg-opacity-30">
-                                <div id="saturation-progress" class="h-full w-0 bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Main Layout -->
+                    
+                    <!-- Dashboard Layout: Left/Right Split -->
                     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <!-- Left Side: Main Content -->
+                        <!-- Left Side: Metrics + Network Map + Devices -->
                         <div class="lg:col-span-3 space-y-6">
+                            <!-- Metrics Grid -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                                <div class="bg-gray-800 p-6 rounded-lg text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                    </svg>
+                                    <p class="text-gray-400 text-sm mb-1">Network Range</p>
+                                    <p class="text-xl font-bold text-gray-200" id="network-range">Loading...</p>
+                                </div>
+                                
+                                <div class="bg-gray-800 p-6 rounded-lg text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                    </svg>
+                                    <p class="text-gray-400 text-sm mb-1">Devices Found</p>
+                                    <p class="text-xl font-bold text-gray-200" id="devices-found">0</p>
+                                </div>
+                                
+                                <div class="bg-gray-800 p-6 rounded-lg text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    <p class="text-gray-400 text-sm mb-1">Online</p>
+                                    <p class="text-xl font-bold text-gray-200" id="devices-online">0</p>
+                                </div>
+                                
+                                <div class="bg-gray-800 p-6 rounded-lg text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                    </svg>
+                                    <p class="text-gray-400 text-sm mb-1">Public IP</p>
+                                    <p class="text-xl font-bold text-gray-200" id="public-ip">Loading...</p>
+                                </div>
+                                
+                                <div class="bg-gray-800 p-6 rounded-lg text-center relative">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                                    </svg>
+                                    <p class="text-gray-400 text-sm mb-1">Saturation</p>
+                                    <p class="text-xl font-bold text-gray-200" id="network-saturation">0%</p>
+                                    <!-- Progress bar at bottom -->
+                                    <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-900 bg-opacity-30">
+                                        <div id="saturation-progress" class="h-full w-0 bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Network Suggestions -->
+                            <div id="network-suggestions" class="bg-blue-600 bg-opacity-10 border border-blue-500 rounded-lg p-4" style="display: none;">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center flex-1">
+                                        <svg class="w-6 h-6 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div class="flex-1">
+                                            <p class="text-blue-400 font-medium">Network Detection</p>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <p id="suggestion-text" class="text-gray-300 text-sm">Detecting networks...</p>
+                                                <div class="flex gap-2" id="network-action-buttons" style="display: none;">
+                                                    <button id="create-network-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors">
+                                                        Add Network
+                                                    </button>
+                                                    <button id="dismiss-suggestion-btn" class="border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 px-2 py-1 rounded text-xs transition-colors">
+                                                        Dismiss
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button id="close-suggestions-btn" class="text-gray-400 hover:text-white p-1 ml-3 flex-shrink-0" title="Close">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- Network Map -->
                             <div class="rounded-lg">
                                 <h2 class="text-base font-light mb-4 text-green-500">[ NETWORK MAP ]</h2>
@@ -326,18 +360,11 @@
                             <div class="rounded-lg">
                                 <h2 class="text-base font-light mb-4 text-green-500">[ NETWORK DEVICES ]</h2>
                                 <div id="devices-container" class="min-h-32">
-                                    <div class="flex items-center justify-center py-8" id="devices-loading">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading devices...</span>
-                                    </div>
-                                    <div id="devices-content" class="hidden"></div>
-                                    <div id="devices-empty" class="hidden flex items-center justify-center py-8 text-gray-400">
-                                        <div class="text-center">
-                                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-                                            </svg>
-                                            <p class="text-sm">No devices found</p>
-                                        </div>
+                                    <div class="text-center py-8 text-gray-400">
+                                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                        </svg>
+                                        <p class="text-sm">Select a network to view devices</p>
                                     </div>
                                 </div>
                             </div>
@@ -347,7 +374,6 @@
                         <div class="space-y-6">
                             <!-- Scan Control -->
                             <div class="bg-gray-800 rounded-lg p-6">
-                                <h3 class="text-base font-semibold mb-4 text-green-500">[ SCAN CONTROL ]</h3>
                                 <div id="scan-control-container">
                                     <div class="flex items-center justify-center py-4" id="scan-control-loading">
                                         <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
@@ -358,12 +384,14 @@
                             </div>
                             
                             <!-- Events -->
-                            <div class="bg-gray-800 rounded-lg p-6">
-                                <h3 class="text-base font-semibold mb-4 text-green-500">[ EVENTS ]</h3>
-                                <div id="activity-log" class="space-y-2 text-sm text-gray-400 max-h-64 overflow-y-auto">
-                                    <div class="flex items-center justify-center py-8">
-                                        <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading events...</span>
+                            <div class="rounded-lg">
+                                <h2 class="text-base font-light mb-4 text-green-500">[ ACTIVITY LOG ]</h2>
+                                <div class="bg-gray-800 rounded-lg p-6">
+                                    <div id="activity-log" class="space-y-2 text-sm text-gray-400 max-h-64 overflow-y-auto">
+                                        <div class="flex items-center justify-center py-8">
+                                            <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
+                                            <span class="ml-3 text-gray-400">Loading events...</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -465,9 +493,9 @@
         }
         
         .modal-content {
-            background: #1f2937;
+            background: var(--bg-secondary);
             border-radius: 0.5rem;
-            border: 1px solid #10b981;
+            border: 1px solid var(--border-accent);
             max-width: 90vw;
             max-height: 90vh;
             overflow-y: auto;
@@ -578,22 +606,7 @@
     </style>
     
     <script>   
-        // Dropdown functionality
-        const dropdownButton = document.getElementById('dropdownMenuButton');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        
-        if (dropdownButton && dropdownMenu) {
-            dropdownButton.addEventListener('click', function() {
-                dropdownMenu.classList.toggle('hidden');
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
-                    dropdownMenu.classList.add('hidden');
-                }
-            });
-        }
+        // Dropdown functionality is handled by main.js
         
         // About page function
         function loadAboutPage() {
@@ -677,12 +690,12 @@
                                             <div class="flex gap-2">
                                                 <button onclick="loadDeviceModal('${deviceId}')" 
                                                         class="text-green-500 hover:text-green-400 p-1">
-                                                    <i class="bi bi-eye"></i>
+                                                    <i class="ti ti-eye"></i>
                                                 </button>
                                                 ${status !== 'offline' ? `
                                                     <button onclick="deleteDevice('${deviceId}', '${ip}')" 
                                                             class="text-red-500 hover:text-red-400 p-1">
-                                                        <i class="bi bi-trash"></i>
+                                                        <i class="ti ti-trash"></i>
                                                     </button>
                                                 ` : ''}
                                             </div>
@@ -726,7 +739,7 @@
             if (!networks || networks.length === 0) {
                 return `
                     <div class="text-center py-8 text-gray-400">
-                        <i class="bi bi-network-wired text-4xl mb-3"></i>
+                        <i class="ti ti-network text-4xl mb-3"></i>
                         <p>No networks configured</p>
                     </div>
                 `;
@@ -754,7 +767,7 @@
                                     <tr class="hover:bg-gray-700 transition-colors">
                                         <td class="px-4 py-3">
                                             <div class="flex items-center">
-                                                <i class="bi bi-globe mr-2 text-green-500"></i>
+                                                <i class="ti ti-world mr-2 text-green-500"></i>
                                                 <span class="font-medium">${cidr}</span>
                                             </div>
                                         </td>
@@ -766,11 +779,11 @@
                                             <div class="flex gap-2">
                                                 <button onclick="editNetwork('${networkId}')" 
                                                         class="text-green-500 hover:text-green-400 p-1">
-                                                    <i class="bi bi-pencil"></i>
+                                                    <i class="ti ti-edit"></i>
                                                 </button>
                                                 <button onclick="deleteNetwork('${networkId}')" 
                                                         class="text-red-500 hover:text-red-400 p-1">
-                                                    <i class="bi bi-trash"></i>
+                                                    <i class="ti ti-trash"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -917,8 +930,8 @@
     <div id="deviceModal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-container">
-            <div class="modal-content max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div id="device-modal-content">
+            <div class="modal-content max-w-3xl max-h-[90vh] overflow-y-auto">
+                <div id="device-modal-content" class="max-w-3xl mx-auto">
                     <!-- Content will be loaded here -->
                 </div>
             </div>

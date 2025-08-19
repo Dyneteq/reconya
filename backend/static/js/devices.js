@@ -14,14 +14,42 @@ function loadDevices(showSpinner = true) {
     }
     
     fetch('/api/devices', { credentials: 'include' })
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 400) {
+                // No network selected
+                return response.text().then(text => {
+                    if (text.includes('network') || text.includes('select')) {
+                        showNoNetworkSelected();
+                        return null;
+                    }
+                    throw new Error(text);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
-            renderDeviceGrid(data.devices || []);
+            if (data !== null) {
+                renderDeviceGrid(data.devices || []);
+            }
         })
         .catch(error => {
             console.error('Error loading devices:', error);
             devicesContainer.innerHTML = '<div class="text-red-500 text-center py-4">Failed to load devices</div>';
         });
+}
+
+function showNoNetworkSelected() {
+    const devicesContainer = document.getElementById('devices-container');
+    if (!devicesContainer) return;
+    
+    devicesContainer.innerHTML = `
+        <div class="text-center py-8 text-gray-400">
+            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+            </svg>
+            <p class="text-sm">Select a network to view devices</p>
+        </div>
+    `;
 }
 
 function renderDeviceGrid(devices) {
@@ -31,7 +59,7 @@ function renderDeviceGrid(devices) {
     if (!devices || devices.length === 0) {
         devicesContainer.innerHTML = `
             <div class="text-center py-8 text-gray-400">
-                <i class="bi bi-router text-4xl mb-2 block"></i>
+                <i class="ti ti-router text-4xl mb-2 block"></i>
                 <p>No devices found</p>
                 <p class="text-sm text-gray-500">Start a network scan to discover devices</p>
             </div>
@@ -68,7 +96,7 @@ function renderDeviceGrid(devices) {
                 <div class="flex-1 flex items-end justify-between">
                     <div class="text-gray-500 text-sm truncate opacity-75">${(device.hostname || device.name) ? (device.hostname || device.name) : ''}</div>
                     <div class="flex items-center gap-1">
-                        ${isPortScanning ? `<i class="bi bi-search text-blue-400 text-xs animate-pulse" title="Port scanning in progress"></i>` : ''}
+                        ${isPortScanning ? `<i class="ti ti-search text-blue-400 text-xs animate-pulse" title="Port scanning in progress"></i>` : ''}
                     </div>
                 </div>
             </div>
@@ -98,12 +126,13 @@ function renderDeviceModal(device, screenshotsEnabled = false) {
     return `
         <div class="p-6">
             <!-- Header -->
-            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-600">
+            <div class="flex justify-between items-center mb-4 pb-3" style="border-bottom: 1px solid var(--border-color);">
                 <div class="flex items-center">
                     <div class="w-4 h-4 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
-                    <h3 class="text-xl font-bold text-green-500">${device.ipv4}</h3>
+                    <h3 class="text-xl font-bold" style="color: var(--text-primary);">${device.ipv4}</h3>
+                    ${device.name || device.hostname ? `<span class="text-lg ml-3" style="color: var(--text-secondary);">- ${device.name || device.hostname}</span>` : ''}
                 </div>
-                <button type="button" class="text-gray-400 hover:text-white text-xl" onclick="closeModal('deviceModal')">
+                <button type="button" class="text-xl transition-colors" style="color: var(--text-muted);" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'" onclick="closeModal('deviceModal')">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
@@ -115,11 +144,11 @@ function renderDeviceModal(device, screenshotsEnabled = false) {
                 <div>
                     <h4 class="text-green-500 font-semibold mb-3">Device Info</h4>
                     <div class="space-y-3 text-sm">
-                        <div><span class="text-gray-400">IP Address:</span> <span class="text-white">${device.ipv4}</span></div>
-                        ${device.mac ? `<div><span class="text-gray-400">MAC Address:</span> <span class="text-blue-400">${device.mac}</span></div>` : ''}
-                        ${device.hostname ? `<div><span class="text-gray-400">Hostname:</span> <span class="text-white">${device.hostname}</span></div>` : ''}
-                        <div><span class="text-gray-400">Status:</span> <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span></div>
-                        ${device.LastSeen ? `<div><span class="text-gray-400">Last Seen:</span> <span class="text-white">${formatLogTime(device.LastSeen)}</span></div>` : ''}
+                        <div><span style="color: var(--text-muted);">IP Address:</span> <span style="color: var(--text-primary);">${device.ipv4}</span></div>
+                        ${device.mac ? `<div><span style="color: var(--text-muted);">MAC Address:</span> <span class="text-blue-400">${device.mac}</span></div>` : ''}
+                        ${device.hostname ? `<div><span style="color: var(--text-muted);">Hostname:</span> <span style="color: var(--text-primary);">${device.hostname}</span></div>` : ''}
+                        <div><span style="color: var(--text-muted);">Status:</span> <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span></div>
+                        ${device.LastSeen ? `<div><span style="color: var(--text-muted);">Last Seen:</span> <span style="color: var(--text-primary);">${formatLogTime(device.LastSeen)}</span></div>` : ''}
                     </div>
                 </div>
                 
@@ -127,9 +156,9 @@ function renderDeviceModal(device, screenshotsEnabled = false) {
                     <div>
                         <h4 class="text-green-500 font-semibold mb-2">Operating System</h4>
                         <div class="space-y-2 text-sm">
-                            <div><span class="text-gray-400">OS:</span> <span class="text-white">${device.os.name || 'Unknown'}</span></div>
-                            ${device.os.version ? `<div><span class="text-gray-400">Version:</span> <span class="text-white">${device.os.version}</span></div>` : ''}
-                            ${device.os.cpe ? `<div><span class="text-gray-400">CPE:</span> <span class="text-gray-300 text-xs">${device.os.cpe}</span></div>` : ''}
+                            <div><span style="color: var(--text-muted);">OS:</span> <span style="color: var(--text-primary);">${device.os.name || 'Unknown'}</span></div>
+                            ${device.os.version ? `<div><span style="color: var(--text-muted);">Version:</span> <span style="color: var(--text-primary);">${device.os.version}</span></div>` : ''}
+                            ${device.os.cpe ? `<div><span style="color: var(--text-muted);">CPE:</span> <span class="text-xs" style="color: var(--text-secondary);">${device.os.cpe}</span></div>` : ''}
                         </div>
                     </div>
                 ` : ''}
@@ -163,15 +192,15 @@ function renderDeviceModal(device, screenshotsEnabled = false) {
             
             <!-- Ports -->
             ${device.ports && device.ports.length > 0 ? `
-                <div class="mb-3">
-                    <h4 class="text-green-500 font-semibold mb-1 text-sm">Ports</h4>
-                    <div class="bg-gray-900 rounded p-2 max-h-32 overflow-y-auto">
-                        <div class="space-y-0.5">
+                <div class="mb-6">
+                    <h4 class="text-green-500 font-semibold mb-3">Open Ports</h4>
+                    <div class="rounded p-3 max-h-32 overflow-y-auto" style="background: var(--bg-tertiary); border: 1px solid var(--border-color);">
+                        <div class="space-y-1">
                             ${device.ports.filter(port => port.state === 'open' || port.state === 'filtered').map(port => `
-                                <div class="flex items-center justify-between text-xs py-0.5">
+                                <div class="flex items-center justify-between text-xs py-1">
                                     <div class="flex items-center space-x-2">
                                         <span class="text-green-400 font-medium">${port.number || port.Port}/${port.protocol || port.Protocol}</span>
-                                        <span class="text-gray-300">${port.service || port.Service || 'unknown'}</span>
+                                        <span style="color: var(--text-secondary);">${port.service || port.Service || 'unknown'}</span>
                                     </div>
                                     <span class="text-xs font-bold uppercase ${port.state === 'open' ? 'text-red-500' : port.state === 'filtered' ? 'text-yellow-500' : 'text-gray-500'}">${port.state}</span>
                                 </div>
@@ -182,16 +211,16 @@ function renderDeviceModal(device, screenshotsEnabled = false) {
             ` : ''}
             
             <!-- Actions -->
-            <div class="flex justify-between pt-3" style="border-top: 1px solid var(--border-color);">
-                <button type="button" class="px-4 py-2 rounded transition-colors" style="color: var(--text-muted); border: 1px solid var(--border-color); background: none;" onclick="closeModal('deviceModal')">
+            <div class="flex justify-between items-center pt-4" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="px-4 py-2 rounded transition-colors" style="color: var(--text-muted); border: 1px solid var(--border-color); background: transparent;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'" onclick="closeModal('deviceModal')">
                     Close
                 </button>
                 <div class="flex gap-3">
-                    <button type="button" class="px-4 py-2" style="background: var(--bs-success); color: #fff; border-radius: 0.375rem;" onclick="saveDeviceChanges('${device.id}')">
+                    <button type="button" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors" onclick="saveDeviceChanges('${device.id}')">
                         Save Changes
                     </button>
-                    <button type="button" class="p-2" style="color: #f87171; border: 1px solid #f87171; border-radius: 0.375rem; background: none;" onmouseover="this.style.background='#f87171'; this.style.color='#fff';" onmouseout="this.style.background='none'; this.style.color='#f87171';" onclick="deleteDevice('${device.id}', '${device.ipv4}'); closeModal('deviceModal')" title="Delete Device">
-                        <i class="bi bi-trash"></i>
+                    <button type="button" class="px-3 py-2 rounded transition-colors" style="color: #ef4444; border: 1px solid #ef4444; background: transparent;" onmouseover="this.style.background='#ef4444'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#ef4444';" onclick="deleteDevice('${device.id}', '${device.ipv4}'); closeModal('deviceModal')" title="Delete Device">
+                        <i class="ti ti-trash"></i> Delete
                     </button>
                 </div>
             </div>

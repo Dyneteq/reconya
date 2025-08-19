@@ -191,7 +191,7 @@ IPV6_MULTICAST_MONITORING=false
 ## Architecture
 
 - **Backend**: Go API with HTMX templates and SQLite database (Port 3008)
-- **Web Interface**: HTMX templates with Bootstrap styling served directly from backend
+- **Web Interface**: HTML and vanilla JS
 - **Scanning**: Multi-strategy network discovery with nmap integration
 - **Database**: SQLite for device storage and event logging
 

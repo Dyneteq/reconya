@@ -1,144 +1,151 @@
-<div class="container-fluid py-4">
-    <h3 class="text-success mb-4">[ ABOUT RECONYA ]</h3>
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <!-- Header -->
-            <div class="text-center mb-5">
-                <h1 class="display-4 text-success mb-3">
-                    <i class="bi bi-hdd-network me-3"></i>reconYa
-                </h1>
-                <p class="lead text-muted">Network Reconnaissance and Asset Discovery Tool</p>
-                <div class="badge bg-success fs-6 px-3 py-2">
-                    Version {{.Version}}
-                </div>
+<div class="max-w-4xl mx-auto py-8 px-4">
+    <h3 class="text-green-500 mb-6 text-2xl font-bold">[ ABOUT RECONYA ]</h3>
+    
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-green-500 mb-4">
+                <i class="ti ti-network text-3xl mr-3"></i>reconYa
+            </h1>
+            <p class="text-lg text-gray-400 mb-4">Network Reconnaissance and Asset Discovery Tool</p>
+            <div class="inline-block bg-green-600 text-white px-4 py-2 rounded-full text-sm font-medium">
+                Version {{.Version}}
             </div>
+        </div>
 
-            <!-- Description -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h3 class="card-title text-success mb-3">
-                        <i class="bi bi-info-circle me-2"></i>About reconYa
-                    </h3>
-                    <p class="card-text">
-                        reconYa is a comprehensive network reconnaissance and asset discovery tool built with Go and HTMX. 
-                        It provides real-time network scanning, device identification, and monitoring capabilities for 
-                        network administrators, security professionals, and enthusiasts.
-                    </p>
-                    <p class="card-text">
-                        <strong>Key Features:</strong>
-                    </p>
-                    <ul class="list-unstyled">
-                        <li><i class="bi bi-check-circle text-success me-2"></i>Real-time network scanning with nmap integration</li>
-                        <li><i class="bi bi-check-circle text-success me-2"></i>Device identification and vendor detection</li>
-                        <li><i class="bi bi-check-circle text-success me-2"></i>Port scanning and service detection</li>
-                        <li><i class="bi bi-check-circle text-success me-2"></i>Web-based dashboard with live updates</li>
-                        <li><i class="bi bi-check-circle text-success me-2"></i>Event logging and monitoring</li>
-                    </ul>
-                </div>
-            </div>
+        <!-- Description -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
+            <h3 class="text-xl font-semibold text-green-500 mb-4 flex items-center">
+                <i class="ti ti-info-circle mr-2"></i>About reconYa
+            </h3>
+            <p class="text-gray-300 mb-4">
+                reconYa is a comprehensive network reconnaissance and asset discovery tool built with Go and modern web technologies. 
+                It provides real-time network scanning, device identification, and monitoring capabilities for 
+                network administrators, security professionals, and enthusiasts.
+            </p>
+            <p class="text-gray-300 mb-4">
+                <strong class="text-white">Key Features:</strong>
+            </p>
+            <ul class="space-y-2">
+                <li class="flex items-start text-gray-300">
+                    <i class="ti ti-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                    Real-time network scanning with nmap integration
+                </li>
+                <li class="flex items-start text-gray-300">
+                    <i class="ti ti-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                    Device identification and vendor detection
+                </li>
+                <li class="flex items-start text-gray-300">
+                    <i class="ti ti-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                    Port scanning and service detection
+                </li>
+                <li class="flex items-start text-gray-300">
+                    <i class="ti ti-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                    Web-based dashboard with live updates
+                </li>
+                <li class="flex items-start text-gray-300">
+                    <i class="ti ti-check text-green-500 mr-2 mt-1 flex-shrink-0"></i>
+                    Event logging and monitoring
+                </li>
+            </ul>
+        </div>
 
-            <!-- Support Links -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h3 class="card-title text-success mb-3">
-                        <i class="bi bi-heart me-2"></i>Support Development
-                    </h3>
-                    <p class="card-text">
-                        Help support the development of reconYa and enable new features:
-                    </p>
-                    <div class="d-flex flex-wrap gap-3">
-                        <a href="https://www.patreon.com/reconya" target="_blank" class="btn btn-outline-light">
-                            <i class="bi bi-currency-dollar me-2"></i>Patreon
-                        </a>
-                        <a href="https://github.com/sponsors/Dyneteq" target="_blank" class="btn btn-outline-light">
-                            <i class="bi bi-github me-2"></i>GitHub Sponsors
-                        </a>
-                        <a href="https://ko-fi.com/reconya" target="_blank" class="btn btn-outline-light">
-                            <i class="bi bi-cup-hot me-2"></i>Ko-fi
-                        </a>
-                    </div>
-                </div>
+        <!-- Support Links -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
+            <h3 class="text-xl font-semibold text-green-500 mb-4 flex items-center">
+                <i class="ti ti-heart mr-2"></i>Support Development
+            </h3>
+            <p class="text-gray-300 mb-4">
+                Help support the development of reconYa and enable new features:
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a href="https://www.patreon.com/reconya" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+                    <i class="ti ti-currency-dollar mr-2"></i>Patreon
+                </a>
+                <a href="https://github.com/sponsors/Dyneteq" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+                    <i class="ti ti-brand-github mr-2"></i>GitHub Sponsors
+                </a>
+                <a href="https://ko-fi.com/reconya" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+                    <i class="ti ti-coffee mr-2"></i>Ko-fi
+                </a>
             </div>
+        </div>
 
-            <!-- Community Links -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h3 class="card-title text-success mb-3">
-                        <i class="bi bi-people me-2"></i>Community
-                    </h3>
-                    <p class="card-text">
-                        Join the reconYa community for support, discussions, and updates:
-                    </p>
-                    <div class="d-flex flex-wrap gap-3">
-                        <a href="https://discord.gg/JW7VtBnNXp" target="_blank" class="btn btn-outline-primary">
-                            <i class="bi bi-discord me-2"></i>Discord Community
-                        </a>
-                        <a href="https://www.reddit.com/r/reconya/" target="_blank" class="btn btn-outline-warning">
-                            <i class="bi bi-reddit me-2"></i>Reddit
-                        </a>
-                        <a href="https://github.com/Dyneteq/reconya" target="_blank" class="btn btn-outline-light">
-                            <i class="bi bi-github me-2"></i>GitHub
-                        </a>
-                    </div>
-                </div>
+        <!-- Community Links -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
+            <h3 class="text-xl font-semibold text-green-500 mb-4 flex items-center">
+                <i class="ti ti-users mr-2"></i>Community
+            </h3>
+            <p class="text-gray-300 mb-4">
+                Join the reconYa community for support, discussions, and updates:
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a href="https://discord.gg/JW7VtBnNXp" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-400 hover:text-blue-300 hover:border-blue-500 rounded-lg transition-colors">
+                    <i class="ti ti-brand-discord mr-2"></i>Discord Community
+                </a>
+                <a href="https://www.reddit.com/r/reconya/" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 border border-orange-600 text-orange-400 hover:text-orange-300 hover:border-orange-500 rounded-lg transition-colors">
+                    <i class="ti ti-brand-reddit mr-2"></i>Reddit
+                </a>
+                <a href="https://github.com/Dyneteq/reconya" target="_blank" 
+                   class="inline-flex items-center px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors">
+                    <i class="ti ti-brand-github mr-2"></i>GitHub
+                </a>
             </div>
+        </div>
 
-            <!-- Other Projects -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h3 class="card-title text-success mb-3">
-                        <i class="bi bi-star me-2"></i>Other Projects
-                    </h3>
-                    <p class="card-text">
-                        Check out other projects by the reconYa team:
-                    </p>
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <div class="card border-success">
-                                <div class="card-body">
-                                    <h5 class="card-title text-success">tududi</h5>
-                                    <p class="card-text small">Self-hosted task management with hierarchical organization</p>
-                                    <a href="https://tududi.com" target="_blank" class="btn btn-sm btn-outline-success">Visit</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="card border-success">
-                                <div class="card-body">
-                                    <h5 class="card-title text-success">BreachHarbor</h5>
-                                    <p class="card-text small">Cybersecurity suite for digital asset protection</p>
-                                    <a href="https://breachharbor.com" target="_blank" class="btn btn-sm btn-outline-success">Visit</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="card border-success">
-                                <div class="card-body">
-                                    <h5 class="card-title text-success">Hevetra</h5>
-                                    <p class="card-text small">Digital tracking for child health milestones</p>
-                                    <a href="https://hevetra.com" target="_blank" class="btn btn-sm btn-outline-success">Visit</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Other Projects -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
+            <h3 class="text-xl font-semibold text-green-500 mb-4 flex items-center">
+                <i class="ti ti-star mr-2"></i>Other Projects
+            </h3>
+            <p class="text-gray-300 mb-6">
+                Check out other projects by the reconYa team:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gray-700 border border-green-600 rounded-lg p-4">
+                    <h5 class="text-lg font-semibold text-green-500 mb-2">tududi</h5>
+                    <p class="text-sm text-gray-400 mb-4">Self-hosted task management with hierarchical organization</p>
+                    <a href="https://tududi.com" target="_blank" 
+                       class="inline-flex items-center px-3 py-1.5 text-sm border border-green-600 text-green-400 hover:text-green-300 hover:border-green-500 rounded transition-colors">
+                        Visit
+                    </a>
+                </div>
+                <div class="bg-gray-700 border border-green-600 rounded-lg p-4">
+                    <h5 class="text-lg font-semibold text-green-500 mb-2">BreachHarbor</h5>
+                    <p class="text-sm text-gray-400 mb-4">Cybersecurity suite for digital asset protection</p>
+                    <a href="https://breachharbor.com" target="_blank" 
+                       class="inline-flex items-center px-3 py-1.5 text-sm border border-green-600 text-green-400 hover:text-green-300 hover:border-green-500 rounded transition-colors">
+                        Visit
+                    </a>
+                </div>
+                <div class="bg-gray-700 border border-green-600 rounded-lg p-4">
+                    <h5 class="text-lg font-semibold text-green-500 mb-2">Hevetra</h5>
+                    <p class="text-sm text-gray-400 mb-4">Digital tracking for child health milestones</p>
+                    <a href="https://hevetra.com" target="_blank" 
+                       class="inline-flex items-center px-3 py-1.5 text-sm border border-green-600 text-green-400 hover:text-green-300 hover:border-green-500 rounded transition-colors">
+                        Visit
+                    </a>
                 </div>
             </div>
+        </div>
 
-            <!-- Legal -->
-            <div class="card">
-                <div class="card-body">
-                    <h3 class="card-title text-success mb-3">
-                        <i class="bi bi-file-earmark-text me-2"></i>License
-                    </h3>
-                    <p class="card-text">
-                        reconYa is released under the <strong>Creative Commons Attribution-NonCommercial 4.0 International License</strong>. 
-                        Commercial use requires permission.
-                    </p>
-                    <p class="card-text small text-muted">
-                        Built with <i class="bi bi-heart-fill text-danger"></i> using Go, HTMX, and Bootstrap.
-                    </p>
-                </div>
-            </div>
+        <!-- Legal -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <h3 class="text-xl font-semibold text-green-500 mb-4 flex items-center">
+                <i class="ti ti-file-text mr-2"></i>License
+            </h3>
+            <p class="text-gray-300 mb-4">
+                reconYa is released under the <strong class="text-white">Creative Commons Attribution-NonCommercial 4.0 International License</strong>. 
+                Commercial use requires permission.
+            </p>
+            <p class="text-sm text-gray-500">
+                Built with <i class="ti ti-heart text-red-500"></i> using Go, Tailwind CSS, and modern web technologies.
+            </p>
         </div>
     </div>
 </div>

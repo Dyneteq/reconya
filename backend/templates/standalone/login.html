@@ -1,102 +1,64 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa - Login</title>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tabler Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons@latest/tabler-icons.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'body': ['Rajdhani', 'sans-serif'],
+                        'logo': ['Orbitron', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --bs-success: #198754;
-            --bs-success-rgb: 25, 135, 84;
-        }
-        
-        body {
-            font-family: 'Rajdhani', sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-            color: #e9ecef;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-        }
-        
-        .card {
-            background: rgba(33, 37, 41, 0.95);
-            border: 1px solid rgba(25, 135, 84, 0.3);
-            backdrop-filter: blur(10px);
-        }
-        
-        .btn-success {
-            background: linear-gradient(45deg, #198754, #20c997);
-            border: none;
-            box-shadow: 0 0 20px rgba(25, 135, 84, 0.3);
-        }
-        
-        .input-group-text {
-            border-color: #198754;
-            background-color: #198754;
-        }
-        
-        .form-control {
-            border-color: rgba(25, 135, 84, 0.3);
-        }
-        
-        .form-control:focus {
-            border-color: #198754;
-            box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-        }
-        
-        .loading-spinner {
-            border: 3px solid rgba(25, 135, 84, 0.3);
-            border-radius: 50%;
-            border-top: 3px solid #198754;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-        
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
-        
         .htmx-indicator {
             opacity: 0;
             transition: opacity 500ms ease-in;
         }
-        
         .htmx-request .htmx-indicator,
         .htmx-request.htmx-indicator {
             opacity: 1;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow-lg border-success">
-                    <div class="card-body p-4">
-                        <div class="text-center mb-4">
-                            <h2 class="card-title text-success">
-                                <div class="logo text-success bg-transparent d-inline-block px-3 py-2" style="font-family: 'Orbitron', monospace; font-weight: 800; font-size: 38px;">
-                                    <i class="bi bi-circle-nodes"></i> reconYa
+<body class="font-body bg-gradient-to-br from-black to-gray-900 text-gray-100 min-h-screen flex items-center">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-center">
+            <div class="w-full max-w-md">
+                <div class="bg-gray-800 bg-opacity-95 border border-green-600 border-opacity-30 rounded-lg shadow-2xl backdrop-blur-md">
+                    <div class="p-6">
+                        <div class="text-center mb-6">
+                            <h2 class="text-green-500">
+                                <div class="font-logo font-bold text-4xl inline-block px-3 py-2">
+                                    <i class="ti ti-network"></i> reconYa
                                 </div>
                             </h2>
-                            <p class="text-muted">Network Reconnaissance Tool</p>
+                            <p class="text-gray-400">Network Reconnaissance Tool</p>
                         </div>
                         
                         {{if .Error}}
-                        <div class="alert alert-danger" role="alert">
-                            <i class="bi bi-exclamation-triangle me-1"></i>
-                            {{.Error}}
+                        <div class="bg-red-600 bg-opacity-20 border border-red-500 rounded-lg p-3 mb-4" role="alert">
+                            <i class="ti ti-alert-triangle mr-2 text-red-400"></i>
+                            <span class="text-red-400">{{.Error}}</span>
                         </div>
                         {{end}}
                         
@@ -105,14 +67,14 @@
                               hx-indicator=".login-spinner"
                               hx-disabled-elt="button[type=submit]">
                             
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-person"></i>
-                                    </span>
+                            <div class="mb-4">
+                                <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="ti ti-user text-green-500"></i>
+                                    </div>
                                     <input type="text" 
-                                           class="form-control" 
+                                           class="w-full pl-10 pr-3 py-3 bg-gray-700 border border-green-600 border-opacity-30 text-gray-100 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none transition-colors" 
                                            id="username" 
                                            name="username" 
                                            required 
@@ -121,32 +83,32 @@
                                 </div>
                             </div>
                             
-                            <div class="mb-4">
-                                <label for="password" class="form-label">Password</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="bi bi-lock"></i>
-                                    </span>
+                            <div class="mb-6">
+                                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="ti ti-lock text-green-500"></i>
+                                    </div>
                                     <input type="password" 
-                                           class="form-control" 
+                                           class="w-full pl-10 pr-3 py-3 bg-gray-700 border border-green-600 border-opacity-30 text-gray-100 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none transition-colors" 
                                            id="password" 
                                            name="password" 
                                            required>
                                 </div>
                             </div>
                             
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-success btn-lg">
-                                    <span class="login-spinner htmx-indicator loading-spinner me-2"></span>
-                                    <i class="bi bi-box-arrow-in-right me-1"></i>
+                            <div class="w-full">
+                                <button type="submit" class="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white py-3 px-4 rounded-lg font-medium text-lg shadow-lg transition-all duration-200 hover:shadow-green-500/30">
+                                    <span class="login-spinner htmx-indicator inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" style="animation: spin 1s linear infinite;"></span>
+                                    <i class="ti ti-login mr-2"></i>
                                     Sign In
                                 </button>
                             </div>
                         </form>
                     </div>
                     
-                    <div class="card-footer bg-transparent border-success text-center">
-                        <small class="text-muted">
+                    <div class="border-t border-green-600 border-opacity-30 bg-transparent text-center p-4">
+                        <small class="text-gray-500">
                             Default credentials: admin / password
                         </small>
                     </div>
@@ -155,8 +117,6 @@
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     

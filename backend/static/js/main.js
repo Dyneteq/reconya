@@ -18,8 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize page-specific content based on current page
     initPageContent();
-    
-    console.log('Main application initialized');
 });
 
 // Page initialization
@@ -70,7 +68,6 @@ function initPageContent() {
             break;
         default:
             // Default initialization for other pages
-            console.log('Default page initialization for:', currentPath);
             break;
     }
 }
@@ -83,6 +80,7 @@ function initDropdownMenu() {
     if (dropdownButton && dropdownMenu) {
         // Toggle dropdown on button click
         dropdownButton.addEventListener('click', function(e) {
+            e.preventDefault();
             e.stopPropagation();
             dropdownMenu.classList.toggle('hidden');
         });
@@ -100,6 +98,11 @@ function initDropdownMenu() {
                 dropdownMenu.classList.add('hidden');
             }
         });
+        
+        // Test function for debugging
+        window.testDropdownToggle = function() {
+            dropdownMenu.classList.toggle('hidden');
+        };
     }
 }
 
@@ -117,7 +120,7 @@ function showAboutModal() {
             <!-- Header -->
             <div class="text-center mb-6">
                 <h1 class="text-3xl font-bold text-green-500 mb-3">
-                    <i class="bi bi-hdd-network mr-2"></i>reconYa
+                    <i class="ti ti-network mr-2"></i>reconYa
                 </h1>
                 <p class="text-lg text-gray-300 mb-3">Network Reconnaissance and Asset Discovery Tool</p>
                 <div class="inline-block bg-green-500 text-black px-3 py-1 rounded text-sm font-semibold">
@@ -128,7 +131,7 @@ function showAboutModal() {
             <!-- Description -->
             <div class="bg-gray-800 rounded-lg p-4 mb-4 border border-green-500/30">
                 <h3 class="text-lg font-semibold text-green-500 mb-3">
-                    <i class="bi bi-info-circle mr-2"></i>About reconYa
+                    <i class="ti ti-info-circle mr-2"></i>About reconYa
                 </h3>
                 <p class="text-gray-300 mb-3 text-sm">
                     reconYa is a comprehensive network reconnaissance and asset discovery tool built with Go and modern web technologies. 
@@ -139,28 +142,28 @@ function showAboutModal() {
                     <strong class="text-white">Key Features:</strong>
                 </p>
                 <ul class="space-y-1 text-sm">
-                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Real-time network scanning with nmap integration</li>
-                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Device identification and vendor detection</li>
-                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Port scanning and service detection</li>
-                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Web-based dashboard with live updates</li>
-                    <li class="flex items-center text-gray-300"><i class="bi bi-check-circle text-green-500 mr-2"></i>Event logging and monitoring</li>
+                    <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Real-time network scanning with nmap integration</li>
+                    <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Device identification and vendor detection</li>
+                    <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Port scanning and service detection</li>
+                    <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Web-based dashboard with live updates</li>
+                    <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Event logging and monitoring</li>
                 </ul>
             </div>
 
             <!-- Community Links -->
             <div class="bg-gray-800 rounded-lg p-4 mb-4 border border-green-500/30">
                 <h3 class="text-lg font-semibold text-green-500 mb-3">
-                    <i class="bi bi-people mr-2"></i>Community & Support
+                    <i class="ti ti-users mr-2"></i>Community & Support
                 </h3>
                 <div class="flex flex-wrap gap-2 text-sm">
                     <a href="https://discord.gg/JW7VtBnNXp" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors">
-                        <i class="bi bi-discord mr-1"></i>Discord
+                        <i class="ti ti-brand-discord mr-1"></i>Discord
                     </a>
                     <a href="https://github.com/Dyneteq/reconya" target="_blank" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded border border-gray-600 transition-colors">
-                        <i class="bi bi-github mr-1"></i>GitHub
+                        <i class="ti ti-brand-github mr-1"></i>GitHub
                     </a>
                     <a href="https://www.reddit.com/r/reconya/" target="_blank" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded transition-colors">
-                        <i class="bi bi-reddit mr-1"></i>Reddit
+                        <i class="ti ti-brand-reddit mr-1"></i>Reddit
                     </a>
                 </div>
             </div>
@@ -168,14 +171,14 @@ function showAboutModal() {
             <!-- Legal -->
             <div class="bg-gray-800 rounded-lg p-4 border border-green-500/30">
                 <h3 class="text-lg font-semibold text-green-500 mb-3">
-                    <i class="bi bi-file-earmark-text mr-2"></i>License
+                    <i class="ti ti-file-text mr-2"></i>License
                 </h3>
                 <p class="text-gray-300 mb-2 text-sm">
                     reconYa is released under the <strong class="text-white">Creative Commons Attribution-NonCommercial 4.0 International License</strong>. 
                     Commercial use requires permission.
                 </p>
                 <p class="text-gray-500 text-xs">
-                    Built with <i class="bi bi-heart-fill text-red-500"></i> using Go, Tailwind CSS, and modern web technologies.
+                    Built with <i class="ti ti-heart text-red-500"></i> using Go, Tailwind CSS, and modern web technologies.
                 </p>
             </div>
         </div>
