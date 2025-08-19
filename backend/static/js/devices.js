@@ -13,10 +13,9 @@ function loadDevices(showSpinner = true) {
         `;
     }
     
-    fetch('/api/devices')
+    fetch('/api/devices', { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
-            console.log('Devices API response:', data);
             renderDeviceGrid(data.devices || []);
         })
         .catch(error => {
@@ -81,10 +80,9 @@ function renderDeviceGrid(devices) {
 }
 
 function loadDeviceModal(deviceId) {
-    fetch(`/api/devices/${deviceId}/modal`)
+    fetch(`/api/devices/${deviceId}/modal`, { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
-            console.log('loadDeviceModal data:', data);
             const modalContent = document.getElementById('device-modal-content');
             if (modalContent) {
                 modalContent.innerHTML = renderDeviceModal(data.device, data.screenshotsEnabled);
@@ -239,7 +237,8 @@ function saveDeviceChanges(deviceId) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: 'include'
     })
     .then(response => response.json())
     .then(result => {
@@ -268,7 +267,8 @@ function saveDeviceChanges(deviceId) {
 function deleteDevice(deviceId, deviceIP) {
     if (confirm(`Are you sure you want to delete device ${deviceIP}? This action cannot be undone.`)) {
         fetch(`/api/devices/${deviceId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include'
         })
         .then(response => {
             if (response.ok) {
@@ -289,7 +289,7 @@ function loadDeviceList() {
     if (targetEl) {
         targetEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading devices...</span></div>';
         
-        fetch('/api/device-list')
+        fetch('/api/device-list', { credentials: 'include' })
             .then(response => response.json())
             .then(data => {
                 targetEl.innerHTML = renderDeviceTable(data.devices || []);

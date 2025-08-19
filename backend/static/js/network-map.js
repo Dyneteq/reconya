@@ -19,7 +19,6 @@ function loadNetworkMap() {
     fetch('/api/network-map')
         .then(response => response.json())
         .then(data => {
-            console.log('Network map API response:', data);
             renderNetworkMap(data);
         })
         .catch(error => {
@@ -29,7 +28,6 @@ function loadNetworkMap() {
 }
 
 function renderNetworkMap(data) {
-    console.log('renderNetworkMap data:', data);
     const loadingEl = document.getElementById('network-map-loading');
     const contentEl = document.getElementById('network-map-content');
     const emptyEl = document.getElementById('network-map-empty');
@@ -40,7 +38,6 @@ function renderNetworkMap(data) {
     }
     
     if (!data.BaseIP || !data.IPRange) {
-        console.log('Missing BaseIP or IPRange:', { BaseIP: data.BaseIP, IPRange: data.IPRange });
         showNetworkMapEmpty();
         return;
     }

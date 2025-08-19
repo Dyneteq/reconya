@@ -7,16 +7,19 @@ function initSidebar() {
     const mainContent = document.getElementById('main-content');
     const navItems = document.querySelectorAll('.nav-item');
     
-    console.log('Sidebar elements found:', { sidebar, sidebarToggle, mainContent, navItemsCount: navItems.length });
-    
+    console.log('Sidebar elements found:', { 
+        sidebar: !!sidebar, 
+        sidebarToggle: !!sidebarToggle, 
+        mainContent: !!mainContent, 
+        navItemsCount: navItems.length 
+    });
+        
     // Start with sidebar collapsed
     if (sidebar) {
         sidebar.classList.add('collapsed');
-        console.log('Sidebar collapsed class added');
     }
     if (mainContent) {
         mainContent.style.marginLeft = '0';
-        console.log('Main content margin reset');
     }
     
     // Single sidebar toggle functionality
@@ -27,44 +30,28 @@ function initSidebar() {
             e.stopPropagation(); // Prevent click from bubbling
             
             if (sidebar.classList.contains('collapsed')) {
-                // Open sidebar
                 console.log('Opening sidebar');
                 sidebar.classList.remove('collapsed');
                 if (mainContent) mainContent.style.marginLeft = '16rem'; // 256px
             } else {
-                // Close sidebar
                 console.log('Closing sidebar');
                 sidebar.classList.add('collapsed');
                 if (mainContent) mainContent.style.marginLeft = '0';
             }
-            // Keep hamburger icon for both states
         });
     } else {
         console.log('Sidebar toggle button not found!');
     }
     
-    // Test if sidebar clicks work at all
-    sidebar.addEventListener('click', function(e) {
-        console.log('SIDEBAR CLICKED - target:', e.target);
-        console.log('SIDEBAR CLICKED - classList:', e.target.classList.toString());
-    });
-    
     // Navigation functionality
-    console.log('Setting up navigation for', navItems.length, 'items');
-    navItems.forEach((item, index) => {
-        console.log('Nav item', index, ':', item.getAttribute('data-page'), item);
+    navItems.forEach((item) => {
         item.addEventListener('click', function(e) {
-            console.log('CLICK DETECTED on nav item:', this.getAttribute('data-page'));
-            
-            // Get page from data attribute
             const page = this.getAttribute('data-page');
             
             if (page) {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                console.log('Navigating to page:', page);
-                
+                                
                 // Remove active class from all items
                 navItems.forEach(nav => nav.classList.remove('active'));
                 
@@ -118,3 +105,5 @@ function initSidebar() {
     // Initial check
     handleResize();
 }
+
+// Sidebar initialization is now handled by main.js DOMContentLoaded

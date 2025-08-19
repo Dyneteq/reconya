@@ -5,7 +5,7 @@ function loadSettings() {
     
     container.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading settings...</span></div>';
     
-    fetch('/api/settings')
+    fetch('/api/settings', { credentials: 'include' })
         .then(response => {
             console.log('Settings response status:', response.status);
             if (!response.ok) {
@@ -138,7 +138,8 @@ function handleSettingsSubmit(event) {
     // Save screenshots setting
     fetch('/api/settings/screenshots', {
         method: 'POST',
-        body: screenshotsFormData
+        body: screenshotsFormData,
+        credentials: 'include'
     })
     .then(response => response.json())
     .then(data => {

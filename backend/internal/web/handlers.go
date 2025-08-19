@@ -71,7 +71,7 @@ type NetworkInfo struct {
 	OfflineDevices int
 }
 
-// SystemStatusTemplateData holds all data required by the system-status.html template
+// SystemStatusTemplateData holds system status data
 type SystemStatusTemplateData struct {
 	SystemStatus *models.SystemStatus
 	NetworkCIDR  string
@@ -357,11 +357,6 @@ func NewWebHandler(
 		panic(fmt.Sprintf("Failed to glob base templates: %v", err))
 	}
 
-	pageFiles, err := filepath.Glob("templates/pages/*.html")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to glob page templates: %v", err))
-	}
-
 	componentFiles, err := filepath.Glob("templates/components/*.html")
 	if err != nil {
 		panic(fmt.Sprintf("Failed to glob component templates: %v", err))
@@ -369,7 +364,7 @@ func NewWebHandler(
 
 	indexFile := "templates/index.html"
 
-	files := append(baseFiles, append(pageFiles, componentFiles...)...)
+	files := append(baseFiles, componentFiles...)
 	files = append(files, indexFile)
 	log.Printf("Found template files: %v", files)
 
@@ -573,7 +568,7 @@ func (h *WebHandler) About(w http.ResponseWriter, r *http.Request) {
 		Version: "0.14",
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "about.html", data); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "components/about.html", data); err != nil {
 		log.Printf("About template execution error: %v", err)
 		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
 	}
@@ -2107,14 +2102,18 @@ func (h *WebHandler) APIScanControlWithError(w http.ResponseWriter, r *http.Requ
 
 	scanState := h.scanManager.GetState()
 
-	data := PageData{
-		Networks:  networksSlice,
-		ScanState: &scanState,
-		Error:     errorMsg,
+	// Return JSON data for external JavaScript to handle
+	data := map[string]interface{}{
+		"networks":  networksSlice,
+		"scanState": &scanState,
+	}
+	if errorMsg != "" {
+		data["error"] = errorMsg
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "components/scan-control-inner.html", data); err != nil {
-		log.Printf("Error rendering scan control template: %v", err)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("Error encoding scan control JSON: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

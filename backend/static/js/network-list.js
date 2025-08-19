@@ -165,7 +165,6 @@ function loadNetworkModal() {
 }
 
 function renderNetworkModal(data) {
-    console.log('renderNetworkModal data:', data);
     const network = data.network || {};
     const error = data.error || '';
     const isEdit = network && network.id;

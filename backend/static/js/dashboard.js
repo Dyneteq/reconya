@@ -1,6 +1,6 @@
 // Dashboard functionality
 function loadRecentActivity() {
-    fetch('/api/event-logs')
+    fetch('/api/event-logs', { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
             renderRecentActivity(data.logs || []);
@@ -104,7 +104,7 @@ function getTimeAgo(date) {
 }
 
 function loadDashboardMetrics() {
-    fetch('/api/dashboard-metrics')
+    fetch('/api/dashboard-metrics', { credentials: 'include' })
         .then(response => response.json())
         .then(data => {
             updateDashboardMetrics(data);
@@ -162,10 +162,9 @@ function loadEventLogs() {
     if (targetEl) {
         targetEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading logs...</span></div>';
         
-        fetch('/api/event-logs')
+        fetch('/api/event-logs', { credentials: 'include' })
             .then(response => response.json())
             .then(data => {
-                console.log('Event logs data:', data);
                 targetEl.innerHTML = renderEventLogs(data.logs || []);
             })
             .catch(error => {

@@ -41,11 +41,9 @@ function closeModal(modalId) {
 
 // Global modal functions for network operations
 function confirmNetworkDelete(networkId) {
-    console.log('confirmNetworkDelete called with networkId:', networkId);
     
     fetch(`/api/network-delete-modal/${networkId}`)
         .then(response => {
-            console.log('Network delete modal response status:', response.status);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }

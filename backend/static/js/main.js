@@ -63,14 +63,6 @@ function initPageContent() {
                 loadNetworkList();
             }
             break;
-        case '/logs':
-            // Load event logs page
-            if (typeof loadEventLogs === 'function') {
-                loadEventLogs();
-            } else if (typeof loadRecentActivity === 'function') {
-                loadRecentActivity();
-            }
-            break;
         case '/settings':
             if (typeof loadSettings === 'function') {
                 loadSettings();
@@ -111,21 +103,7 @@ function initDropdownMenu() {
     }
 }
 
-// Also run immediately for HTMX loaded content
-if (typeof initTheme === 'function') {
-    initTheme();
-}
-
-if (typeof initSidebar === 'function') {
-    initSidebar();
-}
-
-if (typeof initNetworkSuggestions === 'function') {
-    initNetworkSuggestions();
-}
-
-// Initialize dropdown menu immediately too
-initDropdownMenu();
+// Note: All initialization is now handled by DOMContentLoaded event above
 
 // About page functionality
 function loadAboutPage() {

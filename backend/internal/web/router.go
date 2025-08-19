@@ -73,6 +73,9 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/networks-debug", h.APINetworksDebug).Methods("GET")
 	api.HandleFunc("/network-suggestion", h.APINetworkSuggestion).Methods("POST")
 
+	// Static file serving
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+
 	// 404 handler
 	r.NotFoundHandler = http.HandlerFunc(h.NotFound)
 
@@ -92,7 +95,7 @@ func (h *WebHandler) Targets(w http.ResponseWriter, r *http.Request) {
 		User: user,
 	}
 
-	if err := h.templates.ExecuteTemplate(w, "targets.html", data); err != nil {
+	if err := h.templates.ExecuteTemplate(w, "index.html", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -107,7 +110,7 @@ func (h *WebHandler) APIRescanDevice(w http.ResponseWriter, r *http.Request) {
 	// Return updated modal
 	device, _ := h.deviceService.FindByID(deviceID)
 	if device != nil {
-		if err := h.templates.ExecuteTemplate(w, "device-modal.html", device); err != nil {
+		if err := h.templates.ExecuteTemplate(w, "components/device-modal.html", device); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}

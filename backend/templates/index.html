@@ -1,10 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Core functionality -->
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script src="/static/js/modal.js"></script>
+    
+    <!-- Feature modules -->
+    <script src="/static/js/devices.js"></script>
+    <script src="/static/js/network-map.js"></script>
+    <script src="/static/js/network-list.js"></script>
+    <script src="/static/js/scan-control.js"></script>
+    <script src="/static/js/settings.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+    
+    <!-- Main initialization (load last) -->
+    <script src="/static/js/main.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,12 +57,6 @@
                         <a href="/networks" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="networks">
                             <i class="bi bi-globe nav-icon text-lg mr-3"></i>
                             <span class="nav-text">Networks</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/logs" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="logs">
-                            <i class="bi bi-file-text nav-icon text-lg mr-3"></i>
-                            <span class="nav-text">Logs</span>
                         </a>
                     </li>
                     <li>
@@ -161,40 +171,6 @@
                             </div>
                         </div>
                     </div>
-                {{else if eq .Page "logs"}}
-                    <!-- Logs Page Content -->
-                    <div class="flex gap-4 p-4">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-2xl font-bold text-green-500">[ EVENT LOGS ]</h1>
-                                    <div class="flex gap-2">
-                                        <button type="button" 
-                                                class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" 
-                                                onclick="refreshLogs()">
-                                            <i class="bi bi-arrow-clockwise mr-1"></i>Refresh
-                                        </button>
-                                        <button type="button" 
-                                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm" 
-                                                onclick="clearLogs()">
-                                            <i class="bi bi-trash mr-1"></i>Clear
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Logs Table -->
-                                <div class="bg-gray-800 rounded-lg">
-                                    <div id="logs-container">
-                                        <div class="flex justify-center items-center h-32">
-                                            <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                            <span class="ml-3 text-gray-400">Loading event logs...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 {{else if eq .Page "alerts"}}
                     <!-- Alerts Page Content -->
                     <div class="flex gap-4 p-4">
@@ -275,65 +251,45 @@
                     <div class="space-y-6">
                     <!-- Stats Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                        <div class="bg-gray-800 p-6 rounded-lg">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-green-500 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                                </svg>
-                                <div>
-                                    <p class="text-gray-400 text-sm">Network Range</p>
-                                    <p class="text-xl font-bold text-gray-200" id="network-range">Loading...</p>
-                                </div>
-                            </div>
+                        <div class="bg-gray-800 p-6 rounded-lg text-center">
+                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                            </svg>
+                            <p class="text-gray-400 text-sm mb-1">Network Range</p>
+                            <p class="text-xl font-bold text-gray-200" id="network-range">Loading...</p>
                         </div>
                         
-                        <div class="bg-gray-800 p-6 rounded-lg">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-                                </svg>
-                                <div>
-                                    <p class="text-gray-400 text-sm">Devices Found</p>
-                                    <p class="text-xl font-bold" id="devices-found">0</p>
-                                </div>
-                            </div>
+                        <div class="bg-gray-800 p-6 rounded-lg text-center">
+                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                            </svg>
+                            <p class="text-gray-400 text-sm mb-1">Devices Found</p>
+                            <p class="text-xl font-bold text-gray-200" id="devices-found">0</p>
                         </div>
                         
-                        <div class="bg-gray-800 p-6 rounded-lg">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                                <div>
-                                    <p class="text-gray-400 text-sm">Online</p>
-                                    <p class="text-xl font-bold" id="devices-online">0</p>
-                                </div>
-                            </div>
+                        <div class="bg-gray-800 p-6 rounded-lg text-center">
+                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            <p class="text-gray-400 text-sm mb-1">Online</p>
+                            <p class="text-xl font-bold text-gray-200" id="devices-online">0</p>
                         </div>
                         
-                        <div class="bg-gray-800 p-6 rounded-lg">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                                </svg>
-                                <div>
-                                    <p class="text-gray-400 text-sm">Public IP</p>
-                                    <p class="text-xl font-bold" id="public-ip">Loading...</p>
-                                </div>
-                            </div>
+                        <div class="bg-gray-800 p-6 rounded-lg text-center">
+                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                            <p class="text-gray-400 text-sm mb-1">Public IP</p>
+                            <p class="text-xl font-bold text-gray-200" id="public-ip">Loading...</p>
                         </div>
                         
-                        <div class="bg-gray-800 p-6 rounded-lg relative">
-                            <div class="flex items-center">
-                                <svg class="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
-                                </svg>
-                                <div>
-                                    <p class="text-gray-400 text-sm">Saturation</p>
-                                    <p class="text-xl font-bold" id="network-saturation">0%</p>
-                                </div>
-                            </div>
+                        <div class="bg-gray-800 p-6 rounded-lg text-center relative">
+                            <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
+                            </svg>
+                            <p class="text-gray-400 text-sm mb-1">Saturation</p>
+                            <p class="text-xl font-bold text-gray-200" id="network-saturation">0%</p>
                             <!-- Progress bar at bottom -->
                             <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-900 bg-opacity-30">
                                 <div id="saturation-progress" class="h-full w-0 bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out"></div>
@@ -341,10 +297,10 @@
                         </div>
                     </div>
 
-                    <!-- Content Sections -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <!-- Main Content -->
-                        <div class="lg:col-span-2 space-y-6">
+                    <!-- Main Layout -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <!-- Left Side: Main Content -->
+                        <div class="lg:col-span-3 space-y-6">
                             <!-- Network Map -->
                             <div class="rounded-lg">
                                 <h2 class="text-base font-light mb-4 text-green-500">[ NETWORK MAP ]</h2>
@@ -387,11 +343,11 @@
                             </div>
                         </div>
                         
-                        <!-- Sidebar Content -->
+                        <!-- Right Side: Scan Control & Events -->
                         <div class="space-y-6">
                             <!-- Scan Control -->
                             <div class="bg-gray-800 rounded-lg p-6">
-                                <h3 class="text-base font-semibold mb-4">Scan Control</h3>
+                                <h3 class="text-base font-semibold mb-4 text-green-500">[ SCAN CONTROL ]</h3>
                                 <div id="scan-control-container">
                                     <div class="flex items-center justify-center py-4" id="scan-control-loading">
                                         <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
@@ -401,13 +357,13 @@
                                 </div>
                             </div>
                             
-                            <!-- Recent Activity -->
+                            <!-- Events -->
                             <div class="bg-gray-800 rounded-lg p-6">
-                                <h3 class="text-base font-semibold mb-4">Recent Activity</h3>
+                                <h3 class="text-base font-semibold mb-4 text-green-500">[ EVENTS ]</h3>
                                 <div id="activity-log" class="space-y-2 text-sm text-gray-400 max-h-64 overflow-y-auto">
                                     <div class="flex items-center justify-center py-8">
                                         <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading recent activity...</span>
+                                        <span class="ml-3 text-gray-400">Loading events...</span>
                                     </div>
                                 </div>
                             </div>
@@ -419,8 +375,6 @@
         </div>
     </div>
 
-
-    
     <!-- Sidebar & Modal CSS -->
     <style>
         /* Sidebar Styles */
@@ -559,193 +513,71 @@
             color: var(--text-primary);
         }
         
-        .bg-gray-900 { background-color: var(--bg-primary) !important; }
-        .bg-gray-800 { background-color: var(--bg-secondary) !important; }
-        .bg-gray-700 { background-color: var(--bg-tertiary) !important; }
+        /* Light theme - Very specific selectors */
+        html[data-theme="light"] body,
+        html[data-theme="light"] body.bg-gray-900 { 
+            background-color: #f9fafb !important; 
+            color: #111827 !important; 
+        }
+        html[data-theme="light"] .bg-gray-900,
+        html[data-theme="light"] nav.bg-gray-800,
+        html[data-theme="light"] .sidebar.bg-gray-800 { background-color: #f3f4f6 !important; }
+        html[data-theme="light"] .bg-gray-800,
+        html[data-theme="light"] header.bg-gray-800 { background-color: #e5e7eb !important; }
+        html[data-theme="light"] .bg-gray-700 { background-color: #d1d5db !important; }
+        html[data-theme="light"] .bg-gray-600 { background-color: #d1d5db !important; }
+        html[data-theme="light"] .text-white,
+        html[data-theme="light"] .text-gray-200 { color: #111827 !important; }
+        html[data-theme="light"] .text-gray-300 { color: #374151 !important; }
+        html[data-theme="light"] .text-gray-400,
+        html[data-theme="light"] .text-gray-500 { color: #6b7280 !important; }
+        html[data-theme="light"] .text-green-500 { color: #059669 !important; }
+        html[data-theme="light"] .border-gray-700,
+        html[data-theme="light"] .border-gray-600 { border-color: #d1d5db !important; }
         
-        .text-white { color: var(--text-primary) !important; }
-        .text-gray-200 { color: var(--text-primary) !important; }
-        .text-gray-300 { color: var(--text-secondary) !important; }
-        .text-gray-400 { color: var(--text-muted) !important; }
-        .text-green-500 { color: var(--text-accent) !important; }
+        /* Dark theme - Very specific selectors */
+        html[data-theme="dark"] body,
+        html[data-theme="dark"] body.bg-gray-900 { 
+            background-color: #111827 !important; 
+            color: #f9fafb !important; 
+        }
+        html[data-theme="dark"] .bg-gray-900 { background-color: #111827 !important; }
+        html[data-theme="dark"] .bg-gray-800,
+        html[data-theme="dark"] nav.bg-gray-800,
+        html[data-theme="dark"] .sidebar.bg-gray-800,
+        html[data-theme="dark"] header.bg-gray-800 { background-color: #1f2937 !important; }
+        html[data-theme="dark"] .bg-gray-700 { background-color: #374151 !important; }
+        html[data-theme="dark"] .bg-gray-600 { background-color: #374151 !important; }
+        html[data-theme="dark"] .text-white,
+        html[data-theme="dark"] .text-gray-200 { color: #f9fafb !important; }
+        html[data-theme="dark"] .text-gray-300 { color: #d1d5db !important; }
+        html[data-theme="dark"] .text-gray-400,
+        html[data-theme="dark"] .text-gray-500 { color: #9ca3af !important; }
+        html[data-theme="dark"] .text-green-500 { color: #10b981 !important; }
+        html[data-theme="dark"] .border-gray-700,
+        html[data-theme="dark"] .border-gray-600 { border-color: #374151 !important; }
         
-        .border-gray-700 { border-color: var(--border-color) !important; }
-        .border-gray-600 { border-color: var(--border-color) !important; }
-        .border-green-500 { border-color: var(--border-accent) !important; }
-        .border-green-600 { border-color: var(--border-accent) !important; }
+        /* Hover state overrides */
+        html[data-theme="light"] .hover\\:bg-gray-700:hover { background-color: #d1d5db !important; }
+        html[data-theme="light"] .hover\\:text-white:hover { color: #111827 !important; }
+        html[data-theme="light"] .hover\\:text-green-500:hover { color: #059669 !important; }
+        html[data-theme="dark"] .hover\\:bg-gray-700:hover { background-color: #374151 !important; }
+        html[data-theme="dark"] .hover\\:text-white:hover { color: #f9fafb !important; }
+        html[data-theme="dark"] .hover\\:text-green-500:hover { color: #10b981 !important; }
         
-        /* Theme transition */
+        /* Additional border overrides */
+        html[data-theme="light"] .border-green-500,
+        html[data-theme="light"] .border-green-600 { border-color: #059669 !important; }
+        html[data-theme="dark"] .border-green-500,
+        html[data-theme="dark"] .border-green-600 { border-color: #10b981 !important; }
+        
+        /* Theme transition animation */
         * {
             transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
         }
     </style>
     
-    <script>
-        // Theme functionality
-        function initTheme() {
-            const themeToggle = document.getElementById('themeToggle');
-            const sunIcon = document.getElementById('sunIcon');
-            const moonIcon = document.getElementById('moonIcon');
-            
-            // Get saved theme or default to dark
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            
-            // Apply saved theme
-            if (savedTheme === 'light') {
-                document.documentElement.setAttribute('data-theme', 'light');
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-            } else {
-                document.documentElement.removeAttribute('data-theme');
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
-            }
-            
-            // Theme toggle functionality
-            if (themeToggle) {
-                themeToggle.addEventListener('click', function() {
-                    const currentTheme = document.documentElement.getAttribute('data-theme');
-                    
-                    if (currentTheme === 'light') {
-                        // Switch to dark
-                        document.documentElement.removeAttribute('data-theme');
-                        sunIcon.classList.remove('hidden');
-                        moonIcon.classList.add('hidden');
-                        localStorage.setItem('theme', 'dark');
-                    } else {
-                        // Switch to light
-                        document.documentElement.setAttribute('data-theme', 'light');
-                        sunIcon.classList.add('hidden');
-                        moonIcon.classList.remove('hidden');
-                        localStorage.setItem('theme', 'light');
-                    }
-                });
-            }
-        }
-        
-        // Sidebar functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize theme first
-            initTheme();
-            
-            const sidebar = document.getElementById('sidebar');
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebarToggleIcon = sidebarToggle ? sidebarToggle.querySelector('i') : null;
-            const mainContent = document.getElementById('main-content');
-            const navItems = document.querySelectorAll('.nav-item');
-            
-            
-            // Start with sidebar collapsed
-            sidebar.classList.add('collapsed');
-            mainContent.style.marginLeft = '0';
-            
-            // Single sidebar toggle functionality
-            if (sidebarToggle) {
-                sidebarToggle.addEventListener('click', function(e) {
-                    e.stopPropagation(); // Prevent click from bubbling
-                    
-                    if (sidebar.classList.contains('collapsed')) {
-                        // Open sidebar
-                        sidebar.classList.remove('collapsed');
-                        mainContent.style.marginLeft = '16rem'; // 256px
-                    } else {
-                        // Close sidebar
-                        sidebar.classList.add('collapsed');
-                        mainContent.style.marginLeft = '0';
-                    }
-                    // Keep hamburger icon for both states
-                });
-            }
-            
-            // Note: Removed auto-collapse on outside clicks - sidebar stays open until toggle is clicked
-            
-            // Test if sidebar clicks work at all
-            sidebar.addEventListener('click', function(e) {
-                console.log('SIDEBAR CLICKED - target:', e.target);
-                console.log('SIDEBAR CLICKED - classList:', e.target.classList.toString());
-            });
-            
-            // Navigation functionality
-            console.log('Setting up navigation for', navItems.length, 'items');
-            navItems.forEach((item, index) => {
-                console.log('Nav item', index, ':', item.getAttribute('data-page'), item);
-                item.addEventListener('click', function(e) {
-                    console.log('CLICK DETECTED on nav item:', this.getAttribute('data-page'));
-                    
-                    // Get page from data attribute
-                    const page = this.getAttribute('data-page');
-                    
-                    if (page) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        console.log('Navigating to page:', page);
-                        
-                        // Remove active class from all items
-                        navItems.forEach(nav => nav.classList.remove('active'));
-                        
-                        // Add active class to clicked item
-                        this.classList.add('active');
-                        
-                        // Close sidebar only on mobile after navigation (keep open on desktop)
-                        if (window.innerWidth <= 1024) {
-                            sidebar.classList.add('collapsed');
-                            mainContent.style.marginLeft = '0';
-                        }
-                        
-                        // Navigate to page
-                        setTimeout(() => {
-                            if (page === 'home') {
-                                window.location.href = '/';
-                            } else {
-                                window.location.href = `/${page}`;
-                            }
-                        }, 100);
-                    } else {
-                        console.log('No data-page found on clicked item');
-                    }
-                });
-            });
-            
-            // Set active nav item based on current page
-            const currentPath = window.location.pathname;
-            const currentPage = currentPath === '/' ? 'home' : currentPath.substring(1);
-            const activeItem = document.querySelector(`[data-page="${currentPage}"]`);
-            if (activeItem) {
-                activeItem.classList.add('active');
-            }
-            
-            // Mobile responsive behavior
-            function handleResize() {
-                if (window.innerWidth <= 1024) {
-                    // Mobile view - collapse sidebar for overlay behavior
-                    if (!sidebar.classList.contains('collapsed')) {
-                        sidebar.classList.add('collapsed');
-                    }
-                    mainContent.style.marginLeft = '0';
-                } else {
-                    // Desktop view - maintain current sidebar state
-                    if (sidebar.classList.contains('collapsed')) {
-                        mainContent.style.marginLeft = '0';
-                    } else {
-                        mainContent.style.marginLeft = '16rem';
-                    }
-                }
-                // Icon always stays as hamburger
-            }
-            
-            // Handle window resize
-            window.addEventListener('resize', handleResize);
-            handleResize(); // Initial call
-        });
-
-        // Initialize network map updates when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Start network map updates
-            startNetworkMapUpdates();
-        });
-
-        
+    <script>   
         // Dropdown functionality
         const dropdownButton = document.getElementById('dropdownMenuButton');
         const dropdownMenu = document.getElementById('dropdownMenu');
@@ -771,169 +603,7 @@
         // Make loadAboutPage available globally
         window.loadAboutPage = loadAboutPage;
         
-        // Modal Functions
-        function showModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    modal.classList.add('show');
-                }, 10);
-                
-                // Add click handler to backdrop
-                const backdrop = modal.querySelector('.modal-backdrop');
-                if (backdrop) {
-                    backdrop.onclick = () => closeModal(modalId);
-                }
-                
-                // Add escape key handler
-                const escapeHandler = (e) => {
-                    if (e.key === 'Escape') {
-                        closeModal(modalId);
-                        document.removeEventListener('keydown', escapeHandler);
-                    }
-                };
-                document.addEventListener('keydown', escapeHandler);
-            }
-        }
-        
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.remove('show');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
-            }
-        }
-        
-        // Make modal functions available globally
-        window.showModal = showModal;
-        window.closeModal = closeModal;
-        
-        // Network Map Functions
-        let networkMapInterval = null;
-        
-        function loadNetworkMap() {
-            fetch('/api/network-map')
-                .then(response => response.json())
-                .then(data => {
-                    renderNetworkMap(data);
-                })
-                .catch(error => {
-                    console.error('Failed to load network map:', error);
-                    showNetworkMapEmpty();
-                });
-        }
-        
-        function renderNetworkMap(data) {
-            console.log('renderNetworkMap data:', data);
-            const loadingEl = document.getElementById('network-map-loading');
-            const contentEl = document.getElementById('network-map-content');
-            const emptyEl = document.getElementById('network-map-empty');
-            
-            // Only proceed if elements exist (we're on the right page)
-            if (!loadingEl || !contentEl || !emptyEl) {
-                return;
-            }
-            
-            if (!data.BaseIP || !data.IPRange) {
-                console.log('Missing BaseIP or IPRange:', { BaseIP: data.BaseIP, IPRange: data.IPRange });
-                showNetworkMapEmpty();
-                return;
-            }
-            
-            // Hide loading and empty states
-            loadingEl.classList.add('hidden');
-            emptyEl.classList.add('hidden');
-            contentEl.classList.remove('hidden');
-            
-            // Network range is handled by dashboard metrics, not here
-            
-            // Build the network map grid
-            let html = '<div class="flex flex-wrap gap-1 justify-start">';
-            
-            data.IPRange.forEach(ipPart => {
-                const fullIP = `${data.BaseIP}.${ipPart}`;
-                const device = data.Devices[fullIP];
-                
-                let buttonClass = 'w-5 h-5 rounded-sm transition-all duration-200 hover:scale-110 cursor-pointer ';
-                let title = fullIP;
-                
-                if (device) {
-                    title += ` - ${device.status}`;
-                    if (device.status === 'online') {
-                        buttonClass += 'bg-green-600 border-2 border-green-500';
-                    } else if (device.status === 'idle') {
-                        buttonClass += 'bg-green-300 border border-green-400 opacity-70';
-                    } else if (device.status === 'offline') {
-                        buttonClass += 'bg-gray-700 border border-gray-600 opacity-25';
-                    } else {
-                        buttonClass += 'bg-gray-700 border border-gray-600 opacity-25';
-                    }
-                } else {
-                    buttonClass += 'bg-gray-800 border border-gray-700 opacity-15';
-                    title += ' - Available IP';
-                }
-                
-                html += `<button type="button" class="${buttonClass}" title="${title}" data-ip="${fullIP}" data-status="${device ? device.status : 'empty'}" onclick="handleNetworkMapClick('${fullIP}', ${device ? device.id : 'null'})"></button>`;
-            });
-            
-            html += '</div>';
-            contentEl.innerHTML = html;
-        }
-        
-        function showNetworkMapEmpty() {
-            const loadingEl = document.getElementById('network-map-loading');
-            const contentEl = document.getElementById('network-map-content');
-            const emptyEl = document.getElementById('network-map-empty');
-            
-            // Only proceed if elements exist (we're on the right page)
-            if (!loadingEl || !contentEl || !emptyEl) {
-                return;
-            }
-            
-            loadingEl.classList.add('hidden');
-            contentEl.classList.add('hidden');
-            emptyEl.classList.remove('hidden');
-            
-            // Network range display is handled by dashboard metrics
-        }
-        
-        function handleNetworkMapClick(ip, deviceId) {
-            if (deviceId && deviceId !== 'null') {
-                // Load device modal
-                loadDeviceModal(deviceId);
-            } else {
-                // Load new scan modal
-                loadNewScanModal(ip);
-            }
-        }
-        
-        function startNetworkMapUpdates() {
-            // Load immediately
-            loadNetworkMap();
-            
-            // Set up interval for updates every 8 seconds
-            if (networkMapInterval) {
-                clearInterval(networkMapInterval);
-            }
-            networkMapInterval = setInterval(loadNetworkMap, 8000);
-        }
-        
-        function stopNetworkMapUpdates() {
-            if (networkMapInterval) {
-                clearInterval(networkMapInterval);
-                networkMapInterval = null;
-            }
-        }
-        
-        // Make network map functions globally available
-        window.loadNetworkMap = loadNetworkMap;
-        window.startNetworkMapUpdates = startNetworkMapUpdates;
-        window.stopNetworkMapUpdates = stopNetworkMapUpdates;
-        
-        // Vanilla JS replacement functions for HTMX
+        // Content loading utility functions
         function loadContent(url, targetId) {
             fetch(url)
                 .then(response => response.text())
@@ -944,1451 +614,6 @@
                     console.error('Failed to load content:', error);
                     document.getElementById(targetId).innerHTML = '<div class="p-6"><p class="text-red-400">Error loading content. Please try again.</p></div>';
                 });
-        }
-        
-        function loadDevices() {
-            const loadingEl = document.getElementById('devices-loading');
-            const contentEl = document.getElementById('devices-content');
-            const emptyEl = document.getElementById('devices-empty');
-            
-            // Only proceed if elements exist (we're on the right page)
-            if (!loadingEl || !contentEl || !emptyEl) {
-                return;
-            }
-            
-            loadingEl.classList.remove('hidden');
-            contentEl.classList.add('hidden');
-            emptyEl.classList.add('hidden');
-            
-            fetch('/api/devices')
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    console.log('Response headers:', response.headers.get('content-type'));
-                    
-                    if (!response.ok) {
-                        return response.text().then(text => {
-                            console.log('Error response body:', text);
-                            throw new Error(`HTTP ${response.status}: ${response.statusText} - ${text}`);
-                        });
-                    }
-                    
-                    // Check if response is actually JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        return response.text().then(text => {
-                            console.log('Non-JSON response body:', text);
-                            throw new Error(`Expected JSON but got ${contentType}. Response: ${text.substring(0, 200)}...`);
-                        });
-                    }
-                    
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('loadDevices data:', data);
-                    loadingEl.classList.add('hidden');
-                    
-                    if (data.error) {
-                        console.error('API Error:', data.error);
-                        if (data.error === 'Unauthorized') {
-                            window.location.href = '/login';
-                            return;
-                        }
-                        emptyEl.innerHTML = '<div class="text-center py-8"><p class="text-red-400">Error: ' + data.error + '</p></div>';
-                        emptyEl.classList.remove('hidden');
-                        return;
-                    }
-                    
-                    if (data.devices && data.devices.length > 0) {
-                        contentEl.innerHTML = renderDeviceGrid(data.devices);
-                        contentEl.classList.remove('hidden');
-                    } else {
-                        emptyEl.classList.remove('hidden');
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to load devices:', error);
-                    loadingEl.classList.add('hidden');
-                    emptyEl.classList.remove('hidden');
-                });
-        }
-        
-        function renderDeviceGrid(devices) {
-            console.log('renderDeviceGrid called with devices:', devices);
-            return `
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    ${devices.map(device => {
-                        console.log('Rendering device:', device);
-                        return `
-                        <div class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer relative" 
-                             onclick="loadDeviceModal('${device.id}')">
-                            <div class="mb-3">
-                                <span class="text-green-400 font-mono text-xs sm:text-sm md:text-base lg:text-lg font-thin tracking-tighter break-all">${device.ipv4}</span>
-                            </div>
-                            ${device.name ? `
-                                <div class="text-gray-300 text-sm mb-2 truncate">${device.name}</div>
-                            ` : ''}
-                            ${device.mac ? `
-                                <div class="text-gray-500 text-xs font-mono mb-2">${device.mac}</div>
-                            ` : ''}
-                            ${device.ports && device.ports.length > 0 ? `
-                                <div class="text-xs text-gray-400">
-                                    ${device.ports.filter(p => p.state === 'open').length} open ports
-                                </div>
-                            ` : ''}
-                            <div class="absolute bottom-2 right-2 opacity-40 text-gray-500">
-                                ${getDeviceIcon(device)}
-                            </div>
-                        </div>
-                        `; // End device template
-                    }).join('')}
-                </div>
-            `;
-        }
-        
-        function getStatusColor(status) {
-            switch(status) {
-                case 'online': return 'bg-green-500';
-                case 'idle': return 'bg-green-300';
-                case 'offline': return 'bg-gray-500';
-                default: return 'bg-gray-500';
-            }
-        }
-        
-        function getDeviceIcon(device) {
-            try {
-                const iconClass = "w-8 h-8 text-green-500";
-                
-                // Check device type first
-                if (device.device_type) {
-                    const deviceType = device.device_type.toLowerCase();
-                    if (deviceType === 'router') {
-                        return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M5 13h14v-2H5v2zm-2 4h16v-2H3v2zM3 6v2h16V6H3z"/></svg>`;
-                    } else if (deviceType === 'mobile') {
-                        return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M17 2H7c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H7V6h10v10z"/></svg>`;
-                    }
-                }
-                
-                // Check OS family
-                if (device.os && device.os.family) {
-                    const osFamily = device.os.family.toLowerCase();
-                    if (osFamily.includes('windows')) {
-                        return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12V6.75l6-1.32v6.48L3 12zm8-6.82l7-1.54V12l-7-1.89V5.18zM3 13l6 1.32v6.18l-6-1.68V13zm8 1.82L18 16v8.36l-7-1.54v-6.18z"/></svg>`;
-                    } else if (osFamily.includes('linux')) {
-                        return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>`;
-                    } else if (osFamily.includes('macos') || osFamily.includes('darwin')) {
-                        return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>`;
-                    } else if (osFamily.includes('ios')) {
-                        return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M17 2H7c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H7V6h10v10z"/></svg>`;
-                    } else if (osFamily.includes('android')) {
-                        return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.03-1.03c.39-.39.39-1.02 0-1.41-.39-.39-1.02-.39-1.41 0L14.12 1.75C13.17 1.28 12.11 1 11 1s-2.17.28-3.12.75L6.85.72c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41L6.47 3.16C5.53 3.82 5 4.96 5 6.5h14c0-1.54-.53-2.68-1.47-3.34zM9 5H8V4h1v1zm6 0h-1V4h1v1z"/></svg>`;
-                    }
-                }
-                
-                // Default computer icon
-                return `<svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24"><path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 13H4V5h16v11z"/></svg>`;
-            } catch (error) {
-                console.error('Error in getDeviceIcon:', error);
-                return `<div class="w-8 h-8 bg-green-500 rounded"></div>`;
-            }
-        }
-        
-        function loadDeviceList() {
-            const targetEl = document.getElementById('device-list');
-            if (targetEl) {
-                targetEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading devices...</span></div>';
-                
-                fetch('/api/device-list')
-                    .then(response => response.json())
-                    .then(data => {
-                        targetEl.innerHTML = renderDeviceTable(data.devices || []);
-                    })
-                    .catch(error => {
-                        console.error('Failed to load device list:', error);
-                        targetEl.innerHTML = '<div class="text-red-400">Failed to load devices</div>';
-                    });
-            }
-        }
-        
-        function renderDeviceTable(devices) {
-            if (!devices || devices.length === 0) {
-                return '<div class="text-center text-gray-400 py-8">No devices found</div>';
-            }
-            
-            return `
-                <div class="bg-gray-800 rounded-lg overflow-hidden">
-                    <table class="w-full">
-                        <thead class="bg-gray-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500">IP Address</th>
-                                <th class="px-4 py-3 text-left text-green-500">Name</th>
-                                <th class="px-4 py-3 text-left text-green-500">Network Info</th>
-                                <th class="px-4 py-3 text-left text-green-500">Status</th>
-                                <th class="px-4 py-3 text-left text-green-500">Ports</th>
-                                <th class="px-4 py-3 text-left text-green-500">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${devices.map(device => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-700 cursor-pointer" onclick="loadDeviceModal('${device.id}')">
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center">
-                                            <div class="w-3 h-3 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
-                                            <div class="text-green-500 font-mono text-lg">${device.ipv4}</div>
-                                        </div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        ${device.name || device.hostname ? `<div class="text-gray-300">${device.name || device.hostname}</div>` : '<span class="text-gray-500">-</span>'}
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        ${device.mac ? `<div class="text-blue-400 font-mono text-sm">${device.mac}</div>` : ''}
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        ${device.ports && device.ports.length > 0 ? 
-                                            `<div class="text-sm text-gray-400">${device.ports.filter(p => p.state === 'open').length} open</div>` 
-                                            : '<span class="text-gray-500">-</span>'
-                                        }
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <button class="px-2 py-1 text-red-400 border border-red-400 rounded text-sm hover:bg-red-400 hover:text-white transition-colors" 
-                                                onclick="event.stopPropagation(); deleteDevice('${device.id}', '${device.ipv4}')"
-                                                title="Delete">
-                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                            </svg>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        function getStatusBadgeColor(status) {
-            switch(status) {
-                case 'online': return 'bg-green-600 text-white';
-                case 'idle': return 'bg-green-300 text-gray-900';
-                case 'offline': return 'bg-gray-600 text-gray-200';
-                default: return 'bg-gray-600 text-gray-200';
-            }
-        }
-        
-        function loadNetworkList() {
-            const targetEl = document.getElementById('network-list');
-            if (targetEl) {
-                targetEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading networks...</span></div>';
-                
-                fetch('/api/networks')
-                    .then(response => response.json())
-                    .then(data => {
-                        targetEl.innerHTML = renderNetworkTable(data.networks || [], data.scanState);
-                    })
-                    .catch(error => {
-                        console.error('Failed to load network list:', error);
-                        targetEl.innerHTML = '<div class="text-red-400">Failed to load networks</div>';
-                    });
-            }
-        }
-        
-        function renderNetworkTable(networks, scanState) {
-            const header = `
-                <div class="mb-4 flex justify-between items-center">
-                    <p class="text-gray-400">Manage network ranges for reconnaissance scanning</p>
-                    <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors" 
-                            onclick="loadNetworkModal()">
-                        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Add New Network
-                    </button>
-                </div>
-            `;
-            
-            if (!networks || networks.length === 0) {
-                return header + '<div class="text-center text-gray-400 py-8">No networks configured. Add your first network to start scanning.</div>';
-            }
-            
-            return header + `
-                <div class="bg-gray-800 rounded-lg overflow-hidden">
-                    <table class="w-full">
-                        <thead class="bg-gray-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500">Network</th>
-                                <th class="px-4 py-3 text-left text-green-500">CIDR</th>
-                                <th class="px-4 py-3 text-left text-green-500">Status</th>
-                                <th class="px-4 py-3 text-left text-green-500">Devices</th>
-                                <th class="px-4 py-3 text-left text-green-500">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${networks.map(network => `
-                                <tr class="border-b border-gray-700 hover:bg-gray-700 cursor-pointer ${isSelectedNetwork(network, scanState) ? 'bg-green-900/20 border-l-4 border-green-500' : ''}" 
-                                    onclick="selectNetwork('${network.id}')">
-                                    <td class="px-4 py-3">
-                                        <div class="text-gray-200">${network.name || 'Unnamed Network'}</div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <code class="text-green-400 bg-gray-900 px-2 py-1 rounded text-sm">${network.cidr}</code>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="px-2 py-1 rounded text-xs ${getNetworkStatusBadgeColor(network.status)}">${getNetworkStatusText(network.status)}</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="text-gray-400">${network.DeviceCount || 0} devices</span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex gap-2">
-                                            <button class="px-2 py-1 text-green-400 border border-green-400 rounded text-sm hover:bg-green-400 hover:text-white transition-colors" 
-                                                    onclick="event.stopPropagation(); editNetwork('${network.id}')"
-                                                    title="Edit">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                </svg>
-                                            </button>
-                                            <button class="px-2 py-1 text-red-400 border border-red-400 rounded text-sm hover:bg-red-400 hover:text-white transition-colors" 
-                                                    onclick="event.stopPropagation(); deleteNetwork('${network.id}')"
-                                                    title="Delete">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        function isSelectedNetwork(network, scanState) {
-            return scanState && scanState.selected_network && scanState.selected_network.id === network.id;
-        }
-        
-        function getNetworkStatusBadgeColor(status) {
-            switch(status) {
-                case 'active': return 'bg-green-600 text-white';
-                case 'scanning': return 'bg-yellow-600 text-white';
-                default: return 'bg-gray-600 text-gray-200';
-            }
-        }
-        
-        function getNetworkStatusText(status) {
-            switch(status) {
-                case 'active': return 'Active';
-                case 'scanning': return 'Scanning';
-                default: return 'Inactive';
-            }
-        }
-        
-        function editNetwork(networkId) {
-            fetch(`/api/network-modal/${networkId}`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('network-modal-content').innerHTML = renderNetworkModal(data);
-                    showModal('networkModal');
-                })
-                .catch(error => {
-                    console.error('Failed to load network edit modal:', error);
-                });
-        }
-        
-        function deleteNetwork(networkId) {
-            if (confirm('Are you sure you want to delete this network?')) {
-                fetch(`/api/networks/${networkId}`, {
-                    method: 'DELETE'
-                })
-                .then(response => {
-                    if (response.ok) {
-                        loadNetworkList();
-                        if (typeof window.loadScanControl === 'function') {
-                            window.loadScanControl(false);
-                        }
-                    } else {
-                        alert('Failed to delete network');
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to delete network:', error);
-                    alert('Failed to delete network');
-                });
-            }
-        }
-        
-        function loadEventLogs() {
-            const targetEl = document.getElementById('log-list');
-            if (targetEl) {
-                targetEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading logs...</span></div>';
-                
-                fetch('/api/event-logs')
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Event logs data:', data);
-                        targetEl.innerHTML = renderEventLogs(data.logs || []);
-                    })
-                    .catch(error => {
-                        console.error('Failed to load event logs:', error);
-                        targetEl.innerHTML = '<div class="text-red-400">Failed to load logs</div>';
-                    });
-            }
-        }
-        
-        function renderEventLogs(logs) {
-            if (!logs || logs.length === 0) {
-                return '<div class="text-center text-gray-400 py-8">No logs found</div>';
-            }
-            
-            return `
-                <div class="space-y-2">
-                    ${logs.map(log => `
-                        <div class="flex items-center justify-between py-2 px-3 border-b border-gray-700 hover:bg-gray-800 rounded">
-                            <div class="flex items-center">
-                                <div class="w-2 h-2 rounded-full mr-3 ${getLogLevelColor(log.type)}"></div>
-                                <span class="text-gray-300 text-sm">${log.description || log.Description}</span>
-                            </div>
-                            <span class="text-xs text-gray-500">${formatLogTime(log.created_at || log.CreatedAt)}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-        
-        function getLogLevelColor(level) {
-            switch(level?.toLowerCase()) {
-                case 'error': return 'bg-red-500';
-                case 'warning': return 'bg-yellow-500';
-                case 'info': return 'bg-blue-500';
-                case 'success': return 'bg-green-500';
-                default: return 'bg-gray-500';
-            }
-        }
-        
-        function formatLogTime(timestamp) {
-            if (!timestamp) return 'Unknown';
-            try {
-                const date = new Date(timestamp);
-                const now = new Date();
-                const diffMs = now - date;
-                
-                if (diffMs < 60000) return 'Just now';
-                if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)} min ago`;
-                if (diffMs < 86400000) return `${Math.floor(diffMs / 3600000)} hr ago`;
-                return date.toLocaleDateString();
-            } catch (e) {
-                return 'Unknown';
-            }
-        }
-        
-        function loadSettings() {
-            const content = document.getElementById('content');
-            content.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading settings...</span></div>';
-            
-            fetch('/api/settings')
-                .then(response => response.json())
-                .then(data => {
-                    const settings = data.settings;
-                    content.innerHTML = `
-                        <div class="p-6">
-                            <h2 class="text-xl font-bold mb-6 text-green-500">Settings</h2>
-                            
-                            <div class="bg-gray-800 rounded-lg p-6 max-w-2xl">
-                                <div class="space-y-6">
-                                    <!-- Screenshots Toggle -->
-                                    <div class="flex items-center justify-between py-4 border-b border-gray-700">
-                                        <div>
-                                            <h3 class="text-lg font-medium text-gray-200">Screenshots</h3>
-                                            <p class="text-sm text-gray-400">Enable automatic screenshots of web services</p>
-                                        </div>
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" ${settings.screenshots_enabled ? 'checked' : ''} 
-                                                   class="sr-only peer" id="screenshotsToggle">
-                                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                        </label>
-                                    </div>
-                                    
-                                    <!-- Settings Info -->
-                                    <div class="text-sm text-gray-500 space-y-2">
-                                        <div><span class="font-medium">Settings ID:</span> ${settings.id}</div>
-                                        <div><span class="font-medium">Created:</span> ${new Date(settings.created_at).toLocaleString()}</div>
-                                        <div><span class="font-medium">Last Updated:</span> ${new Date(settings.updated_at).toLocaleString()}</div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Save Button -->
-                                <div class="mt-6 pt-6 border-t border-gray-700">
-                                    <button onclick="saveSettings()" 
-                                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors duration-200">
-                                        Save Settings
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Add event listener for the toggle
-                    const toggle = document.getElementById('screenshotsToggle');
-                    if (toggle) {
-                        toggle.addEventListener('change', function() {
-                            // Auto-save when toggle changes
-                            saveSettings();
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to load settings:', error);
-                    content.innerHTML = '<div class="p-6"><h2 class="text-xl font-bold mb-4">Settings</h2><p class="text-red-400">Error loading settings. Please try again.</p></div>';
-                });
-        }
-        
-        function saveSettings() {
-            const toggle = document.getElementById('screenshotsToggle');
-            if (!toggle) return;
-            
-            const formData = new FormData();
-            formData.append('screenshots_enabled', toggle.checked);
-            
-            fetch('/api/settings/screenshots', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Show success message briefly
-                    const button = document.querySelector('[onclick="saveSettings()"]');
-                    if (button) {
-                        const originalText = button.textContent;
-                        button.textContent = 'Saved!';
-                        button.classList.remove('bg-green-600', 'hover:bg-green-700');
-                        button.classList.add('bg-green-500');
-                        setTimeout(() => {
-                            button.textContent = originalText;
-                            button.classList.remove('bg-green-500');
-                            button.classList.add('bg-green-600', 'hover:bg-green-700');
-                        }, 2000);
-                    }
-                } else {
-                    alert('Failed to save settings: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Failed to save settings:', error);
-                alert('Failed to save settings. Please try again.');
-            });
-        }
-        
-        // Store the currently selected network ID to preserve selection across reloads
-        let selectedNetworkId = null;
-        
-        function loadScanControl(showSpinner = true) {
-            const loadingEl = document.getElementById('scan-control-loading');
-            const contentEl = document.getElementById('scan-control-content');
-            
-            // Only proceed if elements exist (we're on the right page)
-            if (!loadingEl || !contentEl) {
-                return;
-            }
-            
-            // Store current selection if it exists (selectedNetworkId is already managed by our custom dropdown)
-            // No need to read from DOM since we maintain the state in selectedNetworkId
-            
-            // Only show spinner on initial load or when explicitly requested
-            if (showSpinner && contentEl.innerHTML.trim() === '') {
-                loadingEl.classList.remove('hidden');
-                contentEl.classList.add('hidden');
-            }
-            
-            fetch('/api/scan/control')
-                .then(response => response.json())
-                .then(data => {
-                    if (showSpinner) {
-                        loadingEl.classList.add('hidden');
-                    }
-                    contentEl.innerHTML = renderScanControl(data);
-                    contentEl.classList.remove('hidden');
-                    
-                    // Restore selection and add event listener
-                    setupScanControlEventListeners();
-                })
-                .catch(error => {
-                    console.error('Failed to load scan control:', error);
-                    if (showSpinner) {
-                        loadingEl.classList.add('hidden');
-                    }
-                    // Only show error if content is empty (first load failed)
-                    if (contentEl.innerHTML.trim() === '') {
-                        contentEl.innerHTML = '<div class="p-4 text-red-400">Error loading scan control</div>';
-                        contentEl.classList.remove('hidden');
-                    }
-                });
-        }
-        
-        function setupScanControlEventListeners() {
-            const networkSelector = document.getElementById('network-selector');
-            const dropdown = document.getElementById('network-selector-dropdown');
-            const selectorText = document.getElementById('network-selector-text');
-            
-            if (!networkSelector || !dropdown) return;
-            
-            // Restore previous selection if it exists and is still valid
-            if (selectedNetworkId) {
-                const option = dropdown.querySelector(`[data-value="${selectedNetworkId}"]`);
-                if (option) {
-                    selectorText.textContent = option.textContent;
-                    // Update selection styles
-                    dropdown.querySelectorAll('[data-value]').forEach(opt => opt.classList.remove('bg-green-900/20'));
-                    option.classList.add('bg-green-900/20');
-                }
-            }
-            
-            // Toggle dropdown on button click
-            networkSelector.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (this.disabled) return;
-                
-                dropdown.classList.toggle('hidden');
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!networkSelector.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.classList.add('hidden');
-                }
-            });
-        }
-        
-        function selectNetworkOption(element) {
-            const networkId = element.getAttribute('data-value');
-            const selectorText = document.getElementById('network-selector-text');
-            const dropdown = document.getElementById('network-selector-dropdown');
-            
-            // Update text
-            selectorText.textContent = element.textContent;
-            
-            // Update selection styles
-            dropdown.querySelectorAll('[data-value]').forEach(opt => opt.classList.remove('bg-green-900/20'));
-            element.classList.add('bg-green-900/20');
-            
-            // Close dropdown
-            dropdown.classList.add('hidden');
-            
-            // Store selection and trigger network selection
-            selectedNetworkId = networkId;
-            
-            if (networkId) {
-                selectNetwork(networkId);
-            }
-        }
-        
-        function renderScanControl(data) {
-            console.log('renderScanControl data:', data);
-            console.log('networks:', data.networks);
-            console.log('scanState:', data.scanState);
-            const scanState = data.scanState || {};
-            const networks = data.networks || [];
-            const error = data.error || '';
-            
-            return `
-                <div class="bg-gray-800 p-4 rounded-lg">
-                    <!-- Status Indicator -->
-                    <div class="flex items-center justify-center mb-4">
-                        <div class="w-20 h-20 rounded-full border-2 ${scanState.is_running ? 'border-green-500 bg-green-500/20' : 'border-gray-500 bg-gray-500/20'} flex items-center justify-center">
-                            ${scanState.is_running ? 
-                                '<div class="animate-pulse w-8 h-8 bg-green-500 rounded-full"></div>' : 
-                                '<div class="w-8 h-8 bg-gray-500 rounded-full"></div>'
-                            }
-                        </div>
-                    </div>
-                    
-                    <!-- Network Selection -->
-                    <div class="mb-4">
-                        <label class="block text-gray-400 text-sm mb-2">Target Network</label>
-                        <div class="relative">
-                            <button type="button" 
-                                    id="network-selector"
-                                    class="w-full px-3 py-2 bg-gray-700 text-left border rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${error ? 'border-red-500' : 'border-green-600'} ${scanState.is_running ? 'opacity-50 cursor-not-allowed' : 'hover:border-green-500'}"
-                                    ${scanState.is_running ? 'disabled' : ''}>
-                                <span id="network-selector-text" class="text-green-500">Select Network</span>
-                                <svg class="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div id="network-selector-dropdown" 
-                                 class="hidden absolute z-50 w-full mt-1 bg-gray-700 border border-green-600 rounded shadow-lg max-h-60 overflow-y-auto">
-                                <div class="py-1">
-                                    <div class="px-3 py-2 text-green-500 hover:bg-gray-600 cursor-pointer transition-colors"
-                                         data-value=""
-                                         onclick="selectNetworkOption(this)">
-                                        Select Network
-                                    </div>
-                                    ${networks.map(network => `
-                                        <div class="px-3 py-2 text-green-500 hover:bg-gray-600 cursor-pointer transition-colors ${((scanState.current_network && scanState.current_network.id === network.id) || (scanState.selected_network && scanState.selected_network.id === network.id)) ? 'bg-green-900/20' : ''}"
-                                             data-value="${network.id}"
-                                             onclick="selectNetworkOption(this)">
-                                            ${network.name ? `${network.name} - ${network.cidr}` : network.cidr}
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </div>
-                        ${error ? `
-                            <div class="text-red-400 text-sm mt-2 flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                </svg>
-                                ${error}
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Control Buttons -->
-                    <div class="flex gap-2 justify-center">
-                        ${scanState.is_running ? `
-                            ${scanState.is_stopping ? `
-                                <button class="flex items-center px-4 py-2 text-yellow-400 border border-yellow-400 rounded hover:bg-yellow-400 hover:text-gray-900 transition-colors disabled:opacity-50" 
-                                        disabled>
-                                    <div class="animate-spin rounded-full h-4 w-4 border-2 border-yellow-400 border-t-transparent mr-2"></div>
-                                    Stopping...
-                                </button>
-                            ` : `
-                                <button class="flex items-center px-4 py-2 text-red-400 border border-red-400 rounded hover:bg-red-400 hover:text-white transition-colors" 
-                                        onclick="stopScan()">
-                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M6 6h12v12H6z"></path>
-                                    </svg>
-                                    Stop
-                                </button>
-                            `}
-                        ` : `
-                            <button class="flex items-center px-4 py-2 text-green-500 border border-green-500 rounded hover:bg-green-500 hover:text-white transition-colors disabled:opacity-50" 
-                                    onclick="startScan()"
-                                    ${networks.length === 0 ? 'disabled' : ''}>
-                                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z"></path>
-                                </svg>
-                                Start
-                            </button>
-                            <button class="flex items-center px-4 py-2 text-gray-400 border border-gray-400 rounded hover:bg-gray-400 hover:text-gray-900 transition-colors"
-                                    onclick="loadNetworkModal()">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                Add Network
-                            </button>
-                        `}
-                    </div>
-                    
-                    <!-- Scan Statistics (if running) -->
-                    ${scanState.is_running ? `
-                        <div class="mt-4 pt-4 border-t border-gray-600">
-                            <div class="grid grid-cols-3 gap-4 text-center">
-                                <div>
-                                    <div class="text-gray-400 text-sm">Scans</div>
-                                    <div class="text-green-500 font-bold text-lg">${scanState.scan_count || 0}</div>
-                                </div>
-                                <div>
-                                    <div class="text-gray-400 text-sm">Runtime</div>
-                                    <div class="text-green-500 font-bold text-lg" id="scan-runtime" 
-                                         data-start-time="${scanState.start_time || ''}">
-                                        ${formatRuntime(scanState.start_time)}
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="text-gray-400 text-sm">Last Scan</div>
-                                    <div class="text-green-500 font-bold text-lg">
-                                        ${scanState.lastScanTime ? formatLogTime(scanState.lastScanTime) : 'Never'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        }
-        
-        function formatRuntime(startTime) {
-            if (!startTime) return '00:00:00';
-            try {
-                const start = new Date(startTime);
-                const now = new Date();
-                const diff = Math.floor((now - start) / 1000);
-                const hours = Math.floor(diff / 3600);
-                const minutes = Math.floor((diff % 3600) / 60);
-                const seconds = diff % 60;
-                return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-            } catch (e) {
-                return '00:00:00';
-            }
-        }
-        
-        // Save device changes function
-        function saveDeviceChanges(deviceId) {
-            const nameElement = document.getElementById(`device-name-${deviceId}`);
-            const commentElement = document.getElementById(`device-comment-${deviceId}`);
-            
-            const name = nameElement ? nameElement.value.trim() : '';
-            const comment = commentElement ? commentElement.value.trim() : '';
-            
-            const formData = new FormData();
-            formData.append('hostname', name);
-            formData.append('comment', comment);
-            
-            // Show saving state
-            const saveButton = event.target;
-            const originalText = saveButton.textContent;
-            saveButton.textContent = 'Saving...';
-            saveButton.disabled = true;
-            
-            fetch(`/api/devices/${deviceId}`, {
-                method: 'PUT',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success === true) {
-                    // Update successful
-                    saveButton.textContent = 'Saved!';
-                    saveButton.className = 'px-4 py-2 bg-green-500 text-white rounded transition-colors';
-                    
-                    // Reset button after delay
-                    setTimeout(() => {
-                        saveButton.textContent = originalText;
-                        saveButton.className = 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors';
-                        saveButton.disabled = false;
-                    }, 2000);
-                    
-                    // Refresh device lists to show updated info
-                    loadDevices();
-                } else {
-                    // Update failed
-                    saveButton.textContent = 'Failed to Save';
-                    saveButton.className = 'px-4 py-2 bg-red-500 text-white rounded transition-colors';
-                    setTimeout(() => {
-                        saveButton.textContent = originalText;
-                        saveButton.className = 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors';
-                        saveButton.disabled = false;
-                    }, 3000);
-                    console.error('Failed to update device:', data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Failed to save device changes:', error);
-                saveButton.textContent = 'Error';
-                saveButton.className = 'px-4 py-2 bg-red-500 text-white rounded transition-colors';
-                setTimeout(() => {
-                    saveButton.textContent = originalText;
-                    saveButton.className = 'px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors';
-                    saveButton.disabled = false;
-                }, 3000);
-            });
-        }
-        
-        function loadDeviceModal(deviceId) {
-            fetch(`/api/devices/${deviceId}/modal`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('loadDeviceModal data:', data);
-                    document.getElementById('device-modal-content').innerHTML = renderDeviceModal(data.device, data.screenshotsEnabled);
-                    showModal('deviceModal');
-                })
-                .catch(error => {
-                    console.error('Failed to load device modal:', error);
-                });
-        }
-        
-        function loadNewScanModal(ip) {
-            fetch('/api/devices/new-scan')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('device-modal-content').innerHTML = renderNewScanModal(data, ip);
-                    showModal('deviceModal');
-                })
-                .catch(error => {
-                    console.error('Failed to load new scan modal:', error);
-                });
-        }
-        
-        function renderDeviceModal(device, screenshotsEnabled = false) {
-            return `
-                <div class="p-6">
-                    <!-- Header -->
-                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-600">
-                        <div class="flex items-center">
-                            <div class="w-4 h-4 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
-                            <h3 class="text-xl font-bold text-green-500">${device.ipv4}</h3>
-                        </div>
-                        <button type="button" class="text-gray-400 hover:text-white text-xl" onclick="closeModal('deviceModal')">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <!-- Device Information -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <h4 class="text-green-500 font-semibold mb-3">Device Info</h4>
-                            <div class="space-y-3 text-sm">
-                                <div><span class="text-gray-400">IP Address:</span> <span class="text-white font-mono">${device.ipv4}</span></div>
-                                ${device.mac ? `<div><span class="text-gray-400">MAC Address:</span> <span class="text-blue-400 font-mono">${device.mac}</span></div>` : ''}
-                                ${device.hostname ? `<div><span class="text-gray-400">Hostname:</span> <span class="text-white">${device.hostname}</span></div>` : ''}
-                                <div><span class="text-gray-400">Status:</span> <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span></div>
-                                ${device.LastSeen ? `<div><span class="text-gray-400">Last Seen:</span> <span class="text-white">${formatLogTime(device.LastSeen)}</span></div>` : ''}
-                            </div>
-                        </div>
-                        
-                        ${device.os ? `
-                            <div>
-                                <h4 class="text-green-500 font-semibold mb-2">Operating System</h4>
-                                <div class="space-y-2 text-sm">
-                                    <div><span class="text-gray-400">OS:</span> <span class="text-white">${device.os.name || 'Unknown'}</span></div>
-                                    ${device.os.version ? `<div><span class="text-gray-400">Version:</span> <span class="text-white">${device.os.version}</span></div>` : ''}
-                                    ${device.os.cpe ? `<div><span class="text-gray-400">CPE:</span> <span class="text-gray-300 font-mono text-xs">${device.os.cpe}</span></div>` : ''}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Editable Fields -->
-                    <div class="mb-6 space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Editable Name Field -->
-                            <div>
-                                <label class="text-green-500 font-semibold block mb-2">Device Name</label>
-                                <input type="text" 
-                                       id="device-name-${device.id}" 
-                                       value="${device.name || ''}" 
-                                       placeholder="Enter device name"
-                                       class="bg-gray-700 text-white px-4 py-3 rounded w-full border border-gray-600 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 transition-colors">
-                            </div>
-                        </div>
-                        
-                        <!-- Editable Comment Field - Full Width -->
-                        <div>
-                            <label class="text-green-500 font-semibold block mb-2">Comments & Notes</label>
-                            <textarea id="device-comment-${device.id}" 
-                                      placeholder="Add comments, notes, or observations about this device..."
-                                      rows="6"
-                                      class="bg-gray-700 text-white px-4 py-3 rounded w-full border border-gray-600 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 resize-y transition-colors">${device.comment || ''}</textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Open Ports -->
-                    ${device.ports && device.ports.length > 0 ? `
-                        <div class="mb-4">
-                            <h4 class="text-green-500 font-semibold mb-2">Open Ports</h4>
-                            <div class="bg-gray-900 rounded p-3 max-h-40 overflow-y-auto">
-                                <div class="space-y-1">
-                                    ${device.ports.filter(port => port.state === 'open').map(port => `
-                                        <div class="flex items-center justify-between py-1 border-b border-gray-700 last:border-b-0">
-                                            <div class="flex items-center space-x-3">
-                                                <span class="text-green-400 font-mono font-medium">${port.number || port.Port}/${port.protocol || port.Protocol}</span>
-                                                <span class="text-gray-300 text-sm">${port.service || port.Service || 'unknown'}</span>
-                                            </div>
-                                            <span class="text-green-500 text-xs font-medium uppercase">${port.state}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Actions -->
-                    <div class="flex justify-between pt-3 border-t border-gray-600">
-                        <button type="button" class="px-4 py-2 text-gray-400 border border-gray-600 rounded hover:bg-gray-700 transition-colors" onclick="closeModal('deviceModal')">
-                            Close
-                        </button>
-                        <div class="flex gap-3">
-                            <button type="button" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors" 
-                                    onclick="saveDeviceChanges('${device.id}')">
-                                Save Changes
-                            </button>
-                            <button type="button" class="px-4 py-2 text-red-400 border border-red-400 rounded hover:bg-red-400 hover:text-white transition-colors" 
-                                    onclick="deleteDevice('${device.id}', '${device.ipv4}'); closeModal('deviceModal')">
-                                Delete Device
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function renderNewScanModal(data, ip) {
-            return `
-                <div class="p-6">
-                    <!-- Header -->
-                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-600">
-                        <h3 class="text-xl font-bold text-green-500">Scan IP Address</h3>
-                        <button type="button" class="text-gray-400 hover:text-white text-xl" onclick="closeModal('deviceModal')">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <!-- Content -->
-                    <div class="mb-4">
-                        <p class="text-gray-300 mb-4">No device found at this IP address. Would you like to scan it?</p>
-                        <div class="bg-gray-900 rounded p-3 mb-4">
-                            <div class="text-green-400 font-mono text-lg text-center">${ip}</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Actions -->
-                    <div class="flex justify-end gap-3">
-                        <button type="button" class="px-4 py-2 text-gray-400 border border-gray-600 rounded hover:bg-gray-700 transition-colors" onclick="closeModal('deviceModal')">
-                            Cancel
-                        </button>
-                        <button type="button" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors" 
-                                onclick="scanSingleIP('${ip}'); closeModal('deviceModal')">
-                            Scan IP
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function scanSingleIP(ip) {
-            const formData = new FormData();
-            formData.append('ip', ip);
-            
-            fetch('/api/scan/single', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Refresh devices and network map
-                    loadDevices();
-                    loadNetworkMap();
-                } else {
-                    alert(data.error || 'Failed to scan IP');
-                }
-            })
-            .catch(error => {
-                console.error('Failed to scan IP:', error);
-                alert('Failed to scan IP');
-            });
-        }
-        
-        function loadNetworkModal() {
-            fetch('/api/network-modal')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('network-modal-content').innerHTML = renderNetworkModal(data);
-                    showModal('networkModal');
-                })
-                .catch(error => {
-                    console.error('Failed to load network modal:', error);
-                });
-        }
-        
-        function renderNetworkModal(data) {
-            console.log('renderNetworkModal data:', data);
-            const network = data.network || {};
-            const error = data.error || '';
-            const isEdit = network && network.id;
-            
-            return `
-                <div class="p-6">
-                    <!-- Header -->
-                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-green-600">
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                            </svg>
-                            <span class="text-lg font-bold text-green-500">
-                                ${isEdit ? 'Edit Network' : 'Add New Network'}
-                            </span>
-                        </div>
-                        <button type="button" class="text-gray-400 hover:text-white text-xl" onclick="closeModal('networkModal')">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <!-- Form -->
-                    <form onsubmit="submitNetworkForm(event, '${isEdit ? 'PUT' : 'POST'}', '${isEdit ? `/api/networks/${network.id}` : '/api/networks'}')">
-                        ${error ? `
-                            <div class="bg-red-600/10 border border-red-500 rounded p-3 mb-4">
-                                <div class="flex items-center text-red-400">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                    </svg>
-                                    ${error}
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        <div class="mb-4">
-                            <label for="networkName" class="block text-green-500 text-sm font-semibold mb-2">Network Name</label>
-                            <input type="text" 
-                                   class="w-full px-3 py-2 bg-gray-700 border border-green-600 text-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500" 
-                                   id="networkName" 
-                                   name="name"
-                                   value="${network?.name || ''}"
-                                   placeholder="e.g., Home Network, Office LAN">
-                            <div class="text-gray-400 text-xs mt-1">Optional friendly name</div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="networkCIDR" class="block text-green-500 text-sm font-semibold mb-2">CIDR Address <span class="text-red-400">*</span></label>
-                            <input type="text" 
-                                   class="w-full px-3 py-2 bg-gray-700 border border-green-600 text-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500" 
-                                   id="networkCIDR" 
-                                   name="cidr"
-                                   value="${network?.cidr || ''}"
-                                   placeholder="e.g., 192.168.1.0/24"
-                                   required>
-                            <div class="text-gray-400 text-xs mt-1">Network range in CIDR notation</div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="networkDescription" class="block text-green-500 text-sm font-semibold mb-2">Description</label>
-                            <textarea class="w-full px-3 py-2 bg-gray-700 border border-green-600 text-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-y" 
-                                      id="networkDescription" 
-                                      name="description"
-                                      rows="2"
-                                      placeholder="Optional description...">${network?.Description || ''}</textarea>
-                        </div>
-                        
-                        ${!isEdit ? `
-                            <div class="bg-blue-600/10 border border-blue-500 rounded p-3 mb-4">
-                                <div class="flex items-center text-blue-400">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    <span class="text-sm">After adding, you can scan this network to discover devices.</span>
-                                </div>
-                            </div>
-                        ` : ''}
-                        
-                        <div class="flex justify-end gap-3 pt-3 border-t border-green-600">
-                            <button type="button" class="px-4 py-2 text-gray-400 border border-gray-600 rounded hover:bg-gray-700 transition-colors" onclick="closeModal('networkModal')">
-                                Cancel
-                            </button>
-                            <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors">
-                                ${isEdit ? 'Update' : 'Add'} Network
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            `;
-        }
-        
-        function submitNetworkForm(event, method, url) {
-            event.preventDefault();
-            
-            const formData = new FormData(event.target);
-            
-            fetch(url, {
-                method: method,
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Success - close modal and refresh
-                    closeModal('networkModal');
-                    // Refresh network list and scan control
-                    if (typeof window.loadNetworkList === 'function') {
-                        window.loadNetworkList();
-                    }
-                    if (typeof window.loadScanControl === 'function') {
-                        window.loadScanControl(false);
-                    }
-                } else {
-                    // Show error in modal
-                    document.getElementById('network-modal-content').innerHTML = renderNetworkModal({
-                        network: Object.fromEntries(formData.entries()),
-                        error: data.error || 'Failed to save network'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Failed to submit network form:', error);
-                alert('Failed to save network');
-            });
-        }
-        
-        // Dashboard metrics loading
-        function loadDashboardMetrics() {
-            fetch('/api/dashboard-metrics')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Dashboard metrics data:', data);
-                    
-                    // Update network range with CIDR
-                    const networkRangeEl = document.getElementById('network-range');
-                    if (networkRangeEl) {
-                        networkRangeEl.textContent = data.networkRange || 'No network selected';
-                    }
-                    
-                    // Update devices found
-                    const devicesFoundEl = document.getElementById('devices-found');
-                    if (devicesFoundEl) {
-                        devicesFoundEl.textContent = data.devicesFound || 0;
-                    }
-                    
-                    // Update devices online
-                    const devicesOnlineEl = document.getElementById('devices-online');
-                    if (devicesOnlineEl) {
-                        devicesOnlineEl.textContent = data.devicesOnline || 0;
-                    }
-                    
-                    // Update public IP
-                    const publicIPEl = document.getElementById('public-ip');
-                    if (publicIPEl) {
-                        publicIPEl.textContent = data.publicIP || 'N/A';
-                    }
-                    
-                    // Update network saturation
-                    const saturationEl = document.getElementById('network-saturation');
-                    const saturationProgressEl = document.getElementById('saturation-progress');
-                    if (saturationEl && saturationProgressEl) {
-                        const saturation = data.saturation || 0;
-                        saturationEl.textContent = `${saturation.toFixed(1)}%`;
-                        saturationProgressEl.style.width = `${Math.min(saturation, 100)}%`;
-                        
-                        // Update progress bar color based on saturation level
-                        if (saturation < 25) {
-                            saturationProgressEl.className = 'h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out';
-                        } else if (saturation < 50) {
-                            saturationProgressEl.className = 'h-full bg-gradient-to-r from-yellow-500 to-yellow-400 transition-all duration-500 ease-out';
-                        } else if (saturation < 75) {
-                            saturationProgressEl.className = 'h-full bg-gradient-to-r from-orange-500 to-orange-400 transition-all duration-500 ease-out';
-                        } else {
-                            saturationProgressEl.className = 'h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-500 ease-out';
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to load dashboard metrics:', error);
-                    
-                    // Set fallback values
-                    const devicesFoundEl = document.getElementById('devices-found');
-                    if (devicesFoundEl) devicesFoundEl.textContent = '0';
-                    
-                    const devicesOnlineEl = document.getElementById('devices-online');
-                    if (devicesOnlineEl) devicesOnlineEl.textContent = '0';
-                    
-                    const publicIPEl = document.getElementById('public-ip');
-                    if (publicIPEl) publicIPEl.textContent = 'N/A';
-                    
-                    // Reset saturation
-                    const saturationEl = document.getElementById('network-saturation');
-                    const saturationProgressEl = document.getElementById('saturation-progress');
-                    if (saturationEl) saturationEl.textContent = '0.0%';
-                    if (saturationProgressEl) {
-                        saturationProgressEl.style.width = '0%';
-                        saturationProgressEl.className = 'h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out';
-                    }
-                });
-        }
-        
-        // Recent activity loading
-        function loadRecentActivity() {
-            fetch('/api/event-logs')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Recent activity data:', data);
-                    const activityLogEl = document.getElementById('activity-log');
-                    if (activityLogEl && data.logs) {
-                        // Get the 5 most recent logs for the activity widget
-                        const recentLogs = data.logs.slice(0, 5);
-                        activityLogEl.innerHTML = renderRecentActivity(recentLogs);
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to load recent activity:', error);
-                    const activityLogEl = document.getElementById('activity-log');
-                    if (activityLogEl) {
-                        activityLogEl.innerHTML = '<div class="text-red-400 text-center py-4">Failed to load recent activity</div>';
-                    }
-                });
-        }
-        
-        // Render recent activity logs
-        function renderRecentActivity(logs) {
-            if (!logs || logs.length === 0) {
-                return '<div class="text-center text-gray-400 py-4">No recent activity</div>';
-            }
-            
-            return logs.map(log => {
-                const createdAt = log.created_at || log.CreatedAt || log.createdAt;
-                const timeAgo = createdAt ? getTimeAgo(new Date(createdAt)) : 'Unknown time';
-                const typeIcon = getActivityIcon(log.type || log.Type);
-                const description = log.description || log.Description || 'System activity';
-                
-                return `
-                    <div class="flex items-center justify-between py-2 border-b border-gray-700">
-                        <div class="flex items-center">
-                            ${typeIcon}
-                            <span class="ml-2 text-gray-300">${description}</span>
-                        </div>
-                        <span class="text-xs text-gray-500">${timeAgo}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        // Get activity icon based on log type
-        function getActivityIcon(type) {
-            switch(type) {
-                case 'scan_started':
-                    return '<svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
-                case 'scan_completed':
-                    return '<svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-                case 'device_discovered':
-                    return '<svg class="w-4 h-4 text-purple-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
-                case 'network_change':
-                    return '<svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h18v2H3V3zm0 4h18v2H3V7zm0 4h18v2H3v-2z"/></svg>';
-                default:
-                    return '<svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
-            }
-        }
-        
-        // Get human-readable time ago
-        function getTimeAgo(date) {
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMins / 60);
-            const diffDays = Math.floor(diffHours / 24);
-            
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays === 1) return 'Yesterday';
-            return `${diffDays}d ago`;
-        }
-
-        // Initialize all components when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDevices();
-            loadScanControl();
-            loadDashboardMetrics();
-            loadRecentActivity();
-            
-            // Set up periodic updates
-            setInterval(loadDevices, 10000); // Update devices every 10 seconds
-            setInterval(() => loadScanControl(false), 5000); // Update scan control every 5 seconds (no spinner)
-            setInterval(loadDashboardMetrics, 15000); // Update dashboard metrics every 15 seconds
-            setInterval(loadRecentActivity, 30000); // Update recent activity every 30 seconds
-        });
-        
-        // Scan control functions  
-        function startScan() {
-            if (!selectedNetworkId) {
-                alert('Please select a network first');
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('network-selector', selectedNetworkId);
-            
-            fetch('/api/scan/start', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Refresh scan control (without spinner since it's a refresh)
-                    loadScanControl(false);
-                    // Refresh network map and devices
-                    loadNetworkMap();
-                    loadDevices();
-                    // Refresh recent activity to show scan started
-                    loadRecentActivity();
-                } else {
-                    alert(data.error || 'Failed to start scan');
-                }
-            })
-            .catch(error => {
-                console.error('Failed to start scan:', error);
-                alert('Failed to start scan');
-            });
-        }
-
-        function stopScan() {
-            fetch('/api/scan/stop', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Refresh scan control (without spinner)
-                    loadScanControl(false);
-                    // Refresh network map and devices  
-                    loadNetworkMap();
-                    loadDevices();
-                    // Refresh recent activity to show scan stopped
-                    loadRecentActivity();
-                } else {
-                    alert(data.error || 'Failed to stop scan');
-                }
-            })
-            .catch(error => {
-                console.error('Failed to stop scan:', error);
-                alert('Failed to stop scan');
-            });
-        }
-        
-        // Additional missing functions
-        function selectNetwork(networkId) {
-            const formData = new FormData();
-            formData.append('network-id', networkId);
-            
-            fetch('/api/scan/select-network', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Refresh network map and devices
-                    loadNetworkMap();
-                    loadDevices();
-                    // Refresh scan control to update selection (without spinner)
-                    loadScanControl(false);
-                }
-            })
-            .catch(error => {
-                console.error('Failed to select network:', error);
-            });
-        }
-
-        function deleteDevice(deviceId, deviceIP) {
-            if (confirm(`Delete device ${deviceIP}?`)) {
-                fetch(`/api/devices/${deviceId}`, {
-                    method: 'DELETE'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Refresh the device lists and network map
-                        loadDevices();
-                        loadNetworkMap();
-                        if (typeof window.loadDeviceList === 'function') {
-                            loadDeviceList();
-                        }
-                    } else {
-                        alert(data.error || 'Failed to delete device');
-                    }
-                })
-                .catch(error => {
-                    console.error('Failed to delete device:', error);
-                    alert('Failed to delete device');
-                });
-            }
         }
         
         // Page-specific content loading functions
@@ -2407,46 +632,78 @@
                 });
         }
         
-        function renderDeviceGrid(devices) {
-            // Filter out offline devices
-            const onlineDevices = devices ? devices.filter(device => device.status !== 'offline') : [];
-            
-            if (!onlineDevices || onlineDevices.length === 0) {
-                return `
-                    <div class="text-center py-8 text-gray-400">
-                        <i class="bi bi-router text-4xl mb-3"></i>
-                        <p>No online devices found</p>
-                        <p class="text-sm">Start a network scan to discover devices</p>
-                    </div>
-                `;
+        function renderDeviceTable(devices) {
+            if (!devices || devices.length === 0) {
+                return '<div class="text-center text-gray-400 py-8">No devices found</div>';
             }
             
             return `
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    ${onlineDevices.map(device => `
-                        <div class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700 hover:border-green-500" 
-                             onclick="loadDeviceModal('${device.id}')">
-                            <div class="text-green-500 font-mono mb-2" style="font-size: clamp(0.875rem, 2vw, 1.125rem);">${device.ipv4}</div>
-                            ${device.mac ? `<div class="text-gray-500 text-xs font-mono mb-2 opacity-70">${device.mac}</div>` : ''}
-                            ${device.hostname ? `<div class="text-gray-300 text-sm mb-2">${device.hostname}</div>` : ''}
-                            <div class="flex justify-end items-center">
-                                ${device.ports && device.ports.length > 0 ? 
-                                    `<span class="text-gray-400 text-xs">${device.ports.filter(p => p.state === 'open').length} ports</span>` 
-                                    : ''
-                                }
-                            </div>
-                        </div>
-                    `).join('')}
+                <div class="overflow-x-auto">
+                    <table class="w-full bg-gray-800 rounded-lg">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Device</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">IP Address</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">MAC Address</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">OS</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Status</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-600">
+                            ${devices.map(device => {
+                                const hostname = device.hostname || device.Hostname || 'Unknown';
+                                const ip = device.ip || device.IP || 'N/A';
+                                const mac = device.mac_address || device.MacAddress || 'N/A';
+                                const os = device.os || device.OS || 'Unknown';
+                                const status = device.status || device.Status || 'unknown';
+                                const deviceId = device.id || device.ID;
+                                
+                                return `
+                                    <tr class="hover:bg-gray-700 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center">
+                                                <i class="${getDeviceStatusColor(device)} mr-2"></i>
+                                                <span class="font-medium">${hostname}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 font-mono text-sm">${ip}</td>
+                                        <td class="px-4 py-3 font-mono text-sm">${mac}</td>
+                                        <td class="px-4 py-3">${os}</td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-1 rounded text-xs ${getDeviceStatusColor(status)}">${status}</span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex gap-2">
+                                                <button onclick="loadDeviceModal('${deviceId}')" 
+                                                        class="text-green-500 hover:text-green-400 p-1">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                                ${status !== 'offline' ? `
+                                                    <button onclick="deleteDevice('${deviceId}', '${ip}')" 
+                                                            class="text-red-500 hover:text-red-400 p-1">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
                 </div>
             `;
         }
         
         function getDeviceStatusColor(status) {
-            switch(status) {
-                case 'online': return 'bg-green-600 text-white';
-                case 'idle': return 'bg-yellow-600 text-white';
-                case 'offline': return 'bg-gray-600 text-white';
-                default: return 'bg-gray-600 text-white';
+            if (!status) return 'bg-gray-600 text-gray-300';
+            const statusLower = status.toLowerCase();
+            switch (statusLower) {
+                case 'online': return 'bg-green-600 text-green-100';
+                case 'offline': return 'bg-red-600 text-red-100';
+                case 'unknown': return 'bg-yellow-600 text-yellow-100';
+                default: return 'bg-gray-600 text-gray-300';
             }
         }
         
@@ -2471,80 +728,61 @@
                     <div class="text-center py-8 text-gray-400">
                         <i class="bi bi-network-wired text-4xl mb-3"></i>
                         <p>No networks configured</p>
-                        <p class="text-sm">Add a network to start scanning</p>
                     </div>
                 `;
             }
             
             return `
-                <div class="bg-gray-800 rounded-lg overflow-hidden">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-900">
+                <div class="overflow-x-auto">
+                    <table class="w-full bg-gray-800 rounded-lg">
+                        <thead class="bg-gray-700">
                             <tr>
-                                <th class="text-left p-3 text-green-500">Network</th>
-                                <th class="text-left p-3 text-green-500">Name</th>
-                                <th class="text-left p-3 text-green-500">Interface</th>
-                                <th class="text-left p-3 text-green-500">Devices</th>
-                                <th class="text-left p-3 text-green-500">Status</th>
-                                <th class="text-left p-3 text-green-500">Actions</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Network</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Description</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Status</th>
+                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${networks.map(network => `
-                                <tr class="border-t border-gray-700 hover:bg-gray-700">
-                                    <td class="p-3">
-                                        <div class="text-green-500 font-mono">${network.cidr}</div>
-                                    </td>
-                                    <td class="p-3">
-                                        <span class="text-gray-300">${network.name || 'Unnamed'}</span>
-                                    </td>
-                                    <td class="p-3">
-                                        <span class="text-blue-400">${network.interface || '-'}</span>
-                                    </td>
-                                    <td class="p-3">
-                                        <span class="text-gray-400">${network.deviceCount || 0}</span>
-                                    </td>
-                                    <td class="p-3">
-                                        <span class="px-2 py-1 rounded text-xs ${network.active ? 'bg-green-600 text-white' : 'bg-gray-600 text-white'}">
-                                            ${network.active ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </td>
-                                    <td class="p-3">
-                                        <div class="flex gap-2">
-                                            <button class="px-2 py-1 text-blue-400 border border-blue-400 rounded text-sm hover:bg-blue-400 hover:text-white transition-colors" 
-                                                    onclick="editNetwork('${network.id}')"
-                                                    title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button class="px-2 py-1 text-red-400 border border-red-400 rounded text-sm hover:bg-red-400 hover:text-white transition-colors" 
-                                                    onclick="deleteNetwork('${network.id}')"
-                                                    title="Delete">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `).join('')}
+                        <tbody class="divide-y divide-gray-600">
+                            ${networks.map(network => {
+                                const cidr = network.cidr || network.CIDR || 'N/A';
+                                const description = network.description || network.Description || 'No description';
+                                const status = network.status || network.Status || 'unknown';
+                                const networkId = network.id || network.ID;
+                                
+                                return `
+                                    <tr class="hover:bg-gray-700 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center">
+                                                <i class="bi bi-globe mr-2 text-green-500"></i>
+                                                <span class="font-medium">${cidr}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-300">${description}</td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-1 rounded text-xs bg-green-600 text-green-100">Active</span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex gap-2">
+                                                <button onclick="editNetwork('${networkId}')" 
+                                                        class="text-green-500 hover:text-green-400 p-1">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button onclick="deleteNetwork('${networkId}')" 
+                                                        class="text-red-500 hover:text-red-400 p-1">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
             `;
         }
         
-        function loadLogsPage() {
-            const container = document.getElementById('logs-container');
-            if (!container) return;
-            
-            fetch('/api/event-logs-table')
-                .then(response => response.text())
-                .then(html => {
-                    container.innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Failed to load logs:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load event logs</div>';
-                });
-        }
         
         function loadSettingsPage() {
             const container = document.getElementById('settings-container');
@@ -2567,58 +805,53 @@
                     <form id="settings-form" class="space-y-6">
                         <div>
                             <h3 class="text-lg font-semibold text-green-500 mb-4">Network Scanning</h3>
-                            <div class="space-y-4">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <label class="text-white font-medium">Enable Screenshots</label>
-                                        <p class="text-gray-400 text-sm">Automatically capture screenshots of web services</p>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" 
-                                               name="screenshots_enabled" 
-                                               class="sr-only peer" 
-                                               ${settings.screenshots_enabled ? 'checked' : ''}
-                                               onchange="updateScreenshotSetting(this.checked)">
-                                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                    </label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Scan Interval (seconds)</label>
+                                    <input type="number" 
+                                           name="scan_interval" 
+                                           value="${settings.scan_interval || 300}"
+                                           min="60" 
+                                           max="3600"
+                                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-green-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Concurrent Scans</label>
+                                    <input type="number" 
+                                           name="concurrent_scans" 
+                                           value="${settings.concurrent_scans || 50}"
+                                           min="1" 
+                                           max="200"
+                                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-green-500 focus:outline-none">
                                 </div>
                             </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-green-500 mb-4">Screenshot Capture</h3>
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" 
+                                       id="screenshots_enabled" 
+                                       name="screenshots_enabled" 
+                                       ${settings.screenshots_enabled ? 'checked' : ''}
+                                       class="w-4 h-4 text-green-500 bg-gray-700 border-gray-600 rounded focus:ring-green-500">
+                                <label for="screenshots_enabled" class="text-sm font-medium text-gray-300">
+                                    Enable automatic screenshot capture for detected devices
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-end">
+                            <button type="submit" 
+                                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-medium transition-colors">
+                                Save Settings
+                            </button>
                         </div>
                     </form>
                 </div>
             `;
         }
         
-        function updateScreenshotSetting(enabled) {
-            const formData = new FormData();
-            formData.append('screenshots_enabled', enabled);
-            
-            fetch('/api/settings/screenshots', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('Screenshot setting updated');
-                } else {
-                    console.error('Failed to update screenshot setting');
-                }
-            })
-            .catch(error => {
-                console.error('Error updating screenshot setting:', error);
-            });
-        }
-        
-        function refreshLogs() {
-            loadLogsPage();
-        }
-        
-        function clearLogs() {
-            if (confirm('Are you sure you want to clear all event logs? This action cannot be undone.')) {
-                alert('Clear logs functionality not yet implemented');
-            }
-        }
         
         function refreshAlerts() {
             console.log('Refresh alerts');
@@ -2638,44 +871,56 @@
             } else if (currentPath === '/networks') {
                 loadNetworksPage();
                 setInterval(loadNetworksPage, 15000);
-            } else if (currentPath === '/logs') {
-                loadLogsPage();
-                setInterval(loadLogsPage, 30000);
             } else if (currentPath === '/settings') {
                 loadSettingsPage();
+            } else if (currentPath === '/' || currentPath === '/home' || currentPath === '') {
+                // Initialize main dashboard widgets
+                if (typeof loadScanControl === 'function') {
+                    loadScanControl();
+                }
+                if (typeof loadRecentActivity === 'function') {
+                    loadRecentActivity();
+                }
+                if (typeof loadDashboardMetrics === 'function') {
+                    loadDashboardMetrics();
+                }
+                if (typeof startNetworkMapUpdates === 'function') {
+                    startNetworkMapUpdates();
+                }
+                
+                // Set up periodic updates for dashboard
+                setInterval(() => {
+                    if (typeof loadDashboardMetrics === 'function') {
+                        loadDashboardMetrics();
+                    }
+                }, 15000);
+                setInterval(() => {
+                    if (typeof loadRecentActivity === 'function') {
+                        loadRecentActivity();
+                    }
+                }, 30000);
             }
         }
         
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', initPageContent);
 
-        // Make functions globally available
-        window.loadDevices = loadDevices;
-        window.loadDeviceList = loadDeviceList;
-        window.loadNetworkList = loadNetworkList;
-        window.loadEventLogs = loadEventLogs;
-        window.loadRecentActivity = loadRecentActivity;
-        window.loadScanControl = loadScanControl;
-        window.loadDeviceModal = loadDeviceModal;
-        window.loadNewScanModal = loadNewScanModal;
-        window.loadNetworkModal = loadNetworkModal;
-        window.submitNetworkForm = submitNetworkForm;
-        window.saveDeviceChanges = saveDeviceChanges;
-        window.startScan = startScan;
-        window.stopScan = stopScan;
-        window.selectNetwork = selectNetwork;
-        window.deleteDevice = deleteDevice;
-        window.deleteNetwork = deleteNetwork;
-        window.editNetwork = editNetwork;
-        window.scanSingleIP = scanSingleIP;
+        // Make page-specific functions globally available (non-duplicated ones)
+        window.loadDevicesPage = loadDevicesPage;
+        window.loadNetworksPage = loadNetworksPage;
+        window.loadSettingsPage = loadSettingsPage;
+        window.refreshAlerts = refreshAlerts;
+        window.markAllRead = markAllRead;
     </script>
 
     <!-- Device Modal -->
     <div id="deviceModal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-container">
-            <div id="device-modal-content" class="modal-content">
-                <!-- Content loaded dynamically -->
+            <div class="modal-content max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div id="device-modal-content">
+                    <!-- Content will be loaded here -->
+                </div>
             </div>
         </div>
     </div>
@@ -2684,10 +929,25 @@
     <div id="networkModal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-container">
-            <div id="network-modal-content" class="modal-content">
-                <!-- Content loaded dynamically -->
+            <div class="modal-content max-w-2xl w-full">
+                <div id="networkModalContent">
+                    <!-- Content will be loaded here -->
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- New Scan Modal -->
+    <div id="newScanModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-container">
+            <div class="modal-content max-w-md w-full">
+                <div id="newScanModalContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

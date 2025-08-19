@@ -3,20 +3,16 @@ window.detectedNetworks = [];
 window.currentSuggestionIndex = 0;
 
 function checkForNetworkSuggestions() {
-    console.log('Checking for network suggestions...');
-    fetch('/api/detected-networks')
+    fetch('/api/detected-networks', { credentials: 'include' })
         .then(response => {
-            console.log('Network detection response status:', response.status);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log('Detected networks data:', data);
             window.detectedNetworks = data || [];
             if (window.detectedNetworks.length > 0) {
-                console.log('Showing network suggestion for', window.detectedNetworks.length, 'networks');
                 showNetworkSuggestion(0);
             } else {
                 console.log('No networks detected, hiding suggestion');
@@ -61,7 +57,6 @@ function createNetworkFromSuggestion() {
         return;
     }
     const network = window.detectedNetworks[window.currentSuggestionIndex];
-    console.log('Creating network from suggestion:', network);
     fetch('/api/network-suggestion', {
         method: 'POST',
         headers: {
@@ -72,7 +67,8 @@ function createNetworkFromSuggestion() {
             'interface_name': network.interface_name,
             'gateway': network.gateway || '',
             'name': network.name || ''
-        })
+        }),
+        credentials: 'include'
     })
     .then(response => {
         if (!response.ok) {
@@ -83,7 +79,6 @@ function createNetworkFromSuggestion() {
         return response.json();
     })
     .then(data => {
-        console.log('Network created successfully:', data);
         
         // Remove the accepted suggestion from the array
         window.detectedNetworks.splice(window.currentSuggestionIndex, 1);
@@ -131,7 +126,6 @@ function initNetworkSuggestions() {
         dismissBtn.addEventListener('click', dismissNetworkSuggestion);
     }
     // Check for network suggestions immediately and periodically
-    console.log('Starting network suggestion polling...');
     checkForNetworkSuggestions();
     // Clear any existing interval
     if (window.networkSuggestionInterval) {
