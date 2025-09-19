@@ -40,10 +40,22 @@ function renderScanControlFromData(data) {
         <div id="scan-control-content">
             ${isStopping ? `
                 <!-- Stopping State -->
-                <div class="flex items-center justify-between mb-2">
-                    <div class="text-sm text-yellow-400">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
-                    <div class="px-3 py-1 bg-yellow-600 text-white text-xs rounded">
-                        Stopping...
+                <div class="mb-2">
+                    <div class="text-sm text-yellow-400 mb-2">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
+                    <div class="mb-3">
+                        <select id="network-selector" disabled class="w-full px-2 py-1.5 text-xs rounded focus:outline-none focus:ring-1 focus:ring-green-500 opacity-50 cursor-not-allowed" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                            <option value="">${!selectedNetwork ? 'Select Network to Start' : 'Target Network'}</option>
+                            ${networks.map(network => `
+                                <option value="${network.id}" ${selectedNetwork === network.id ? 'selected' : ''}>
+                                    ${network.name} (${network.cidr})
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <div class="w-full px-3 py-2 bg-yellow-600 text-white text-xs rounded text-center">
+                            Stopping...
+                        </div>
                     </div>
                 </div>
                 <div class="bg-yellow-600 h-2 rounded-full mb-4">
@@ -57,7 +69,7 @@ function renderScanControlFromData(data) {
                     </div>
                     <div>
                         <div class="text-green-400 text-sm">Runtime</div>
-                        <div class="text-white font-bold font-mono">${formatScanTime(scanState.start_time)}</div>
+                        <div id="scan-runtime" class="text-white font-bold font-mono" data-start-time="${scanState.start_time || ''}">${formatScanTime(scanState.start_time)}</div>
                     </div>
                     <div>
                         <div class="text-green-400 text-sm">Status</div>
@@ -66,11 +78,23 @@ function renderScanControlFromData(data) {
                 </div>
             ` : isScanning ? `
                 <!-- Scanning State -->
-                <div class="flex items-center justify-between mb-2">
-                    <div class="text-sm text-green-400">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
-                    <button onclick="stopScan()" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors">
-                        Stop
-                    </button>
+                <div class="mb-2">
+                    <div class="text-sm text-green-400 mb-2">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
+                    <div class="mb-3">
+                        <select id="network-selector" disabled class="w-full px-2 py-1.5 text-xs rounded focus:outline-none focus:ring-1 focus:ring-green-500 opacity-50 cursor-not-allowed" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                            <option value="">${!selectedNetwork ? 'Select Network to Start' : 'Target Network'}</option>
+                            ${networks.map(network => `
+                                <option value="${network.id}" ${selectedNetwork === network.id ? 'selected' : ''}>
+                                    ${network.name} (${network.cidr})
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <button onclick="stopScan()" class="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors">
+                            Stop Scan
+                        </button>
+                    </div>
                 </div>
                 <div class="bg-green-600 h-2 rounded-full mb-4 overflow-hidden relative">
                     <div class="absolute inset-0 scan-progress-animation"></div>
@@ -92,25 +116,30 @@ function renderScanControlFromData(data) {
                 </div>
             ` : `
                 <!-- Ready to Scan State -->
-                <div class="bg-green-600 h-2 rounded-full mb-2"></div>
-                <div class="flex items-center gap-2 mb-4">
-                    <select id="network-selector" class="flex-1 min-w-0 px-2 py-1.5 text-xs rounded focus:outline-none focus:ring-1 focus:ring-green-500" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
-                        <option value="">Target Network</option>
-                        ${networks.map(network => `
-                            <option value="${network.id}" ${selectedNetwork === network.id ? 'selected' : ''}>
-                                ${network.name} (${network.cidr})
-                            </option>
-                        `).join('')}
-                    </select>
-                    <button id="start-scan-btn" onclick="startScan()" ${!selectedNetwork ? 'disabled' : ''} class="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded transition-colors whitespace-nowrap flex-shrink-0">
-                        Start
-                    </button>
+                <div class="mb-2">
+                    <div class="text-sm text-gray-400 mb-2">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
+                    <div class="mb-3">
+                        <select id="network-selector" class="w-full px-2 py-1.5 text-xs rounded focus:outline-none focus:ring-1 focus:ring-green-500" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                            <option value="">${!selectedNetwork ? 'Select Network to Start' : 'Target Network'}</option>
+                            ${networks.map(network => `
+                                <option value="${network.id}" ${selectedNetwork === network.id ? 'selected' : ''}>
+                                    ${network.name} (${network.cidr})
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <button id="start-scan-btn" onclick="startScan()" ${!selectedNetwork ? 'disabled' : ''} class="w-full px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded transition-colors">
+                            Start Scan
+                        </button>
+                    </div>
                 </div>
+                <div class="bg-green-600 h-2 rounded-full mb-4"></div>
                 
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div>
                         <div class="text-green-400 text-sm">Scans</div>
-                        <div class="text-white font-bold">0</div>
+                        <div class="text-white font-bold">${scanState.scan_count || scanState.total_scans || 0}</div>
                     </div>
                     <div>
                         <div class="text-green-400 text-sm">Runtime</div>
@@ -128,27 +157,41 @@ function renderScanControlFromData(data) {
         @keyframes scan-progress {
             0% { 
                 transform: translateX(-100%); 
-                opacity: 0.3;
+                opacity: 0.5;
             }
             50% { 
                 opacity: 1;
             }
             100% { 
                 transform: translateX(100%); 
-                opacity: 0.3;
+                opacity: 0.5;
+            }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { 
+                box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+            }
+            50% { 
+                box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 0 30px rgba(34, 197, 94, 0.4);
             }
         }
         
         .scan-progress-animation {
-            animation: scan-progress 2s ease-in-out infinite;
+            animation: scan-progress 1.5s ease-in-out infinite;
             background: linear-gradient(90deg, 
                 transparent 0%, 
-                rgba(34, 197, 94, 0.3) 25%, 
+                rgba(34, 197, 94, 0.6) 20%, 
                 rgba(34, 197, 94, 1) 50%, 
-                rgba(34, 197, 94, 0.3) 75%, 
+                rgba(34, 197, 94, 0.6) 80%, 
                 transparent 100%);
-            width: 50%;
+            width: 60%;
             height: 100%;
+        }
+        
+        .bg-green-600.overflow-hidden {
+            animation: pulse-glow 2s ease-in-out infinite;
+            border-radius: 9999px;
         }
         </style>
     `;
@@ -280,7 +323,7 @@ function selectNetworkOption(element) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `network_id=${networkId}`,
+        body: `network-id=${networkId}`,
         credentials: 'include'
     })
     .then(response => {
@@ -357,6 +400,33 @@ function startScan() {
 }
 
 function stopScan() {
+    // Immediately show stopping state while we wait for server response
+    const scanControlContainer = document.getElementById('scan-control-container');
+    if (scanControlContainer) {
+        // Get current scan control data to modify
+        fetch('/api/scan/control', { credentials: 'include' })
+            .then(response => response.json())
+            .then(currentData => {
+                // Force stopping state in the data
+                const stoppingData = {
+                    ...currentData,
+                    scanState: {
+                        ...currentData.scanState,
+                        is_stopping: true,
+                        is_running: true // Keep running true so it shows as stopping, not stopped
+                    }
+                };
+                scanControlContainer.innerHTML = renderScanControlFromData(stoppingData);
+                setTimeout(() => {
+                    setupScanControlEventListeners();
+                    manageScanRuntime();
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Error getting current scan state:', error);
+            });
+    }
+    
     fetch('/api/scan/stop', {
         method: 'POST',
         credentials: 'include'
@@ -385,8 +455,11 @@ function stopScan() {
     .then(data => {
         if (data === null) return; // Handle 409 case
         
+        // Start polling to wait for scan to fully stop
+        pollForScanStop();
+        
         if (typeof data === 'object') {
-            // Handle JSON response
+            // Handle JSON response - update UI to showing stopping state
             const scanControlContainer = document.getElementById('scan-control-container');
             if (scanControlContainer) {
                 scanControlContainer.innerHTML = renderScanControlFromData(data);
@@ -401,18 +474,68 @@ function stopScan() {
             document.getElementById('scan-control-content').outerHTML = data;
             manageScanRuntime();
         }
-        // Refresh network map and devices
-        if (typeof window.loadNetworkMap === 'function') {
-            window.loadNetworkMap();
-        }
-        if (typeof window.loadDevices === 'function') {
-            window.loadDevices(false);
-        }
     })
     .catch(error => {
         console.error('Failed to stop scan:', error);
         alert('Failed to stop scan: ' + error.message);
+        // Reload scan control to restore proper state on error
+        setTimeout(() => {
+            loadScanControl(false);
+        }, 100);
     });
+}
+
+// Poll the server to wait for the scan to fully stop
+function pollForScanStop() {
+    const maxPolls = 30; // Maximum 30 seconds of polling
+    let pollCount = 0;
+    
+    const pollInterval = setInterval(() => {
+        pollCount++;
+        
+        fetch('/api/scan/control', { credentials: 'include' })
+            .then(response => response.json())
+            .then(data => {
+                const scanState = data.scanState || {};
+                const isStopping = scanState.is_stopping;
+                const isRunning = scanState.is_running;
+                
+                // If scan is no longer stopping and not running, it's fully stopped
+                if (!isStopping && !isRunning) {
+                    clearInterval(pollInterval);
+                    
+                    // Update UI to stopped state
+                    const scanControlContainer = document.getElementById('scan-control-container');
+                    if (scanControlContainer) {
+                        scanControlContainer.innerHTML = renderScanControlFromData(data);
+                        setTimeout(() => {
+                            setupScanControlEventListeners();
+                            manageScanRuntime();
+                        }, 100);
+                    }
+                    
+                    // Refresh network map and devices
+                    if (typeof window.loadNetworkMap === 'function') {
+                        window.loadNetworkMap();
+                    }
+                    if (typeof window.loadDevices === 'function') {
+                        window.loadDevices(false);
+                    }
+                }
+                // If we've polled for too long, give up and refresh
+                else if (pollCount >= maxPolls) {
+                    clearInterval(pollInterval);
+                    console.warn('Scan stop polling timed out, refreshing scan control');
+                    loadScanControl(false);
+                }
+            })
+            .catch(error => {
+                console.error('Error polling scan status:', error);
+                clearInterval(pollInterval);
+                // Refresh scan control on error
+                loadScanControl(false);
+            });
+    }, 1000); // Poll every second
 }
 
 // Runtime update function
@@ -474,19 +597,20 @@ function handleNetworkSelectorChange(event) {
                 },
                 body: 'network-id=' + encodeURIComponent(event.target.value),
                 credentials: 'include'
-            }).then(() => {
-                // Refresh network map and devices only if target elements exist and are proper containers
-                const networkMapEl = document.getElementById('network-map');
-                const devicesEl = document.getElementById('devices-container');
-                
-                // Refresh network map using vanilla JS
-                if (typeof window.loadNetworkMap === 'function') {
-                    window.loadNetworkMap();
+            }).then(response => {
+                if (response.ok) {
+                    // Refresh network map using vanilla JS
+                    if (typeof window.loadNetworkMap === 'function') {
+                        window.loadNetworkMap();
+                    }
+                    
+                    if (typeof window.loadDevices === 'function') {
+                        window.loadDevices(false);
+                    }
                 }
-                
-                if (devicesEl && typeof window.loadDevices === 'function') {
-                    window.loadDevices(false);
-                }
+            })
+            .catch(error => {
+                console.error('Error selecting network via dropdown:', error);
             });
         }
     }
@@ -498,7 +622,7 @@ function selectNetwork(networkId) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `network_id=${networkId}`,
+        body: `network-id=${networkId}`,
         credentials: 'include'
     })
     .then(response => {
@@ -531,5 +655,6 @@ window.selectNetworkOption = selectNetworkOption;
 window.selectNetwork = selectNetwork;
 window.startScan = startScan;
 window.stopScan = stopScan;
+window.pollForScanStop = pollForScanStop;
 window.manageScanRuntime = manageScanRuntime;
 window.updateScanRuntime = updateScanRuntime;
