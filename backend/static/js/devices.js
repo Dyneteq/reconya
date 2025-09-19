@@ -90,7 +90,7 @@ function renderDeviceGrid(devices) {
         const isPortScanning = device.port_scan_started_at && !device.port_scan_ended_at;
         
         gridHTML += `
-            <div class="rounded-lg p-4 transition-colors cursor-pointer relative min-h-[150px] flex flex-col" 
+            <div class="rounded-sm p-4 transition-colors cursor-pointer relative min-h-[150px] flex flex-col" 
                  style="background: var(--bg-secondary);" 
                  onmouseover="this.style.background='var(--bg-tertiary)'" 
                  onmouseout="this.style.background='var(--bg-secondary)'" 
@@ -135,7 +135,7 @@ function renderDeviceModal(device, screenshotsEnabled = false) {
             <div class="flex justify-between items-center mb-4 pb-3" style="border-bottom: 1px solid var(--border-color);">
                 <div class="flex items-center">
                     <div class="w-4 h-4 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
-                    <h3 class="text-xl font-bold" style="color: var(--text-primary);">${device.ipv4}</h3>
+                    <h3 class="device-ip" style="color: var(--text-primary);">${device.ipv4}</h3>
                     ${device.name || device.hostname ? `<span class="text-lg ml-3" style="color: var(--text-secondary);">- ${device.name || device.hostname}</span>` : ''}
                 </div>
                 <button type="button" class="text-xl transition-colors" style="color: var(--text-muted);" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'" onclick="closeModal('deviceModal')">
@@ -150,7 +150,7 @@ function renderDeviceModal(device, screenshotsEnabled = false) {
                 <div>
                     <h4 class="text-green-500 font-semibold mb-3">Device Info</h4>
                     <div class="space-y-3 text-sm">
-                        <div><span style="color: var(--text-muted);">IP Address:</span> <span style="color: var(--text-primary);">${device.ipv4}</span></div>
+                        <div><span style="color: var(--text-muted);">IP Address:</span> <span class="device-ip" style="color: var(--text-primary); font-size: 1rem;">${device.ipv4}</span></div>
                         ${device.mac ? `<div><span style="color: var(--text-muted);">MAC Address:</span> <span class="text-blue-400">${device.mac}</span></div>` : ''}
                         ${device.hostname ? `<div><span style="color: var(--text-muted);">Hostname:</span> <span style="color: var(--text-primary);">${device.hostname}</span></div>` : ''}
                         <div><span style="color: var(--text-muted);">Status:</span> <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span></div>
@@ -342,7 +342,7 @@ function renderDeviceTable(devices) {
     }
     
     return `
-        <div class="rounded-lg overflow-hidden" style="background: var(--bg-secondary);">
+        <div class="rounded-sm overflow-hidden" style="background: var(--bg-secondary);">
             <table class="w-full">
                 <thead style="background: var(--bg-primary);">
                     <tr>
@@ -360,7 +360,7 @@ function renderDeviceTable(devices) {
                             <td class="px-4 py-3">
                                 <div class="flex items-center">
                                     <div class="w-3 h-3 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
-                                    <div class="text-white text-lg">${device.ipv4}</div>
+                                    <div class="device-ip" style="font-size: 1.1rem;">${device.ipv4}</div>
                                 </div>
                             </td>
                             <td class="px-4 py-3">

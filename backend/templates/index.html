@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="https://unpkg.com/@tabler/icons@latest/tabler-icons.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-900 text-gray-200 font-sans text-sm">
     <div class="flex min-h-screen">
@@ -216,7 +216,7 @@
                                 <!-- Alerts Content -->
                                 <div id="alerts-container">
                                     <!-- No alerts message -->
-                                    <div class="bg-gray-800 rounded-lg p-8 text-center">
+                                    <div class="bg-gray-800 rounded-sm p-8 text-center">
                                         <i class="ti ti-circle-check-filled text-green-500 text-6xl mb-4"></i>
                                         <h4 class="text-green-500 text-xl font-bold mb-2">All Clear!</h4>
                                         <p class="text-gray-400">No alerts at this time. Your network is operating normally.</p>
@@ -235,7 +235,7 @@
                                     <h1 class="text-2xl font-bold text-green-500">[ ACTIVITY ]</h1>
                                 </div>
                                 <!-- Event Logs Content -->
-                                <div id="event-logs-container" class="bg-gray-800 rounded-lg">
+                                <div id="event-logs-container" class="bg-gray-800 rounded-sm">
                                     <div class="flex justify-center items-center h-32">
                                         <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
                                         <span class="ml-3 text-gray-400">Loading activity logs...</span>
@@ -255,7 +255,7 @@
                                 </div>
 
                                 <!-- Settings Content -->
-                                <div id="settings-container" class="bg-gray-800 rounded-lg">
+                                <div id="settings-container" class="bg-gray-800 rounded-sm">
                                     <div class="flex justify-center items-center h-32">
                                         <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
                                         <span class="ml-3 text-gray-400">Loading settings...</span>
@@ -266,7 +266,7 @@
 
                         <!-- Settings sidebar/help -->
                         <div class="w-full lg:w-1/4">
-                            <div class="bg-gray-800 rounded-lg p-4">
+                            <div class="bg-gray-800 rounded-sm p-4">
                                 <div class="flex items-center mb-3">
                                     <i class="ti ti-info-circle text-green-500 mr-2"></i>
                                     <h6 class="text-green-500 font-bold">Settings Help</h6>
@@ -295,53 +295,53 @@
                         <div class="lg:col-span-3 space-y-6">
                             <!-- Metrics Grid -->
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                                <div class="bg-gray-800 p-6 rounded-lg text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
+                                <div class="bg-gray-800 p-6 rounded-sm text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
                                     </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Network Range</p>
+                                    <p class="text-gray-400 text-sm mb-3">Network Range</p>
                                     <p class="text-xl font-bold text-gray-200" id="network-range">Loading...</p>
                                 </div>
                                 
-                                <div class="bg-gray-800 p-6 rounded-lg text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="bg-gray-800 p-6 rounded-sm text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
                                     </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Devices Found</p>
+                                    <p class="text-gray-400 text-sm mb-3">Devices Found</p>
                                     <p class="text-xl font-bold text-gray-200" id="devices-found">0</p>
                                 </div>
                                 
-                                <div class="bg-gray-800 p-6 rounded-lg text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="bg-gray-800 p-6 rounded-sm text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                                     </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Online</p>
+                                    <p class="text-gray-400 text-sm mb-3">Online</p>
                                     <p class="text-xl font-bold text-gray-200" id="devices-online">0</p>
                                 </div>
                                 
-                                <div class="bg-gray-800 p-6 rounded-lg text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="bg-gray-800 p-6 rounded-sm text-center">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                     </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Public IP</p>
+                                    <p class="text-gray-400 text-sm mb-3">Public IP</p>
                                     <p class="text-xl font-bold text-gray-200" id="public-ip">Loading...</p>
                                 </div>
                                 
-                                <div class="bg-gray-800 p-6 rounded-lg text-center relative">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="bg-gray-800 p-6 rounded-sm text-center relative">
+                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
                                     </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Saturation</p>
-                                    <p class="text-xl font-bold text-gray-200" id="network-saturation">0%</p>
-                                    <!-- Progress bar at bottom -->
-                                    <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-900 bg-opacity-30">
-                                        <div id="saturation-progress" class="h-full w-0 bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out"></div>
+                                    <p class="text-gray-400 text-sm mb-3">Saturation</p>
+                                    <p class="text-xl font-bold text-gray-200 mb-3" id="network-saturation">0%</p>
+                                    <!-- Progress bar with margin to fit within the box -->
+                                    <div class="w-full h-1 bg-gray-900 bg-opacity-30 rounded">
+                                        <div id="saturation-progress" class="h-full w-0 bg-gradient-to-r from-green-500 to-green-400 transition-all duration-500 ease-out rounded"></div>
                                     </div>
                                 </div>
                             </div>
                             <!-- Network Suggestions -->
-                            <div id="network-suggestions" class="bg-blue-600 bg-opacity-10 border border-blue-500 rounded-lg p-4" style="display: none;">
+                            <div id="network-suggestions" class="bg-blue-600 bg-opacity-10 border border-blue-500 rounded-sm p-4" style="display: none;">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center flex-1">
                                         <svg class="w-6 h-6 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -371,7 +371,7 @@
                             </div>
 
                             <!-- Network Map -->
-                            <div class="rounded-lg">
+                            <div class="rounded-sm">
                                 <h2 class="text-base font-light mb-4 text-green-500">[ NETWORK MAP ]</h2>
                                 <div id="network-map" class="min-h-48 rounded">
                                     <div class="flex items-center justify-center h-32" id="network-map-loading">
@@ -392,7 +392,7 @@
                             </div>
                             
                             <!-- Network Devices -->
-                            <div class="rounded-lg">
+                            <div class="rounded-sm">
                                 <h2 class="text-base font-light mb-4 text-green-500">[ NETWORK DEVICES ]</h2>
                                 <div id="devices-container" class="min-h-32">
                                     <div class="flex justify-center items-center py-8">
@@ -406,7 +406,7 @@
                         <!-- Right Side: Scan Control & Events -->
                         <div class="space-y-6">
                             <!-- Scan Control -->
-                            <div class="bg-gray-800 rounded-lg p-6">
+                            <div class="bg-gray-800 rounded-sm p-6">
                                 <div id="scan-control-container">
                                     <div class="flex items-center justify-center py-4" id="scan-control-loading">
                                         <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
@@ -417,9 +417,9 @@
                             </div>
                             
                             <!-- Events -->
-                            <div class="rounded-lg">
+                            <div class="rounded-sm">
                                 <h2 class="text-base font-light mb-4 text-green-500">[ ACTIVITY LOG ]</h2>
-                                <div class="bg-gray-800 rounded-lg p-6">
+                                <div class="bg-gray-800 rounded-sm p-6">
                                     <div id="activity-log" class="space-y-2 text-sm text-gray-400 max-h-64 overflow-y-auto">
                                         <div class="flex items-center justify-center py-8">
                                             <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
@@ -689,6 +689,14 @@
         * {
             transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
         }
+
+        /* Device IP styling to match master branch */
+        .device-ip {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #fff;
+        }
     </style>
     
     <script>   
@@ -742,7 +750,7 @@
             
             return `
                 <div class="overflow-x-auto">
-                    <table class="w-full bg-gray-800 rounded-lg">
+                    <table class="w-full bg-gray-800 rounded-sm">
                         <thead class="bg-gray-700">
                             <tr>
                                 <th class="px-4 py-3 text-left text-green-500 font-semibold">Device</th>
@@ -863,7 +871,7 @@
             
             return `
                 <div class="overflow-x-auto">
-                    <table class="w-full bg-gray-800 rounded-lg">
+                    <table class="w-full bg-gray-800 rounded-sm">
                         <thead class="bg-gray-700">
                             <tr>
                                 <th class="px-4 py-3 text-left text-green-500 font-semibold">Network</th>
