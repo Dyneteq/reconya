@@ -690,6 +690,38 @@
             transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
         }
 
+        /* Network Map light mode - lighter grey boxes */
+        html[data-theme="light"] .bg-gray-700.border-gray-600 {
+            background-color: #f3f4f6 !important; /* Very light grey */
+            border-color: #d1d5db !important; /* Light grey border */
+        }
+
+        /* Theme toggle button light mode - lighter colors */
+        html[data-theme="light"] #themeToggle {
+            background-color: #e5e7eb !important; /* Light grey background */
+            color: #6b7280 !important; /* Medium grey icon */
+        }
+        html[data-theme="light"] #themeToggle:hover {
+            background-color: #d1d5db !important; /* Slightly darker grey on hover */
+            color: #059669 !important; /* Green icon on hover */
+        }
+
+        /* Start scan button light mode - lighter colors */
+        html[data-theme="light"] .bg-green-600 {
+            background-color: #16a34a !important; /* Lighter green */
+        }
+        html[data-theme="light"] .hover\\:bg-green-700:hover {
+            background-color: #15803d !important; /* Lighter green hover */
+        }
+
+        /* Devices table light mode - lighter header and borders */
+        html[data-theme="light"] table thead.bg-gray-700 {
+            background-color: #f3f4f6 !important; /* Light grey header */
+        }
+        html[data-theme="light"] .divide-gray-600 > * + * {
+            border-top-color: #e5e7eb !important; /* Light grey borders */
+        }
+
         /* Device IP styling to match master branch */
         .device-ip {
             font-family: 'JetBrains Mono', monospace !important;
@@ -1217,7 +1249,7 @@
     <div id="aboutModal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-container">
-            <div class="modal-content max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div id="about-modal-content">
                     <!-- Content will be loaded here -->
                 </div>

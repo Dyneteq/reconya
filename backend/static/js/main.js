@@ -116,7 +116,7 @@ function loadAboutPage() {
 
 function showAboutModal() {
     const aboutContent = `
-        <div class="p-6 max-w-4xl">
+        <div class="p-6 max-w-2xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-6">
                 <h1 class="text-3xl font-bold text-green-500 mb-3">
