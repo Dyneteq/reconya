@@ -165,7 +165,7 @@ class Installer {
 
     // Install basic tools
     await Utils.runCommand('sudo', ['apt-get', 'install', '-y', 
-      'curl', 'wget', 'software-properties-common', 'apt-transport-https'
+      'curl', 'wget', 'software-properties-common', 'apt-transport-https', 'lsof'
     ]);
 
     // Install Go
