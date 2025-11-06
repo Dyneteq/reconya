@@ -82,7 +82,7 @@ func runGeolocationCacheCleanup(repo *db.GeolocationRepository, done <-chan bool
 	defer ticker.Stop()
 
 	infoLogger.Println("Geolocation cache cleanup service started")
-	
+
 	// Run initial cleanup
 	ctx := context.Background()
 	if err := repo.CleanupExpired(ctx); err != nil {
@@ -101,7 +101,7 @@ func runGeolocationCacheCleanup(repo *db.GeolocationRepository, done <-chan bool
 						errorLogger.Printf("Cache cleanup iteration panic: %v", r)
 					}
 				}()
-				
+
 				if err := repo.CleanupExpired(ctx); err != nil {
 					errorLogger.Printf("Geolocation cache cleanup failed: %v", err)
 				}
@@ -137,7 +137,7 @@ func runNetworkDetection(nicService *nicidentifier.NicIdentifierService, done <-
 						errorLogger.Printf("Network detection iteration panic: %v", r)
 					}
 				}()
-				
+
 				// Check for new networks without creating devices/system status
 				nicService.CheckForNewNetworks()
 			}()
@@ -171,7 +171,7 @@ func main() {
 	infoLogger.Printf("Runtime: %s/%s, Go version: %s", runtime.GOOS, runtime.GOARCH, runtime.Version())
 	infoLogger.Printf("🛡️ Backend is protected against external termination")
 
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(infoLogger)
 	if err != nil {
 		infoLogger.Printf("Failed to load configuration: %v", err)
 		infoLogger.Printf("CRITICAL ERROR - RESTARTING IN 2 SECONDS...")
@@ -244,10 +244,10 @@ func main() {
 	settingsService := settings.NewSettingsService(settingsRepo)
 	portScanService := portscan.NewPortScanService(deviceService, eventLogService)
 	pingSweepService := pingsweep.NewPingSweepService(cfg, deviceService, eventLogService, networkService, portScanService)
-	
+
 	// Initialize IPv6 monitoring service
 	ipv6MonitorService := ipv6monitor.NewIPv6MonitorService(deviceService, networkService, infoLogger)
-	
+
 	// Initialize scan manager to control scanning
 	scanManager := scan.NewScanManager(pingSweepService, networkService, ipv6MonitorService)
 
@@ -259,13 +259,13 @@ func main() {
 
 	// Trigger initial network identification and detection
 	nicService.Identify()
-	
+
 	// Remove automatic ping sweep - now controlled by scan manager
 	go runDeviceUpdater(deviceService, done)
-	
+
 	// Start periodic network detection
 	go runNetworkDetection(nicService, done)
-	
+
 	// Start geolocation cache cleanup routine
 	go runGeolocationCacheCleanup(geolocationRepo, done)
 
@@ -351,7 +351,6 @@ func main() {
 
 	waitForShutdown(server, done)
 }
-
 
 func waitForShutdown(server *http.Server, done chan bool) {
 	stop := make(chan os.Signal, 1)
