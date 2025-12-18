@@ -37,6 +37,7 @@ class Utils {
     if (platform === 'linux') {
       if (fs.existsSync('/etc/debian_version')) return 'debian';
       if (fs.existsSync('/etc/redhat-release')) return 'redhat';
+      if (fs.existsSync('/etc/arch-release')) return 'arch';
       return 'linux';
     }
     return 'unknown';
@@ -153,7 +154,7 @@ class Utils {
     let killed = await this.killProcess(proc.pid, false);
     if (killed) {
       await this.sleep(2000);
-      
+
       // Check if still running
       const stillRunning = await this.findProcessByPort(port);
       if (stillRunning) {
@@ -178,14 +179,14 @@ class Utils {
     // Check if we're in the scripts directory, if so, go up one level
     const currentDir = process.cwd();
     const projectRoot = currentDir.endsWith('scripts') ? path.join(currentDir, '..') : currentDir;
-    
+
     const backendExists = fs.existsSync(path.join(projectRoot, 'backend', 'go.mod'));
-    
+
     if (!backendExists) {
       this.log.error('Please run this script from the reconYa root directory');
       process.exit(1);
     }
-    
+
     // Return the project root for use by other functions
     return projectRoot;
   }
@@ -240,13 +241,13 @@ SQLITE_PATH="data/reconya-dev.db"
     try {
       const nmapPath = execSync('which nmap', { encoding: 'utf8' }).trim();
       this.log.info('Setting up nmap permissions for MAC address detection...');
-      
+
       if (this.isMacOS()) {
         await this.runCommand('sudo', ['chown', 'root:admin', nmapPath]);
       } else {
         await this.runCommand('sudo', ['chown', 'root:root', nmapPath]);
       }
-      
+
       await this.runCommand('sudo', ['chmod', 'u+s', nmapPath]);
       this.log.success('nmap permissions configured');
     } catch (error) {
