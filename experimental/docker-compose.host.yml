@@ -3,7 +3,7 @@
 # Usage: docker compose -f docker-compose.yml -f docker-compose.host.yml up -d
 
 services:
-  backend:
+  reconya:
     network_mode: host
     networks: []  # Remove custom networks when using host mode
     ports: []     # Remove port mapping when using host mode

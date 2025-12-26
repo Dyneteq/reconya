@@ -104,24 +104,30 @@ If you prefer to install manually:
    cd reconya
    ```
 
-2. **Setup backend:**
+2. **Setup:**
    ```bash
-   cd backend
+   cd src
    cp .env.example .env
    # Edit .env file to set your credentials
    go mod download
+   cd ..
    ```
 
-3. **Start the application:**
+3. **Build and run:**
    ```bash
-   cd backend
-   go run ./cmd
+   make build
+   ./reconya
+   ```
+
+   Or run directly with Go:
+   ```bash
+   make start-dev
    ```
 
    **Windows users:** If you encounter SQLite CGO errors, use:
    ```bash
-   cd backend
-   CGO_ENABLED=1 go run ./cmd
+   make build-cgo
+   ./reconya
    ```
 
 4. **Access the application:**
@@ -165,7 +171,7 @@ reconYa includes advanced IPv6 passive monitoring capabilities that activate aut
 
 ## Configuration
 
-Edit the `backend/.env` file to customize:
+Edit the `src/.env` file to customize:
 
 ```bash
 LOGIN_USERNAME=admin
@@ -184,7 +190,7 @@ IPV6_MULTICAST_MONITORING=false
 
 ## Architecture
 
-- **Backend**: Go API with HTMX templates and SQLite database (Port 3008)
+- **Server**: Go API with HTMX templates and SQLite database (Port 3008)
 - **Web Interface**: HTML and vanilla JS
 - **Scanning**: Multi-strategy network discovery with nmap integration
 - **Database**: SQLite for device storage and event logging
@@ -247,10 +253,8 @@ Reconya uses a multi-layered scanning approach that combines nmap integration wi
 **Windows SQLite CGO Error**
 - If you see "Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work":
   ```bash
-  cd backend
-  CGO_ENABLED=1 go run ./cmd
-  # or for building:
   make build-cgo
+  ./reconya
   ```
 - Ensure you have a C compiler installed (like TDM-GCC or Visual Studio Build Tools)
 

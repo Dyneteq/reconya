@@ -42,15 +42,16 @@ temp/
 .reconya.pid
 
 # Database files
-backend/data/
+src/data/
 *.db
 *.db-shm
 *.db-wal
 
 # Go binaries
-backend/main
-backend/reconya
-backend/reconya-api
+/reconya
+src/main
+src/reconya
+src/reconya-api
 
 # Coverage reports
 coverage.out

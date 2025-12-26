@@ -10,7 +10,7 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-BACKEND_DIR="$PROJECT_ROOT/backend"
+SRC_DIR="$PROJECT_ROOT/src"
 PORT=3008
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -63,56 +63,56 @@ check_dependency "Go" "go" "version"
 check_dependency "nmap" "nmap" "--version"
 
 echo ""
-log_info "Checking backend service..."
+log_info "Checking reconYa service..."
 
-backend_pid=$(find_process_by_port $PORT)
-if [[ -n "$backend_pid" ]]; then
-    log_success "Backend: running (PID $backend_pid)"
+reconya_pid=$(find_process_by_port $PORT)
+if [[ -n "$reconya_pid" ]]; then
+    log_success "reconYa: running (PID $reconya_pid)"
 
     # Test web interface
     if test_http "http://localhost:$PORT"; then
-        log_success "Backend web interface: accessible"
+        log_success "Web interface: accessible"
     else
-        log_warning "Backend web interface: not accessible"
+        log_warning "Web interface: not accessible"
     fi
 
     # Test login endpoint
     if test_http "http://localhost:$PORT/login"; then
-        log_success "Backend API: responding"
+        log_success "API: responding"
     else
-        log_warning "Backend API: not responding"
+        log_warning "API: not responding"
     fi
 else
-    log_error "Backend: not running"
+    log_error "reconYa: not running"
 fi
 
 echo ""
 log_info "Checking configuration..."
 
 # Check .env file
-if [[ -f "$BACKEND_DIR/.env" ]]; then
-    log_success "Backend .env: exists"
+if [[ -f "$SRC_DIR/.env" ]]; then
+    log_success ".env: exists"
 
     # Parse username from .env
-    username=$(grep -E "^LOGIN_USERNAME=" "$BACKEND_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"')
+    username=$(grep -E "^LOGIN_USERNAME=" "$SRC_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '"')
     if [[ -n "$username" ]]; then
         log_success "Login username: $username"
     else
         log_warning "Login username: not configured"
     fi
 else
-    log_error "Backend .env: missing"
+    log_error ".env: missing"
 fi
 
 # Check go.mod
-if [[ -f "$BACKEND_DIR/go.mod" ]]; then
-    log_success "Backend dependencies: go.mod exists"
+if [[ -f "$SRC_DIR/go.mod" ]]; then
+    log_success "Dependencies: go.mod exists"
 else
-    log_error "Backend dependencies: go.mod missing"
+    log_error "Dependencies: go.mod missing"
 fi
 
 # Check templates directory
-if [[ -d "$BACKEND_DIR/templates" ]]; then
+if [[ -d "$SRC_DIR/templates" ]]; then
     log_success "HTMX templates: directory exists"
 else
     log_error "HTMX templates: directory missing"

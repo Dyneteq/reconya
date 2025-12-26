@@ -72,8 +72,8 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/networks-debug", h.APINetworksDebug).Methods("GET")
 	api.HandleFunc("/network-suggestion", h.APINetworkSuggestion).Methods("POST")
 
-	// Static file serving
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+	// Static file serving (works from project root or src directory)
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(findPath("static")))))
 
 	// 404 handler
 	r.NotFoundHandler = http.HandlerFunc(h.NotFound)

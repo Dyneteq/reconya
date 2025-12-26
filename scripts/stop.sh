@@ -109,7 +109,7 @@ fi
 port_pid=$(find_process_by_port $PORT)
 if [[ -n "$port_pid" ]]; then
     log_warning "Port $PORT is in use by process $port_pid"
-    kill_process "$port_pid" "backend"
+    kill_process "$port_pid" "reconya"
     stopped_any=true
 fi
 
@@ -126,8 +126,8 @@ if [[ -n "$final_pid" ]]; then
     log_info "  kill -9 $final_pid"
 else
     if [[ "$stopped_any" == true ]]; then
-        log_success "reconYa backend stopped"
+        log_success "reconYa stopped"
     else
-        log_info "No reconYa backend was running"
+        log_info "No reconYa process was running"
     fi
 fi

@@ -27,13 +27,13 @@ while [[ $# -gt 0 ]]; do
       FOLLOW=true
       shift
       ;;
-    backend)
+    reconya)
       SERVICE=$1
       shift
       ;;
     *)
       echo "Unknown argument: $1"
-      echo "Usage: ./logs.sh [-f|--follow] [backend]"
+      echo "Usage: ./logs.sh [-f|--follow] [reconya]"
       exit 1
       ;;
   esac

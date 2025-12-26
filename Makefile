@@ -2,12 +2,13 @@
 
 # Project paths
 PROJECT_ROOT := $(shell pwd)
-BACKEND_DIR := $(PROJECT_ROOT)/backend
+SRC_DIR := $(PROJECT_ROOT)/src
 SCRIPTS_DIR := $(PROJECT_ROOT)/scripts
 LOGS_DIR := $(PROJECT_ROOT)/logs
 PID_FILE := $(PROJECT_ROOT)/.reconya.pid
 LOG_FILE := $(LOGS_DIR)/reconya.log
 ERROR_LOG := $(LOGS_DIR)/reconya.error.log
+BINARY := $(PROJECT_ROOT)/reconya
 
 # Default port
 PORT ?= 3008
@@ -23,15 +24,15 @@ NC := \033[0m
 # Main targets
 #-----------------------------------------------------------------------
 
-## Start reconYa backend as daemon
+## Start reconYa as daemon
 start:
 	@echo "=========================================="
-	@echo "         Starting reconYa Backend         "
+	@echo "            Starting reconYa              "
 	@echo "=========================================="
 	@mkdir -p $(LOGS_DIR)
 	@$(MAKE) -s stop-silent
-	@echo "$(BLUE)[INFO]$(NC) Starting backend as daemon..."
-	@cd $(BACKEND_DIR) && nohup go run ./cmd > $(LOG_FILE) 2> $(ERROR_LOG) & echo $$! > $(PID_FILE)
+	@echo "$(BLUE)[INFO]$(NC) Starting reconYa as daemon..."
+	@cd $(SRC_DIR) && nohup go run ./cmd > $(LOG_FILE) 2> $(ERROR_LOG) & echo $$! > $(PID_FILE)
 	@sleep 2
 	@if [ -f $(PID_FILE) ] && kill -0 $$(cat $(PID_FILE)) 2>/dev/null; then \
 		echo "$(GREEN)[SUCCESS]$(NC) reconYa daemon started with PID: $$(cat $(PID_FILE))"; \
@@ -46,21 +47,21 @@ start:
 		exit 1; \
 	fi
 
-## Start reconYa backend in foreground (dev mode)
+## Start reconYa in foreground (dev mode)
 start-dev:
 	@echo "=========================================="
-	@echo "      Starting reconYa Backend (dev)      "
+	@echo "        Starting reconYa (dev)            "
 	@echo "=========================================="
 	@$(MAKE) -s stop-silent
-	@echo "$(BLUE)[INFO]$(NC) reconYa backend will run on: http://localhost:$(PORT)"
+	@echo "$(BLUE)[INFO]$(NC) reconYa will run on: http://localhost:$(PORT)"
 	@echo "$(BLUE)[INFO]$(NC) Press Ctrl+C to stop the service"
 	@echo ""
-	@cd $(BACKEND_DIR) && go run ./cmd
+	@cd $(SRC_DIR) && go run ./cmd
 
-## Stop reconYa backend
+## Stop reconYa
 stop:
 	@echo "=========================================="
-	@echo "         Stopping reconYa Backend         "
+	@echo "            Stopping reconYa              "
 	@echo "=========================================="
 	@$(SCRIPTS_DIR)/stop.sh
 
@@ -113,29 +114,29 @@ logs-clear:
 # Build targets
 #-----------------------------------------------------------------------
 
-## Build the backend binary
+## Build the reconYa binary
 build:
-	@echo "Building reconYa backend..."
-	@cd $(BACKEND_DIR) && go build -o reconya -v ./cmd
-	@echo "$(GREEN)[SUCCESS]$(NC) Build complete: $(BACKEND_DIR)/reconya"
+	@echo "Building reconYa..."
+	@cd $(SRC_DIR) && go build -o $(BINARY) -v ./cmd
+	@echo "$(GREEN)[SUCCESS]$(NC) Build complete: $(BINARY)"
 
 ## Build with CGO enabled (required for SQLite)
 build-cgo:
-	@echo "Building reconYa backend with CGO..."
-	@cd $(BACKEND_DIR) && CGO_ENABLED=1 go build -o reconya -v ./cmd
-	@echo "$(GREEN)[SUCCESS]$(NC) Build complete: $(BACKEND_DIR)/reconya"
+	@echo "Building reconYa with CGO..."
+	@cd $(SRC_DIR) && CGO_ENABLED=1 go build -o $(BINARY) -v ./cmd
+	@echo "$(GREEN)[SUCCESS]$(NC) Build complete: $(BINARY)"
 
 ## Download and tidy dependencies
 deps:
 	@echo "Downloading dependencies..."
-	@cd $(BACKEND_DIR) && go mod download && go mod tidy
+	@cd $(SRC_DIR) && go mod download && go mod tidy
 	@echo "$(GREEN)[SUCCESS]$(NC) Dependencies updated"
 
 ## Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@cd $(BACKEND_DIR) && go clean
-	@rm -f $(BACKEND_DIR)/reconya
+	@cd $(SRC_DIR) && go clean
+	@rm -f $(BINARY)
 	@rm -f $(PID_FILE)
 	@echo "$(GREEN)[SUCCESS]$(NC) Clean complete"
 
@@ -148,17 +149,17 @@ install:
 	@echo "=========================================="
 	@echo "          reconYa Installation            "
 	@echo "=========================================="
-	@if [ ! -f $(BACKEND_DIR)/.env ]; then \
-		if [ -f $(BACKEND_DIR)/.env.example ]; then \
+	@if [ ! -f $(SRC_DIR)/.env ]; then \
+		if [ -f $(SRC_DIR)/.env.example ]; then \
 			echo "$(BLUE)[INFO]$(NC) Creating .env from example..."; \
-			cp $(BACKEND_DIR)/.env.example $(BACKEND_DIR)/.env; \
+			cp $(SRC_DIR)/.env.example $(SRC_DIR)/.env; \
 		else \
 			echo "$(BLUE)[INFO]$(NC) Creating default .env..."; \
-			echo 'LOGIN_USERNAME=admin' > $(BACKEND_DIR)/.env; \
-			echo 'LOGIN_PASSWORD=password' >> $(BACKEND_DIR)/.env; \
-			echo 'DATABASE_NAME="reconya-dev"' >> $(BACKEND_DIR)/.env; \
-			echo "JWT_SECRET_KEY=\"$$(openssl rand -base64 32)\"" >> $(BACKEND_DIR)/.env; \
-			echo 'SQLITE_PATH="data/reconya-dev.db"' >> $(BACKEND_DIR)/.env; \
+			echo 'LOGIN_USERNAME=admin' > $(SRC_DIR)/.env; \
+			echo 'LOGIN_PASSWORD=password' >> $(SRC_DIR)/.env; \
+			echo 'DATABASE_NAME="reconya-dev"' >> $(SRC_DIR)/.env; \
+			echo "JWT_SECRET_KEY=\"$$(openssl rand -base64 32)\"" >> $(SRC_DIR)/.env; \
+			echo 'SQLITE_PATH="data/reconya-dev.db"' >> $(SRC_DIR)/.env; \
 		fi; \
 		echo "$(GREEN)[SUCCESS]$(NC) .env file created"; \
 	else \
@@ -198,9 +199,9 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Main targets:"
-	@echo "  start        Start reconYa backend as daemon"
+	@echo "  start        Start reconYa as daemon"
 	@echo "  start-dev    Start in foreground (development mode)"
-	@echo "  stop         Stop reconYa backend"
+	@echo "  stop         Stop reconYa"
 	@echo "  status       Check service status"
 	@echo ""
 	@echo "Log targets:"
@@ -210,7 +211,7 @@ help:
 	@echo "  logs-clear   Clear all log files"
 	@echo ""
 	@echo "Build targets:"
-	@echo "  build        Build the backend binary"
+	@echo "  build        Build the reconYa binary"
 	@echo "  build-cgo    Build with CGO (for SQLite)"
 	@echo "  deps         Download dependencies"
 	@echo "  clean        Clean build artifacts"

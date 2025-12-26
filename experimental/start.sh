@@ -40,20 +40,20 @@ source .env
 REBUILD_FLAG=""
 
 # Check if images exist and compare with source file modification times
-if ! docker image inspect reconya-backend &> /dev/null; then
-    echo -e "${YELLOW}Backend image not found, will rebuild...${NC}"
+if ! docker image inspect reconya &> /dev/null; then
+    echo -e "${YELLOW}Image not found, will rebuild...${NC}"
     REBUILD_FLAG="--build"
 else
     # Get the creation time of the backend image
-    BACKEND_IMAGE_TIME=$(docker image inspect reconya-backend --format='{{.Created}}' 2>/dev/null || echo "1970-01-01T00:00:00Z")
+    IMAGE_TIME=$(docker image inspect reconya --format='{{.Created}}' 2>/dev/null || echo "1970-01-01T00:00:00Z")
     
     # Check if any backend source files are newer than the image
-    if find backend -name "*.go" -newer <(date -d "$BACKEND_IMAGE_TIME" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "1970-01-01 00:00:00") 2>/dev/null | grep -q .; then
-        echo -e "${YELLOW}Backend source files changed, will rebuild...${NC}"
+    if find src -name "*.go" -newer <(date -d "$IMAGE_TIME" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "1970-01-01 00:00:00") 2>/dev/null | grep -q .; then
+        echo -e "${YELLOW}Source files changed, will rebuild...${NC}"
         REBUILD_FLAG="--build"
     # Check if docker-compose.yml or Dockerfile changed
-    elif [ "docker-compose.yml" -nt <(date -d "$BACKEND_IMAGE_TIME" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "1970-01-01 00:00:00") ] || 
-         [ "backend/Dockerfile" -nt <(date -d "$BACKEND_IMAGE_TIME" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "1970-01-01 00:00:00") ]; then
+    elif [ "docker-compose.yml" -nt <(date -d "$IMAGE_TIME" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "1970-01-01 00:00:00") ] || 
+         [ "src/Dockerfile" -nt <(date -d "$IMAGE_TIME" +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "1970-01-01 00:00:00") ]; then
         echo -e "${YELLOW}Docker configuration changed, will rebuild...${NC}"
         REBUILD_FLAG="--build"
     else

@@ -1,7 +1,7 @@
 services:
-  backend:
+  reconya:
     build:
-      context: ./backend
+      context: ./src
       dockerfile: Dockerfile
     ports:
       - "${PORT:-3008}:3008"
@@ -14,7 +14,7 @@ services:
       - LOGIN_USERNAME=${LOGIN_USERNAME:-admin}
       - LOGIN_PASSWORD=${LOGIN_PASSWORD:-admin}
     volumes:
-      - ./backend/data:/app/data
+      - ./src/data:/app/data
     networks:
       - reconya-network
     restart: unless-stopped

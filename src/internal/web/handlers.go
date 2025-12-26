@@ -31,6 +31,21 @@ import (
 // Templates will be loaded from filesystem for now
 // TODO: Embed templates in production build
 
+// findPath searches for a path in multiple locations and returns the first one found
+func findPath(name string) string {
+	paths := []string{
+		name,              // Current directory (running from src)
+		"src/" + name,     // From project root
+		"../" + name,      // Parent directory
+	}
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return name // Return default if not found
+}
+
 type WebHandler struct {
 	deviceService         *device.DeviceService
 	eventLogService       *eventlog.EventLogService
@@ -351,18 +366,21 @@ func NewWebHandler(
 	// Parse templates from filesystem
 	tmpl := template.New("").Funcs(funcMap)
 
+	// Find templates directory (works from project root or src directory)
+	templatesDir := findPath("templates")
+
 	// Parse templates with unique names to avoid conflicts
-	baseFiles, err := filepath.Glob("templates/layouts/*.html")
+	baseFiles, err := filepath.Glob(filepath.Join(templatesDir, "layouts", "*.html"))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to glob base templates: %v", err))
 	}
 
-	componentFiles, err := filepath.Glob("templates/components/*.html")
+	componentFiles, err := filepath.Glob(filepath.Join(templatesDir, "components", "*.html"))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to glob component templates: %v", err))
 	}
 
-	indexFile := "templates/index.html"
+	indexFile := filepath.Join(templatesDir, "index.html")
 
 	files := append(baseFiles, componentFiles...)
 	files = append(files, indexFile)
@@ -613,7 +631,7 @@ func (h *WebHandler) Settings(w http.ResponseWriter, r *http.Request) {
 func (h *WebHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		// Use standalone login template to avoid conflicts
-		loginTmpl, err := template.ParseFiles("templates/standalone/login.html")
+		loginTmpl, err := template.ParseFiles(filepath.Join(findPath("templates"), "standalone", "login.html"))
 		if err != nil {
 			log.Printf("Failed to parse standalone login template: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

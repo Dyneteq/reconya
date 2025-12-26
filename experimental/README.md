@@ -13,7 +13,7 @@ The fundamental limitation is Docker's network architecture. Even with comprehen
 
 ## Files in this Directory
 
-- `Dockerfile` - Backend container definition  
+- `Dockerfile` - Container definition
 - `docker-compose.yml` - Standard Docker composition
 - `docker-compose.host.yml` - Host networking override (still limited)
 - `setup.sh` - Automated Docker setup script

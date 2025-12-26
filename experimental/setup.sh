@@ -74,7 +74,7 @@ else
 fi
 
 # Ensure data directory exists
-mkdir -p backend/data
+mkdir -p src/data
 
 # Build and start the containers
 echo -e "\n${YELLOW}Building and starting containers...${NC}"

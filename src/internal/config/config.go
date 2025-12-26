@@ -25,7 +25,19 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	_ = godotenv.Load()
+	// Try loading .env from multiple locations
+	envPaths := []string{
+		".env",           // Current directory
+		"src/.env",       // From project root
+		"../src/.env",    // From cmd directory
+		"../.env",        // Parent directory
+	}
+	for _, path := range envPaths {
+		if _, err := os.Stat(path); err == nil {
+			_ = godotenv.Load(path)
+			break
+		}
+	}
 
 	databaseName := os.Getenv("DATABASE_NAME")
 	if databaseName == "" {
@@ -61,7 +73,23 @@ func LoadConfig() (*Config, error) {
 
 	sqlitePath := os.Getenv("SQLITE_PATH")
 	if sqlitePath == "" {
-		sqlitePath = filepath.Join("data", fmt.Sprintf("%s.db", databaseName))
+		// Try to find the data directory in multiple locations
+		dataPaths := []string{
+			"data",     // Current directory (running from src)
+			"src/data", // From project root
+		}
+		dataDir := "data" // Default
+		for _, path := range dataPaths {
+			if info, err := os.Stat(path); err == nil && info.IsDir() {
+				dataDir = path
+				break
+			}
+		}
+		// Create data directory if it doesn't exist
+		if _, err := os.Stat(dataDir); os.IsNotExist(err) {
+			os.MkdirAll(dataDir, 0755)
+		}
+		sqlitePath = filepath.Join(dataDir, fmt.Sprintf("%s.db", databaseName))
 	}
 	config.SQLitePath = sqlitePath
 
