@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"reconya-ai/models"
+	"reconya/models"
 	"time"
 )
 

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"reconya-ai/models"
-	"reconya-ai/tests/testutils"
+	"reconya/models"
+	"reconya/tests/testutils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

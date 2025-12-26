@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"reconya-ai/models"
+	"reconya/models"
 
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"

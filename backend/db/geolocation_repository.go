@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"reconya-ai/models"
+	"reconya/models"
 	"time"
 
 	"github.com/google/uuid"

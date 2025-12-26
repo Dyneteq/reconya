@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa - Network Reconnaissance Tool</title>
-    <meta name="description" content="A powerful network reconnaissance and asset discovery tool built with Go and React">
+    <meta name="description" content="A powerful network reconnaissance and asset discovery tool built with Go and HTMX">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Roboto+Condensed:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -314,7 +314,7 @@
                 <div class="container text-center">
                     <h1>reconYa</h1>
                     <p class="lead mb-5 col-md-10 mx-auto">
-                        A powerful network reconnaissance and asset discovery tool built with Go and React, designed to help map and monitor network devices with precision and elegance.
+                        A powerful network reconnaissance and asset discovery tool built with Go and HTMX, designed to help map and monitor network devices with precision and elegance.
                     </p>
                     <div>
                         <a href="#installation" class="btn btn-primary btn-lg px-4 me-md-2">Get Started</a>
@@ -404,15 +404,15 @@
                         <ul class="list-group mb-4">
                             <li class="list-group-item bg-dark text-light border-dark">
                                 <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                Go 1.19+ (automatically installed)
+                                Go 1.21+
                             </li>
                             <li class="list-group-item bg-dark text-light border-dark">
                                 <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                Node.js 14+ and npm (automatically installed)
+                                nmap
                             </li>
                             <li class="list-group-item bg-dark text-light border-dark">
                                 <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                nmap (automatically installed)
+                                make (pre-installed on most systems)
                             </li>
                         </ul>
                         <h3 class="h4 fw-bold mb-3">Quick Start</h3>
@@ -420,34 +420,35 @@
                             <code>
                                 $ git clone https://github.com/Dyneteq/reconya.git<br>
                                 $ cd reconya<br>
-                                $ npm run install
+                                $ make install<br>
+                                $ make start
                             </code>
                         </div>
-                        <p>Access the application at <code>http://localhost:3000</code></p>
+                        <p>Access the application at <code>http://localhost:3008</code></p>
                     </div>
                     <div class="col-lg-6">
                         <div class="card h-100 p-4">
                             <h3 class="h4 fw-bold mb-3">Available Commands</h3>
                             <p>After installation, use these commands to manage reconYa:</p>
                             <ol class="text-light">
-                                <li class="mb-2">Start reconYa services:
+                                <li class="mb-2">Start reconYa:
                                     <div class="code-block my-2">
-                                        <code>$ npm run start</code>
+                                        <code>$ make start</code>
                                     </div>
                                 </li>
                                 <li class="mb-2">Check service status:
                                     <div class="code-block my-2">
-                                        <code>$ npm run status</code>
+                                        <code>$ make status</code>
                                     </div>
                                 </li>
-                                <li class="mb-2">Stop all services:
+                                <li class="mb-2">Stop the service:
                                     <div class="code-block my-2">
-                                        <code>$ npm run stop</code>
+                                        <code>$ make stop</code>
                                     </div>
                                 </li>
-                                <li>Access the application at <code>http://localhost:3000</code></li>
+                                <li>Access the application at <code>http://localhost:3008</code></li>
                             </ol>
-                            <a href="https://github.com/Dyneteq/reconya#-installation" class="btn btn-primary mt-auto" target="_blank">
+                            <a href="https://github.com/Dyneteq/reconya#local-installation-recommended" class="btn btn-primary mt-auto" target="_blank">
                                 Detailed Guide <i class="bi bi-arrow-right"></i>
                             </a>
                         </div>
@@ -483,7 +484,7 @@
                                 </li>
                                 <li>
                                     <i class="bi bi-terminal text-primary me-2"></i>
-                                    <strong>Deployment:</strong> Node.js-based installation and management scripts
+                                    <strong>Deployment:</strong> Simple Makefile-based installation and management
                                 </li>
                             </ul>
                         </div>
@@ -605,7 +606,7 @@
                 <div class="row">
                     <div class="col-lg-6">
                         <h3 class="h4 mb-4">reconYa</h3>
-                        <p>A powerful network reconnaissance and asset discovery tool built with Go and React.</p>
+                        <p>A powerful network reconnaissance and asset discovery tool built with Go and HTMX.</p>
                         <p>This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.</p>
                     </div>
                     <div class="col-lg-3">

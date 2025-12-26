@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"log"
-	"reconya-ai/models"
+	"reconya/models"
 	"time"
 )
 

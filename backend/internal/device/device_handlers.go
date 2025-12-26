@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"reconya-ai/internal/config"
-	"reconya-ai/models"
+	"reconya/internal/config"
+	"reconya/models"
 )
 
 type DeviceHandlers struct {

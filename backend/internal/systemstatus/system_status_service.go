@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"reconya-ai/db"
-	"reconya-ai/models"
+	"reconya/db"
+	"reconya/models"
 	"time"
 
 	"github.com/google/uuid"

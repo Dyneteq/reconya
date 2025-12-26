@@ -6,12 +6,12 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"reconya-ai/internal/config"
-	"reconya-ai/internal/device"
-	"reconya-ai/internal/eventlog"
-	"reconya-ai/internal/network"
-	"reconya-ai/internal/systemstatus"
-	"reconya-ai/models"
+	"reconya/internal/config"
+	"reconya/internal/device"
+	"reconya/internal/eventlog"
+	"reconya/internal/network"
+	"reconya/internal/systemstatus"
+	"reconya/models"
 )
 
 type NicIdentifierService struct {

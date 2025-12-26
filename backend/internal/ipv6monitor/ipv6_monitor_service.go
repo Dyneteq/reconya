@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"reconya-ai/internal/device"
-	"reconya-ai/internal/network"
-	"reconya-ai/models"
+	"reconya/internal/device"
+	"reconya/internal/network"
+	"reconya/models"
 )
 
 type IPv6MonitorService struct {

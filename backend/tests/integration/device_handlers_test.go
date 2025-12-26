@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"testing"
 
-	"reconya-ai/db"
-	"reconya-ai/internal/device"
-	"reconya-ai/internal/network"
-	"reconya-ai/models"
-	"reconya-ai/tests/testutils"
+	"reconya/db"
+	"reconya/internal/device"
+	"reconya/internal/network"
+	"reconya/models"
+	"reconya/tests/testutils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

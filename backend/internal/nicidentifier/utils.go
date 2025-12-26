@@ -3,7 +3,7 @@ package nicidentifier
 import (
 	"fmt"
 	"net"
-	"reconya-ai/models"
+	"reconya/models"
 	"strings"
 )
 

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"reconya-ai/internal/eventlog"
-	"reconya-ai/internal/util"
-	"reconya-ai/internal/webservice"
-	"reconya-ai/models"
+	"reconya/internal/eventlog"
+	"reconya/internal/util"
+	"reconya/internal/webservice"
+	"reconya/models"
 )
 
 // DeviceServicePortScanner defines the interface for device-related operations needed by PortScanService.

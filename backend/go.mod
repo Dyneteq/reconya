@@ -1,4 +1,4 @@
-module reconya-ai
+module reconya
 
 go 1.23.0
 

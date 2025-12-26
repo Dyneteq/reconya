@@ -5,7 +5,7 @@ import (
 	"encoding/xml"
 	"log"
 	"os/exec"
-	"reconya-ai/models"
+	"reconya/models"
 	"regexp"
 	"strconv"
 	"strings"

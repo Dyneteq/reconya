@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"net/http"
-	"reconya-ai/internal/auth"
-	"reconya-ai/internal/config"
+	"reconya/internal/auth"
+	"reconya/internal/config"
 
 	"github.com/dgrijalva/jwt-go"
 )

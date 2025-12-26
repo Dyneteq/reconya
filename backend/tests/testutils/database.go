@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"reconya-ai/db"
-	"reconya-ai/internal/config"
+	"reconya/db"
+	"reconya/internal/config"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"reconya-ai/internal/config"
+	"reconya/internal/config"
 
 	"github.com/dgrijalva/jwt-go"
 )

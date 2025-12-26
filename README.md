@@ -41,8 +41,8 @@ Docker files have been moved to the `experimental/` directory for those who want
 Before installing reconYa, ensure you have the following installed on your system:
 
 - **Go 1.21 or later** - [Download Go](https://golang.org/dl/)
-- **Node.js 18 or later** - [Download Node.js](https://nodejs.org/)
 - **nmap** - Network scanning tool (instructions below)
+- **make** - Build tool (pre-installed on most Unix systems)
 
 ## Local Installation (Recommended)
 
@@ -51,50 +51,46 @@ Before installing reconYa, ensure you have the following installed on your syste
 ```bash
 git clone https://github.com/Dyneteq/reconya.git
 cd reconya
-./install.sh
+make install
 ```
 
-The script will check for Node.js 18+ and npm, and guide you through installation if needed.
-
 This will:
-- Detect your operating system (macOS, Windows, Debian, or Red Hat-based)
-- Install all required dependencies (Go, nmap)
-- Configure nmap permissions for MAC address detection
-- Set up the reconYa application
-- Install all Node.js dependencies
+- Download Go dependencies
+- Create default `.env` configuration file
 
 **After installation, use these commands:**
 ```bash
-npm run start    # Start reconYa
-npm run stop     # Stop reconYa  
-npm run status   # Check service status
-npm run uninstall # Uninstall reconYa
+make start       # Start reconYa as daemon
+make start-dev   # Start in foreground (dev mode)
+make stop        # Stop reconYa
+make status      # Check service status
+make logs        # View logs
+make help        # Show all commands
 ```
 
-Then open your browser to: `http://localhost:3000`  
+Then open your browser to: `http://localhost:3008`
 Default login: `admin` / `password`
 
 ### Manual Installation
 
-If you prefer to install manually or the script doesn't work on your system:
+If you prefer to install manually:
 
 #### Prerequisites
 
 1. **Install Go** (1.21 or later): https://golang.org/dl/
-2. **Install Node.js** (18 or later): https://nodejs.org/
-3. **Install nmap**:
+2. **Install nmap**:
    ```bash
    # macOS
    brew install nmap
-   
+
    # Ubuntu/Debian
    sudo apt-get install nmap
-   
+
    # RHEL/CentOS/Fedora
    sudo yum install nmap  # or dnf install nmap
    ```
 
-4. **Grant nmap privileges** (for MAC address detection):
+3. **Grant nmap privileges** (for MAC address detection):
    ```bash
    sudo chown root:admin $(which nmap)
    sudo chmod u+s $(which nmap)
@@ -121,14 +117,12 @@ If you prefer to install manually or the script doesn't work on your system:
    cd backend
    go run ./cmd
    ```
-   
+
    **Windows users:** If you encounter SQLite CGO errors, use:
    ```bash
    cd backend
    CGO_ENABLED=1 go run ./cmd
    ```
-   
-   Or simply double-click `scripts/start-windows.bat` from the project root.
 
 4. **Access the application:**
    - Open your browser to: `http://localhost:3008`
@@ -227,34 +221,28 @@ Reconya uses a multi-layered scanning approach that combines nmap integration wi
 
 ### Common Issues
 
-**Installation problems**
-- If `./install.sh` fails, try running it again with `sudo ./install.sh`
-- For manual installation, ensure you have Node.js 18+ installed
-- Run `npm run status` to check what's missing
-- Try running `npm run install` again
-
 **No devices found**
-- Run `npm run status` to check if nmap is installed and configured
+- Run `make status` to check if nmap is installed and configured
 - Check that you're on the same network segment as target devices
 
 **Services won't start**
-- Run `npm run stop` to kill any stuck processes
-- Check `npm run status` for dependency issues
-- Ensure ports 3000 and 3008 are available
+- Run `make stop` to kill any stuck processes
+- Check `make status` for dependency issues
+- Ensure port 3008 is available
 
 **Missing MAC addresses**
-- Run `npm run status` to verify nmap permissions
+- Run `make status` to verify nmap permissions
 - MAC addresses only visible on same network segment
 - Some devices may not respond to ARP requests
 
 **Permission denied errors**
-- The installer should handle nmap permissions automatically
-- If issues persist, manually run: `sudo chmod u+s $(which nmap)`
+- Run `make setup-nmap` to configure nmap permissions
+- Or manually run: `sudo chmod u+s $(which nmap)`
 
 **Services keep crashing**
-- Check if dependencies are properly installed with `npm run status`
 - Verify your `.env` configuration is correct
-- Try stopping and restarting: `npm run stop && npm run start`
+- Try stopping and restarting: `make stop && make start`
+- Check logs with: `make logs`
 
 **Windows SQLite CGO Error**
 - If you see "Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work":
@@ -268,19 +256,13 @@ Reconya uses a multi-layered scanning approach that combines nmap integration wi
 
 ## Uninstalling reconYa
 
-To completely remove reconYa and optionally its dependencies:
+To completely remove reconYa:
 
 ```bash
-npm run uninstall
+make stop      # Stop any running processes
+make clean     # Remove build artifacts
+rm -rf reconya # Remove the directory
 ```
-
-The uninstall process will:
-- Stop any running reconYa processes
-- Remove application files and data
-- Remove nmap setuid permissions  
-- Optionally remove system dependencies (Go, Node.js, nmap)
-
-**Note:** You'll be asked for confirmation before removing system dependencies since they might be used by other applications.
 
 ## Experimental Docker Support
 

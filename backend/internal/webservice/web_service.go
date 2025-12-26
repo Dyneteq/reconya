@@ -12,7 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reconya-ai/models"
+	"reconya/models"
 	"regexp"
 	"strconv"
 	"strings"

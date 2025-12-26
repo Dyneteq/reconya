@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"reconya-ai/db"
-	"reconya-ai/internal/device"
-	"reconya-ai/models"
+	"reconya/db"
+	"reconya/internal/device"
+	"reconya/models"
 	"time"
 )
 

@@ -5,10 +5,10 @@ import (
 	"log"
 	"sync"
 	"time"
-	"reconya-ai/models"
-	"reconya-ai/internal/pingsweep"
-	"reconya-ai/internal/network"
-	"reconya-ai/internal/ipv6monitor"
+	"reconya/models"
+	"reconya/internal/pingsweep"
+	"reconya/internal/network"
+	"reconya/internal/ipv6monitor"
 )
 
 // ScanState represents the current state of the scanning system

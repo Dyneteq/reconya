@@ -3,7 +3,7 @@ package integration
 import (
 	"time"
 
-	"reconya-ai/models"
+	"reconya/models"
 
 	"github.com/google/uuid"
 )

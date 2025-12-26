@@ -3,9 +3,9 @@ package network
 import (
 	"context"
 	"log"
-	"reconya-ai/db"
-	"reconya-ai/internal/config"
-	"reconya-ai/models"
+	"reconya/db"
+	"reconya/internal/config"
+	"reconya/models"
 	"time"
 )
 

@@ -3,8 +3,8 @@ package settings
 import (
 	"errors"
 	"log"
-	"reconya-ai/db"
-	"reconya-ai/models"
+	"reconya/db"
+	"reconya/models"
 	"time"
 
 	"github.com/google/uuid"
