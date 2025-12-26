@@ -56,7 +56,7 @@ func (s *PingSweepService) Run() {
 
 func (s *PingSweepService) ExecuteSweepScanCommand(network string) ([]models.Device, error) {
 	log.Printf("Executing nmap command on network: %s", network)
-	
+
 	// Try multiple scan strategies for different environments
 	devices, err := s.executeWithFallback(network)
 	if err != nil {
@@ -65,64 +65,55 @@ func (s *PingSweepService) ExecuteSweepScanCommand(network string) ([]models.Dev
 
 	log.Printf("nmap command succeeded. Found %d devices", len(devices))
 
-	// If we didn't get hostnames from nmap, try to enhance with additional methods
-	for i, device := range devices {
-		if device.Hostname == nil || *device.Hostname == "" {
-			// Try to get hostname using additional methods
-			if hostname := s.tryGetHostname(device.IPv4); hostname != "" {
-				devices[i].Hostname = &hostname
-				log.Printf("Enhanced hostname detection found: %s for IP: %s", hostname, device.IPv4)
-			}
-		}
-	}
-	
+	// Skip hostname enhancement for now - it's too slow (individual nmap calls per device)
+	// Hostnames will be resolved asynchronously later if needed
+
 	return devices, nil
 }
 
 // executeWithFallback tries different scan strategies based on environment
 func (s *PingSweepService) executeWithFallback(network string) ([]models.Device, error) {
-	// Skip native scanner - it's too slow for large networks
-	log.Printf("Skipping native Go scanner, using nmap directly")
+	log.Printf("Starting network scan on: %s", network)
 
-	// Strategy 1: Try sudo with IP packets (works on most systems, gets MAC/vendor)
-	devices, err := s.tryNmapCommand([]string{"sudo", "nmap", "-sn", "--send-ip", "-T4", "-n", "-oX", "-", network})
+	// Strategy 1: Try non-sudo nmap first (fastest, avoids password prompts)
+	devices, err := s.tryNmapCommand([]string{"nmap", "-sn", "-T5", "-n", "--min-parallelism", "100", "-oX", "-", network})
 	if err == nil && len(devices) > 0 {
-		log.Printf("Sudo IP scan successful, found %d devices", len(devices))
+		log.Printf("Basic nmap scan successful, found %d devices", len(devices))
 		return devices, nil
 	}
-	log.Printf("Sudo IP scan failed or found no devices: %v", err)
+	log.Printf("Basic nmap scan failed or found no devices: %v", err)
 
-	// Strategy 3: Try IP packets without sudo (may still get some MAC info)
-	devices, err = s.tryNmapCommand([]string{"nmap", "-sn", "--send-ip", "-T4", "-oX", "-", network})
+	// Strategy 2: Try with --send-ip for better results
+	devices, err = s.tryNmapCommand([]string{"nmap", "-sn", "--send-ip", "-T4", "-n", "-oX", "-", network})
 	if err == nil && len(devices) > 0 {
-		log.Printf("IP scan without sudo successful, found %d devices", len(devices))
+		log.Printf("IP scan successful, found %d devices", len(devices))
 		return devices, nil
 	}
-	log.Printf("IP scan without sudo failed or found no devices: %v", err)
+	log.Printf("IP scan failed or found no devices: %v", err)
 
-	// Strategy 4: Try ARP scan with sudo (best for local networks but needs interface access)
-	devices, err = s.tryNmapCommand([]string{"sudo", "nmap", "-sn", "-PR", "-T4", "-n", "-oX", "-", network})
+	// Strategy 3: Try ARP scan without sudo
+	devices, err = s.tryNmapCommand([]string{"nmap", "-sn", "-PR", "-T4", "-n", "-oX", "-", network})
 	if err == nil && len(devices) > 0 {
-		log.Printf("Sudo ARP scan successful, found %d devices", len(devices))
+		log.Printf("ARP scan successful, found %d devices", len(devices))
 		return devices, nil
 	}
-	log.Printf("Sudo ARP scan failed or found no devices: %v", err)
+	log.Printf("ARP scan failed or found no devices: %v", err)
 
-	// Strategy 5: Try ARP scan without sudo
-	devices, err = s.tryNmapCommand([]string{"nmap", "-sn", "-PR", "-T4", "-oX", "-", network})
-	if err == nil && len(devices) > 0 {
-		log.Printf("ARP scan without sudo successful, found %d devices", len(devices))
-		return devices, nil
-	}
-	log.Printf("ARP scan without sudo failed or found no devices: %v", err)
-
-	// Strategy 6: Last resort - TCP SYN scan on common ports (minimal info but finds hosts)
-	devices, err = s.tryNmapCommand([]string{"nmap", "-sn", "-PS80,443,22,21,23,25,53,110,111,135,139,143,993,995", "-T4", "-oX", "-", network})
+	// Strategy 4: TCP SYN probe on common ports
+	devices, err = s.tryNmapCommand([]string{"nmap", "-sn", "-PS80,443,22,21,23,25,53", "-T4", "-n", "-oX", "-", network})
 	if err == nil && len(devices) > 0 {
 		log.Printf("TCP SYN probe scan successful, found %d devices", len(devices))
 		return devices, nil
 	}
 	log.Printf("TCP SYN probe scan failed or found no devices: %v", err)
+
+	// Strategy 5: Try sudo as last resort (may prompt for password)
+	devices, err = s.tryNmapCommand([]string{"sudo", "-n", "nmap", "-sn", "-T4", "-n", "-oX", "-", network})
+	if err == nil && len(devices) > 0 {
+		log.Printf("Sudo nmap scan successful, found %d devices", len(devices))
+		return devices, nil
+	}
+	log.Printf("Sudo nmap scan failed: %v", err)
 
 	return nil, fmt.Errorf("all scan strategies failed for network %s", network)
 }
@@ -143,9 +134,9 @@ func (s *PingSweepService) tryNativeScanner(network string) ([]models.Device, er
 // tryNmapCommand executes a specific nmap command with automatic retry on timeout
 func (s *PingSweepService) tryNmapCommand(args []string) ([]models.Device, error) {
 	log.Printf("Trying nmap command: %s", strings.Join(args, " "))
-	
-	// First attempt with 20-second timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+
+	// First attempt with 60-second timeout (nmap can take 20+ seconds for /24)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)

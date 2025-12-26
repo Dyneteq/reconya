@@ -22,21 +22,26 @@ function initPageContent() {
     switch (currentPath) {
         case '/':
         case '/home':
-            if (typeof loadDevices === 'function') {
-                loadDevices();
-            }
-            if (typeof loadScanControl === 'function') {
-                loadScanControl();
-            }
-            if (typeof startNetworkMapUpdates === 'function') {
-                startNetworkMapUpdates();
-            }
-            if (typeof loadRecentActivity === 'function') {
-                loadRecentActivity();
-            }
+            // Load dashboard components
             if (typeof loadDashboardMetrics === 'function') {
                 loadDashboardMetrics();
                 setInterval(loadDashboardMetrics, 30000);
+            }
+            if (typeof loadDevices === 'function') {
+                loadDevices();
+                setInterval(function() { loadDevices(false); }, 10000);
+            }
+            if (typeof loadNetworkMap === 'function') {
+                loadNetworkMap();
+                setInterval(loadNetworkMap, 10000);
+            }
+            if (typeof loadScanControl === 'function') {
+                loadScanControl();
+                setInterval(function() { loadScanControl(false); }, 5000);
+            }
+            if (typeof loadRecentActivity === 'function') {
+                loadRecentActivity();
+                setInterval(loadRecentActivity, 10000);
             }
             break;
         case '/devices':

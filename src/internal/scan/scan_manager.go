@@ -7,6 +7,7 @@ import (
 	"time"
 	"reconya/models"
 	"reconya/internal/pingsweep"
+	"reconya/internal/portscan"
 	"reconya/internal/network"
 	"reconya/internal/ipv6monitor"
 )
@@ -363,4 +364,14 @@ type ScanError struct {
 
 func (e *ScanError) Error() string {
 	return e.Message
+}
+
+// GetPingSweepService returns the ping sweep service
+func (sm *ScanManager) GetPingSweepService() *pingsweep.PingSweepService {
+	return sm.pingSweepService
+}
+
+// GetPortScanService returns the port scan service (via ping sweep service)
+func (sm *ScanManager) GetPortScanService() *portscan.PortScanService {
+	return sm.pingSweepService.PortScanService
 }

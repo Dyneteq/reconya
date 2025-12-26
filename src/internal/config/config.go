@@ -41,18 +41,17 @@ func LoadConfig() (*Config, error) {
 
 	databaseName := os.Getenv("DATABASE_NAME")
 	if databaseName == "" {
-		return nil, fmt.Errorf("DATABASE_NAME environment variable is not set")
+		databaseName = "reconya" // Default database name
 	}
 
+	// Username/password are optional for agent mode
 	username := os.Getenv("LOGIN_USERNAME")
 	password := os.Getenv("LOGIN_PASSWORD")
-	if username == "" || password == "" {
-		return nil, fmt.Errorf("LOGIN_USERNAME or LOGIN_PASSWORD environment variables are not set")
-	}
 
+	// JWT secret - generate a default for agent mode
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "" {
-		return nil, fmt.Errorf("JWT_SECRET_KEY environment variable is not set")
+		jwtSecret = "agent-mode-default-secret"
 	}
 
 	port := os.Getenv("PORT")

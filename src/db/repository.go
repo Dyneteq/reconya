@@ -75,6 +75,17 @@ type SettingsRepository interface {
 	Update(settings *models.Settings) error
 }
 
+// SensorRepository defines the interface for sensor operations
+type SensorRepository interface {
+	Repository
+	FindByID(ctx context.Context, id string) (*models.Sensor, error)
+	FindByToken(ctx context.Context, token string) (*models.Sensor, error)
+	FindAll(ctx context.Context) ([]*models.Sensor, error)
+	Create(ctx context.Context, sensor *models.Sensor) (*models.Sensor, error)
+	Update(ctx context.Context, sensor *models.Sensor) (*models.Sensor, error)
+	Delete(ctx context.Context, id string) error
+}
+
 // RepositoryFactory creates repositories
 type RepositoryFactory struct {
 	SQLiteDB *sql.DB
@@ -117,6 +128,11 @@ func (f *RepositoryFactory) NewGeolocationRepository() *GeolocationRepository {
 // NewSettingsRepository creates a new settings repository
 func (f *RepositoryFactory) NewSettingsRepository() SettingsRepository {
 	return NewSQLiteSettingsRepository(f.SQLiteDB)
+}
+
+// NewSensorRepository creates a new sensor repository
+func (f *RepositoryFactory) NewSensorRepository() SensorRepository {
+	return NewSQLiteSensorRepository(f.SQLiteDB)
 }
 
 // GenerateID generates a unique ID for a record

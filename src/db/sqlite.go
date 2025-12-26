@@ -352,6 +352,54 @@ func InitializeSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create index on settings.user_id: %w", err)
 	}
 
+	// Create sensors table
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS sensors (
+		id TEXT PRIMARY KEY,
+		name TEXT NOT NULL,
+		token TEXT UNIQUE NOT NULL,
+		status TEXT DEFAULT 'pending',
+		scan_status TEXT DEFAULT 'idle',
+		hostname TEXT,
+		ip TEXT,
+		mac TEXT,
+		interface TEXT,
+		network_cidr TEXT,
+		last_seen_at TIMESTAMP,
+		registered_at TIMESTAMP,
+		last_scan_started_at TIMESTAMP,
+		last_scan_completed_at TIMESTAMP,
+		last_scan_error TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)`)
+	if err != nil {
+		return fmt.Errorf("failed to create sensors table: %w", err)
+	}
+
+	// Ensure new sensor columns exist for older databases
+	sensorColumnMigrations := []struct {
+		name string
+		stmt string
+	}{
+		{"scan_status", `ALTER TABLE sensors ADD COLUMN scan_status TEXT DEFAULT 'idle'`},
+		{"last_scan_started_at", `ALTER TABLE sensors ADD COLUMN last_scan_started_at TIMESTAMP`},
+		{"last_scan_completed_at", `ALTER TABLE sensors ADD COLUMN last_scan_completed_at TIMESTAMP`},
+		{"last_scan_error", `ALTER TABLE sensors ADD COLUMN last_scan_error TEXT`},
+	}
+
+	for _, migration := range sensorColumnMigrations {
+		if _, err := db.Exec(migration.stmt); err != nil {
+			log.Printf("Note: %s column might already exist: %v", migration.name, err)
+		}
+	}
+
+	// Create index on token for sensor lookups
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_sensors_token ON sensors(token)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on sensors.token: %w", err)
+	}
+
 	log.Println("Database schema initialized successfully")
 	return nil
 }

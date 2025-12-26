@@ -105,7 +105,12 @@ function getTimeAgo(date) {
 
 function loadDashboardMetrics() {
     fetch('/api/dashboard-metrics', { credentials: 'include' })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load dashboard metrics');
+            }
+            return response.json();
+        })
         .then(data => {
             updateDashboardMetrics(data);
         })
@@ -115,63 +120,142 @@ function loadDashboardMetrics() {
 }
 
 function updateDashboardMetrics(data) {
-    // Update various dashboard metrics
-    const networkRangeEl = document.getElementById('network-range');
-    const publicIpEl = document.getElementById('public-ip');
+    const summary = data.summary || {};
+
+    // Update the main metric cards
+    const networkCountEl = document.getElementById('network-count');
     const devicesFoundEl = document.getElementById('devices-found');
     const devicesOnlineEl = document.getElementById('devices-online');
-    
-    if (networkRangeEl) networkRangeEl.textContent = data.networkRange || 'N/A';
+    const sensorsOnlineEl = document.getElementById('sensors-online');
+    const saturationEl = document.getElementById('network-saturation');
 
-    // Update public IP with location as tooltip if available
-    if (publicIpEl) {
-        let ipText = data.publicIP || 'N/A';
-        console.log('Dashboard data:', data);
-        console.log('Location:', data.location);
-        publicIpEl.textContent = ipText;
-        if (data.location && data.location !== '') {
-            console.log('Setting location tooltip to:', data.location);
-            publicIpEl.setAttribute('title', data.location);
-            publicIpEl.style.cursor = 'help';
-        } else {
-            console.log('No location data');
-            publicIpEl.removeAttribute('title');
-            publicIpEl.style.cursor = 'default';
-        }
+    if (networkCountEl) networkCountEl.textContent = summary.networks || 0;
+    if (devicesFoundEl) devicesFoundEl.textContent = summary.devicesFound || 0;
+    if (devicesOnlineEl) devicesOnlineEl.textContent = summary.devicesOnline || 0;
+    if (sensorsOnlineEl) sensorsOnlineEl.textContent = summary.sensorsOnline || 0;
+    if (saturationEl) {
+        const sat = typeof summary.saturation === 'number' ? summary.saturation.toFixed(1) : '0';
+        saturationEl.textContent = sat + '%';
     }
-
-    if (devicesFoundEl) devicesFoundEl.textContent = data.devicesFound || 0;
-    if (devicesOnlineEl) devicesOnlineEl.textContent = data.devicesOnline || 0;
-    
-    // Calculate and update saturation
-    updateNetworkSaturation(data.networkRange, data.devicesOnline || 0);
 }
 
-function updateNetworkSaturation(networkRange, devicesOnline) {
-    if (networkRange && networkRange.includes('/')) {
-        const cidrParts = networkRange.split('/');
-        if (cidrParts.length === 2) {
-            const cidr = parseInt(cidrParts[1]);
-            if (!isNaN(cidr) && cidr >= 8 && cidr <= 30) {
-                const totalAddresses = Math.pow(2, 32 - cidr) - 2;
-                if (totalAddresses > 0) {
-                    const saturation = ((devicesOnline / totalAddresses) * 100).toFixed(1);
-                    const saturationNum = parseFloat(saturation);
-                    const saturationEl = document.getElementById('network-saturation');
-                    const progressEl = document.getElementById('saturation-progress');
-                    if (saturationEl) saturationEl.textContent = saturation + '%';
-                    if (progressEl) progressEl.style.width = saturationNum + '%';
-                    return;
-                }
-            }
-        }
+function renderSensorCard(sensor) {
+    const statusClass = sensor.status === 'online'
+        ? 'bg-green-500'
+        : sensor.status === 'offline'
+            ? 'bg-red-500'
+            : 'bg-yellow-400';
+    const scanLabel = sensor.scanStatus === 'running' ? 'Scanning' : 'Idle';
+    const badgeClass = sensor.scanStatus === 'running'
+        ? 'bg-green-600/20 text-green-400 border border-green-500/50'
+        : 'bg-gray-700 text-gray-300 border border-gray-600';
+
+    const saturation = typeof sensor.saturation === 'number'
+        ? sensor.saturation.toFixed(1) + '%'
+        : '0%';
+
+    const lastSeen = sensor.lastSeenAt ? getTimeAgo(sensor.lastSeenAt) : 'Never';
+
+    const actionButton = sensor.scanStatus === 'running'
+        ? `<button class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded transition-colors" onclick="stopSensorScan('${sensor.id}', this)">Stop Scan</button>`
+        : `<button class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded transition-colors" onclick="startSensorScan('${sensor.id}', this)">Start Scan</button>`;
+
+    return `
+        <div class="bg-gray-800 rounded-lg p-5 flex flex-col justify-between h-full border border-gray-700/50 shadow-lg shadow-black/20">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <p class="text-sm font-semibold text-white">${escapeHtml(sensor.name || 'Sensor')}</p>
+                    <div class="flex items-center text-xs text-gray-400 mt-1">
+                        <span class="flex items-center gap-2">
+                            <span class="inline-flex h-2.5 w-2.5 rounded-full ${statusClass}"></span>
+                            ${sensor.status ? sensor.status.toUpperCase() : 'UNKNOWN'}
+                        </span>
+                    </div>
+                </div>
+                <span class="px-2 py-1 text-[10px] uppercase tracking-widest rounded ${badgeClass}">
+                    ${scanLabel}
+                </span>
+            </div>
+            <dl class="grid grid-cols-2 gap-3 text-sm text-gray-300 flex-1">
+                <div>
+                    <dt class="text-xs text-gray-500">Network Range</dt>
+                    <dd class="font-semibold">${escapeHtml(sensor.networkRange || 'N/A')}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500">Public IP</dt>
+                    <dd class="font-semibold">${escapeHtml(sensor.publicIP || 'N/A')}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500">Devices Found</dt>
+                    <dd class="font-semibold">${sensor.devicesFound ?? 0}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500">Online</dt>
+                    <dd class="font-semibold">${sensor.devicesOnline ?? 0}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500">Idle</dt>
+                    <dd class="font-semibold">${sensor.devicesIdle ?? 0}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500">Saturation</dt>
+                    <dd class="font-semibold">${saturation}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-gray-500">Last Seen</dt>
+                    <dd class="font-semibold">${lastSeen}</dd>
+                </div>
+            </dl>
+            <div class="flex items-center justify-between mt-5 text-xs text-gray-500">
+                <span>${sensor.scanStatus === 'running' && sensor.lastScanStartedAt ? `Started ${getTimeAgo(sensor.lastScanStartedAt)}` : ''}</span>
+                ${actionButton}
+            </div>
+        </div>
+    `;
+}
+
+function startSensorScan(sensorId, buttonEl) {
+    handleSensorScanAction(sensorId, 'start', buttonEl);
+}
+
+function stopSensorScan(sensorId, buttonEl) {
+    handleSensorScanAction(sensorId, 'stop', buttonEl);
+}
+
+function handleSensorScanAction(sensorId, action, buttonEl) {
+    if (!sensorId) return;
+
+    let originalText = '';
+    if (buttonEl) {
+        originalText = buttonEl.textContent;
+        buttonEl.disabled = true;
+        buttonEl.textContent = action === 'start' ? 'Starting...' : 'Stopping...';
     }
-    
-    // Reset to 0% if calculation fails
-    const saturationEl = document.getElementById('network-saturation');
-    const progressEl = document.getElementById('saturation-progress');
-    if (saturationEl) saturationEl.textContent = '0%';
-    if (progressEl) progressEl.style.width = '0%';
+
+    fetch(`/api/sensors/${sensorId}/${action}-scan`, {
+        method: 'POST',
+        credentials: 'include'
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(text || 'Request failed');
+                });
+            }
+        })
+        .then(() => {
+            loadDashboardMetrics();
+        })
+        .catch(error => {
+            console.error(`Failed to ${action} scan:`, error);
+            alert(`Failed to ${action} scan: ${error.message}`);
+        })
+        .finally(() => {
+            if (buttonEl) {
+                buttonEl.disabled = false;
+                buttonEl.textContent = originalText || (action === 'start' ? 'Start Scan' : 'Stop Scan');
+            }
+        });
 }
 
 function loadEventLogs() {
@@ -218,6 +302,18 @@ function renderEventLogsPage(page, updatePagination = true) {
     if (updatePagination) setTimeout(renderLogsPaginationControls, 0);
     return html;
 }
+
+function escapeHtml(text) {
+    if (text === undefined || text === null) {
+        return '';
+    }
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+window.startSensorScan = startSensorScan;
+window.stopSensorScan = stopSensorScan;
 
 function renderLogsPaginationControls() {
     const paginationId = 'logs-pagination-controls';

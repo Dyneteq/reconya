@@ -35,7 +35,7 @@ func (r *SQLiteNetworkRepository) FindByID(ctx context.Context, id string) (*mod
 	var name, description, status sql.NullString
 	var lastScannedAt, createdAt, updatedAt sql.NullTime
 	var deviceCount sql.NullInt64
-	
+
 	err := row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -78,7 +78,7 @@ func (r *SQLiteNetworkRepository) FindByCIDR(ctx context.Context, cidr string) (
 	var name, description, status sql.NullString
 	var lastScannedAt, createdAt, updatedAt sql.NullTime
 	var deviceCount sql.NullInt64
-	
+
 	err := row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -135,7 +135,7 @@ func (r *SQLiteNetworkRepository) FindAll(ctx context.Context) ([]*models.Networ
 		var network models.Network
 		var lastScannedAt sql.NullTime
 		var createdAtStr, updatedAtStr string
-		
+
 		err := rows.Scan(&network.ID, &network.Name, &network.CIDR, &network.Description, &network.Status, &lastScannedAt, &network.DeviceCount, &createdAtStr, &updatedAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning network: %w", err)
@@ -216,13 +216,13 @@ func (r *SQLiteNetworkRepository) Delete(ctx context.Context, id string) error {
 func (r *SQLiteNetworkRepository) GetDeviceCount(ctx context.Context, networkID string) (int, error) {
 	query := `SELECT COUNT(*) FROM devices WHERE network_id = ?`
 	row := r.db.QueryRowContext(ctx, query, networkID)
-	
+
 	var count int
 	err := row.Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("error counting devices for network: %w", err)
 	}
-	
+
 	return count, nil
 }
 
@@ -272,7 +272,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	var lastSeenOnlineAt, portScanStartedAt, portScanEndedAt, webScanEndedAt sql.NullTime
 
 	err = row.Scan(
-		&device.ID, &device.Name, &comment, &device.IPv4, 
+		&device.ID, &device.Name, &comment, &device.IPv4,
 		&ipv6LinkLocal, &ipv6UniqueLocal, &ipv6Global, &ipv6Addresses,
 		&mac, &vendor, &deviceType,
 		&osName, &osVersion, &osFamily, &osConfidence,
@@ -290,7 +290,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	if networkID.Valid {
 		device.NetworkID = networkID.String
 	}
-	
+
 	if mac.Valid {
 		device.MAC = &mac.String
 	}
@@ -300,7 +300,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	if comment.Valid {
 		device.Comment = &comment.String
 	}
-	
+
 	// IPv6 fields
 	if ipv6LinkLocal.Valid {
 		device.IPv6LinkLocal = &ipv6LinkLocal.String
@@ -336,7 +336,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	if webScanEndedAt.Valid {
 		device.WebScanEndedAt = &webScanEndedAt.Time
 	}
-	
+
 	// Set OS information
 	if osName.Valid || osVersion.Valid || osFamily.Valid || osConfidence.Valid {
 		device.OS = &models.DeviceOS{}
@@ -371,12 +371,11 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		}
 		device.Ports = append(device.Ports, port)
 	}
-	
+
 	// Check for errors from iterating over rows
 	if err := portRows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over port rows: %w", err)
 	}
-	
 
 	// Load web services
 	webServicesQuery := `
@@ -396,7 +395,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		if err := webServiceRows.Scan(&ws.URL, &title, &server, &ws.StatusCode, &contentType, &size, &screenshot, &ws.Port, &ws.Protocol, &ws.ScannedAt); err != nil {
 			return nil, fmt.Errorf("error scanning web service: %w", err)
 		}
-		
+
 		if title.Valid {
 			ws.Title = title.String
 		}
@@ -412,7 +411,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		if screenshot.Valid {
 			ws.Screenshot = screenshot.String
 		}
-		
+
 		device.WebServices = append(device.WebServices, ws)
 	}
 
@@ -492,26 +491,26 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 	if deviceExists {
 		// Update existing device with the same IP address
 		device.ID = existingID
-		
+
 		// Get the existing created_at timestamp and preserve device type/OS if not provided
 		var createdAt time.Time
 		var existingDeviceType sql.NullString
 		var existingOsName, existingOsVersion, existingOsFamily sql.NullString
 		var existingOsConfidence sql.NullInt64
-		
-		err = tx.QueryRowContext(ctx, 
-			"SELECT created_at, device_type, os_name, os_version, os_family, os_confidence FROM devices WHERE id = ?", 
+
+		err = tx.QueryRowContext(ctx,
+			"SELECT created_at, device_type, os_name, os_version, os_family, os_confidence FROM devices WHERE id = ?",
 			device.ID).Scan(&createdAt, &existingDeviceType, &existingOsName, &existingOsVersion, &existingOsFamily, &existingOsConfidence)
 		if err != nil {
 			return nil, fmt.Errorf("error getting existing device data: %w", err)
 		}
 		device.CreatedAt = createdAt
-		
+
 		// Preserve existing device type if not provided in update
 		if device.DeviceType == "" && existingDeviceType.Valid {
 			device.DeviceType = models.DeviceType(existingDeviceType.String)
 		}
-		
+
 		// Preserve existing OS data if not provided in update
 		if device.OS == nil && (existingOsName.Valid || existingOsVersion.Valid || existingOsFamily.Valid || existingOsConfidence.Valid) {
 			device.OS = &models.DeviceOS{}
@@ -564,7 +563,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 		}
 
 		_, err = tx.ExecContext(ctx, query,
-			device.Name, nullableString(device.Comment), nullableString(device.MAC), nullableString(device.Vendor), 
+			device.Name, nullableString(device.Comment), nullableString(device.MAC), nullableString(device.Vendor),
 			string(device.DeviceType), osName, osVersion, osFamily, osConfidence,
 			device.Status, networkIDPtr, nullableString(device.Hostname),
 			device.UpdatedAt, nullableTime(device.LastSeenOnlineAt),
@@ -1051,7 +1050,7 @@ func (r *SQLiteSettingsRepository) FindByUserID(userID string) (*models.Settings
 
 	var settings models.Settings
 	var createdAt, updatedAt sql.NullTime
-	
+
 	err := row.Scan(&settings.ID, &settings.UserID, &settings.ScreenshotsEnabled, &createdAt, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1074,24 +1073,259 @@ func (r *SQLiteSettingsRepository) FindByUserID(userID string) (*models.Settings
 func (r *SQLiteSettingsRepository) Create(settings *models.Settings) error {
 	query := `INSERT INTO settings (id, user_id, screenshots_enabled, created_at, updated_at) 
 			  VALUES (?, ?, ?, ?, ?)`
-	
-	_, err := r.db.Exec(query, settings.ID, settings.UserID, settings.ScreenshotsEnabled, 
+
+	_, err := r.db.Exec(query, settings.ID, settings.UserID, settings.ScreenshotsEnabled,
 		settings.CreatedAt, settings.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("error creating settings: %w", err)
 	}
-	
+
 	return nil
 }
 
 // Update updates existing settings
 func (r *SQLiteSettingsRepository) Update(settings *models.Settings) error {
 	query := `UPDATE settings SET screenshots_enabled = ?, updated_at = ? WHERE id = ?`
-	
+
 	_, err := r.db.Exec(query, settings.ScreenshotsEnabled, settings.UpdatedAt, settings.ID)
 	if err != nil {
 		return fmt.Errorf("error updating settings: %w", err)
 	}
-	
+
+	return nil
+}
+
+// SQLiteSensorRepository implements the SensorRepository interface for SQLite
+type SQLiteSensorRepository struct {
+	db *sql.DB
+}
+
+// NewSQLiteSensorRepository creates a new SQLiteSensorRepository
+func NewSQLiteSensorRepository(db *sql.DB) *SQLiteSensorRepository {
+	return &SQLiteSensorRepository{db: db}
+}
+
+// Close closes the database connection
+func (r *SQLiteSensorRepository) Close() error {
+	return r.db.Close()
+}
+
+// FindByID finds a sensor by ID
+func (r *SQLiteSensorRepository) FindByID(ctx context.Context, id string) (*models.Sensor, error) {
+	query := `SELECT id, name, token, status, scan_status, hostname, ip, mac, interface, network_cidr,
+	          last_seen_at, registered_at, last_scan_started_at, last_scan_completed_at, last_scan_error,
+	          created_at, updated_at
+	          FROM sensors WHERE id = ?`
+	row := r.db.QueryRowContext(ctx, query, id)
+	return r.scanSensor(row)
+}
+
+// FindByToken finds a sensor by token
+func (r *SQLiteSensorRepository) FindByToken(ctx context.Context, token string) (*models.Sensor, error) {
+	query := `SELECT id, name, token, status, scan_status, hostname, ip, mac, interface, network_cidr,
+	          last_seen_at, registered_at, last_scan_started_at, last_scan_completed_at, last_scan_error,
+	          created_at, updated_at
+	          FROM sensors WHERE token = ?`
+	row := r.db.QueryRowContext(ctx, query, token)
+	return r.scanSensor(row)
+}
+
+// scanSensor scans a row into a Sensor struct
+func (r *SQLiteSensorRepository) scanSensor(row *sql.Row) (*models.Sensor, error) {
+	var sensor models.Sensor
+	var hostname, ip, mac, iface, networkCIDR, lastScanError sql.NullString
+	var lastSeenAt, registeredAt, lastScanStartedAt, lastScanCompletedAt sql.NullTime
+	var scanStatus sql.NullString
+
+	err := row.Scan(
+		&sensor.ID, &sensor.Name, &sensor.Token, &sensor.Status, &scanStatus,
+		&hostname, &ip, &mac, &iface, &networkCIDR,
+		&lastSeenAt, &registeredAt, &lastScanStartedAt, &lastScanCompletedAt, &lastScanError,
+		&sensor.CreatedAt, &sensor.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("error scanning sensor: %w", err)
+	}
+
+	if hostname.Valid {
+		sensor.Hostname = &hostname.String
+	}
+	if ip.Valid {
+		sensor.IP = &ip.String
+	}
+	if scanStatus.Valid {
+		sensor.ScanStatus = models.SensorScanStatus(scanStatus.String)
+	} else {
+		sensor.ScanStatus = models.SensorScanStatusIdle
+	}
+	if mac.Valid {
+		sensor.MAC = &mac.String
+	}
+	if iface.Valid {
+		sensor.Interface = &iface.String
+	}
+	if networkCIDR.Valid {
+		sensor.NetworkCIDR = &networkCIDR.String
+	}
+	if lastSeenAt.Valid {
+		sensor.LastSeenAt = &lastSeenAt.Time
+	}
+	if registeredAt.Valid {
+		sensor.RegisteredAt = &registeredAt.Time
+	}
+	if lastScanStartedAt.Valid {
+		sensor.LastScanStartedAt = &lastScanStartedAt.Time
+	}
+	if lastScanCompletedAt.Valid {
+		sensor.LastScanCompletedAt = &lastScanCompletedAt.Time
+	}
+	if lastScanError.Valid {
+		sensor.LastScanError = &lastScanError.String
+	}
+
+	return &sensor, nil
+}
+
+// FindAll finds all sensors
+func (r *SQLiteSensorRepository) FindAll(ctx context.Context) ([]*models.Sensor, error) {
+	query := `SELECT id, name, token, status, scan_status, hostname, ip, mac, interface, network_cidr,
+	          last_seen_at, registered_at, last_scan_started_at, last_scan_completed_at, last_scan_error,
+	          created_at, updated_at
+	          FROM sensors ORDER BY created_at DESC`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("error querying sensors: %w", err)
+	}
+	defer rows.Close()
+
+	var sensors []*models.Sensor
+	for rows.Next() {
+		var sensor models.Sensor
+		var hostname, ip, mac, iface, networkCIDR, lastScanError sql.NullString
+		var lastSeenAt, registeredAt, lastScanStartedAt, lastScanCompletedAt sql.NullTime
+		var scanStatus sql.NullString
+
+		err := rows.Scan(
+			&sensor.ID, &sensor.Name, &sensor.Token, &sensor.Status, &scanStatus,
+			&hostname, &ip, &mac, &iface, &networkCIDR,
+			&lastSeenAt, &registeredAt, &lastScanStartedAt, &lastScanCompletedAt, &lastScanError,
+			&sensor.CreatedAt, &sensor.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning sensor: %w", err)
+		}
+
+		if hostname.Valid {
+			sensor.Hostname = &hostname.String
+		}
+		if ip.Valid {
+			sensor.IP = &ip.String
+		}
+		if scanStatus.Valid {
+			sensor.ScanStatus = models.SensorScanStatus(scanStatus.String)
+		} else {
+			sensor.ScanStatus = models.SensorScanStatusIdle
+		}
+		if mac.Valid {
+			sensor.MAC = &mac.String
+		}
+		if iface.Valid {
+			sensor.Interface = &iface.String
+		}
+		if networkCIDR.Valid {
+			sensor.NetworkCIDR = &networkCIDR.String
+		}
+		if lastSeenAt.Valid {
+			sensor.LastSeenAt = &lastSeenAt.Time
+		}
+		if registeredAt.Valid {
+			sensor.RegisteredAt = &registeredAt.Time
+		}
+		if lastScanStartedAt.Valid {
+			sensor.LastScanStartedAt = &lastScanStartedAt.Time
+		}
+		if lastScanCompletedAt.Valid {
+			sensor.LastScanCompletedAt = &lastScanCompletedAt.Time
+		}
+		if lastScanError.Valid {
+			sensor.LastScanError = &lastScanError.String
+		}
+
+		sensors = append(sensors, &sensor)
+	}
+
+	return sensors, nil
+}
+
+// Create creates a new sensor
+func (r *SQLiteSensorRepository) Create(ctx context.Context, sensor *models.Sensor) (*models.Sensor, error) {
+	if sensor.ID == "" {
+		sensor.ID = GenerateID()
+	}
+	if sensor.ScanStatus == "" {
+		sensor.ScanStatus = models.SensorScanStatusIdle
+	}
+	now := time.Now()
+	sensor.CreatedAt = now
+	sensor.UpdatedAt = now
+
+	query := `INSERT INTO sensors (id, name, token, status, scan_status, hostname, ip, mac, interface, network_cidr,
+	          last_seen_at, registered_at, last_scan_started_at, last_scan_completed_at, last_scan_error,
+	          created_at, updated_at)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	_, err := r.db.ExecContext(ctx, query,
+		sensor.ID, sensor.Name, sensor.Token, sensor.Status, sensor.ScanStatus,
+		nullableString(sensor.Hostname), nullableString(sensor.IP),
+		nullableString(sensor.MAC), nullableString(sensor.Interface),
+		nullableString(sensor.NetworkCIDR),
+		nullableTime(sensor.LastSeenAt), nullableTime(sensor.RegisteredAt),
+		nullableTime(sensor.LastScanStartedAt), nullableTime(sensor.LastScanCompletedAt),
+		nullableString(sensor.LastScanError),
+		sensor.CreatedAt, sensor.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating sensor: %w", err)
+	}
+
+	return sensor, nil
+}
+
+// Update updates an existing sensor
+func (r *SQLiteSensorRepository) Update(ctx context.Context, sensor *models.Sensor) (*models.Sensor, error) {
+	sensor.UpdatedAt = time.Now()
+
+	query := `UPDATE sensors SET name = ?, status = ?, scan_status = ?, hostname = ?, ip = ?, mac = ?,
+	          interface = ?, network_cidr = ?, last_seen_at = ?, registered_at = ?, last_scan_started_at = ?, 
+	          last_scan_completed_at = ?, last_scan_error = ?, updated_at = ?
+	          WHERE id = ?`
+
+	_, err := r.db.ExecContext(ctx, query,
+		sensor.Name, sensor.Status, sensor.ScanStatus,
+		nullableString(sensor.Hostname), nullableString(sensor.IP),
+		nullableString(sensor.MAC), nullableString(sensor.Interface),
+		nullableString(sensor.NetworkCIDR),
+		nullableTime(sensor.LastSeenAt), nullableTime(sensor.RegisteredAt),
+		nullableTime(sensor.LastScanStartedAt), nullableTime(sensor.LastScanCompletedAt),
+		nullableString(sensor.LastScanError),
+		sensor.UpdatedAt, sensor.ID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error updating sensor: %w", err)
+	}
+
+	return sensor, nil
+}
+
+// Delete deletes a sensor by ID
+func (r *SQLiteSensorRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM sensors WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("error deleting sensor: %w", err)
+	}
 	return nil
 }

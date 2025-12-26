@@ -1,4 +1,4 @@
-package web
+package handlers
 
 import (
 	"html/template"
@@ -18,6 +18,7 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	r.HandleFunc("/logs", h.ServePage("logs")).Methods("GET")
 	r.HandleFunc("/alerts", h.ServePage("alerts")).Methods("GET")
 	r.HandleFunc("/settings", h.ServePage("settings")).Methods("GET")
+	r.HandleFunc("/sensors", h.ServePage("sensors")).Methods("GET")
 	r.HandleFunc("/about", h.ServePage("about")).Methods("GET")
 	r.HandleFunc("/targets", h.ServePage("targets")).Methods("GET")
 
@@ -71,6 +72,16 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/detected-networks-debug", h.APIDetectedNetworksDebug).Methods("GET")
 	api.HandleFunc("/networks-debug", h.APINetworksDebug).Methods("GET")
 	api.HandleFunc("/network-suggestion", h.APINetworkSuggestion).Methods("POST")
+
+	// Sensor endpoints
+	api.HandleFunc("/sensors", h.GetSensors).Methods("GET")
+	api.HandleFunc("/sensors", h.CreateSensor).Methods("POST")
+	api.HandleFunc("/sensors/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", h.DeleteSensor).Methods("DELETE")
+	api.HandleFunc("/sensors/register", h.RegisterSensor).Methods("POST")
+	api.HandleFunc("/sensors/command", h.SensorCommandStatus).Methods("GET")
+	api.HandleFunc("/sensors/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/start-scan", h.StartSensorScan).Methods("POST")
+	api.HandleFunc("/sensors/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/stop-scan", h.StopSensorScan).Methods("POST")
+	api.HandleFunc("/sensors/devices", h.ReceiveSensorDevices).Methods("POST")
 
 	// Static file serving (works from project root or src directory)
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(findPath("static")))))

@@ -137,20 +137,30 @@ func (s *OUIService) loadOUIDatabase(ouiFile string) error {
 		}
 		
 		// Look for lines with OUI assignments
-		// Format: "00-00-00   (hex)		XEROX CORPORATION"
+		// Format 1: "00-00-00   (hex)		XEROX CORPORATION"
+		// Format 2: "000000     (base 16)		XEROX CORPORATION"
+		var oui, vendor string
 		if strings.Contains(line, "(hex)") {
 			parts := strings.SplitN(line, "(hex)", 2)
 			if len(parts) == 2 {
-				oui := strings.TrimSpace(parts[0])
-				vendor := strings.TrimSpace(parts[1])
-				
-				// Normalize OUI format (remove dashes, convert to uppercase)
-				oui = strings.ReplaceAll(oui, "-", "")
-				oui = strings.ToUpper(oui)
-				
-				if len(oui) == 6 && vendor != "" {
-					s.ouiMap[oui] = vendor
-				}
+				oui = strings.TrimSpace(parts[0])
+				vendor = strings.TrimSpace(parts[1])
+			}
+		} else if strings.Contains(line, "(base 16)") {
+			parts := strings.SplitN(line, "(base 16)", 2)
+			if len(parts) == 2 {
+				oui = strings.TrimSpace(parts[0])
+				vendor = strings.TrimSpace(parts[1])
+			}
+		}
+
+		if oui != "" && vendor != "" {
+			// Normalize OUI format (remove dashes, convert to uppercase)
+			oui = strings.ReplaceAll(oui, "-", "")
+			oui = strings.ToUpper(oui)
+
+			if len(oui) == 6 {
+				s.ouiMap[oui] = vendor
 			}
 		}
 	}
