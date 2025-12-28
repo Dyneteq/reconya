@@ -65,8 +65,6 @@ func (h *DeviceHandlers) UpdateDevice(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeviceHandlers) GetAllDevices(w http.ResponseWriter, r *http.Request) {
-	// This handler is deprecated since networks are now user-configurable
-	// Return all devices instead of network-specific devices
 	foundDevices, err := h.Service.FindAll()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -78,7 +76,6 @@ func (h *DeviceHandlers) GetAllDevices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(foundDevices)
 }
 
-// CleanupDeviceNames clears all device names
 func (h *DeviceHandlers) CleanupDeviceNames(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

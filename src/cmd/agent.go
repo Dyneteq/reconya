@@ -1047,11 +1047,11 @@ func syncDevicesToServer(networkID string) {
 		Service  string `json:"service,omitempty"`
 	}
 	type devicePayload struct {
-		IPv4     string    `json:"ipv4"`
-		MAC      *string   `json:"mac,omitempty"`
-		Vendor   *string   `json:"vendor,omitempty"`
-		Hostname *string   `json:"hostname,omitempty"`
-		Status   string    `json:"status"`
+		IPv4     string     `json:"ipv4"`
+		MAC      *string    `json:"mac,omitempty"`
+		Vendor   *string    `json:"vendor,omitempty"`
+		Hostname *string    `json:"hostname,omitempty"`
+		Status   string     `json:"status"`
 		Ports    []portInfo `json:"ports,omitempty"`
 	}
 

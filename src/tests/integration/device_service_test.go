@@ -97,4 +97,3 @@ func TestDeviceRepository_Integration(t *testing.T) {
 		assert.NotNil(t, updatedDevice.LastSeenOnlineAt)
 	})
 }
-

@@ -15,6 +15,7 @@ import (
 
 	"reconya/db"
 	"reconya/internal/config"
+	"reconya/models"
 	"reconya/internal/device"
 	"reconya/internal/eventlog"
 	"reconya/internal/ipv6monitor"
@@ -316,12 +317,18 @@ func runSuite(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// Create or update local sensor
+	localSensor := createLocalSensor(svc, primaryIface, networkCIDR, iface.HardwareAddr.String())
+	if localSensor != nil {
+		fmt.Printf(" [SENSOR] Local agent registered: %s\n", localSensor.ID[:8])
+	}
+
 	fmt.Printf(" [AGENT] Scanning network: %s\n", networkCIDR)
 	fmt.Printf(" [WEB] Starting web server on port %s...\n", svc.Config.Port)
 	fmt.Println()
 
 	// Start agent scanning in background (headless - no TUI)
-	go runSuiteAgentLoop(network.ID, svc)
+	go runSuiteAgentLoop(network.ID, svc, localSensor)
 
 	// Set shared services for web server to use
 	suiteServices = svc
@@ -330,9 +337,71 @@ func runSuite(cmd *cobra.Command, args []string) {
 	runWeb(cmd, args)
 }
 
+// createLocalSensor creates or updates the local agent sensor
+func createLocalSensor(svc *Services, ifaceName, networkCIDR, mac string) *models.Sensor {
+	ctx := context.Background()
+
+	// Check if local sensor already exists
+	sensors, err := svc.SensorService.GetAllSensors(ctx)
+	if err != nil {
+		errorLogger.Printf("Error getting sensors: %v", err)
+		return nil
+	}
+
+	var localSensor *models.Sensor
+	for _, s := range sensors {
+		if s.Name == "Local Agent" {
+			localSensor = s
+			break
+		}
+	}
+
+	// Create if not exists
+	if localSensor == nil {
+		localSensor, err = svc.SensorService.CreateSensor(ctx, "Local Agent")
+		if err != nil {
+			errorLogger.Printf("Error creating local sensor: %v", err)
+			return nil
+		}
+	}
+
+	// Get hostname
+	hostname, _ := os.Hostname()
+
+	// Get local IP from interface
+	var localIP string
+	if iface, err := net.InterfaceByName(ifaceName); err == nil {
+		if addrs, err := iface.Addrs(); err == nil {
+			for _, addr := range addrs {
+				if ip, _, err := net.ParseCIDR(addr.String()); err == nil && ip.To4() != nil {
+					localIP = ip.String()
+					break
+				}
+			}
+		}
+	}
+
+	// Register/update the sensor
+	req := sensor.RegisterRequest{
+		Hostname:    hostname,
+		IP:          localIP,
+		MAC:         mac,
+		Interface:   ifaceName,
+		NetworkCIDR: networkCIDR,
+	}
+	localSensor, err = svc.SensorService.Register(ctx, localSensor.Token, req)
+	if err != nil {
+		errorLogger.Printf("Error registering local sensor: %v", err)
+		return nil
+	}
+
+	return localSensor
+}
+
 // runSuiteAgentLoop runs agent scanning without TUI for suite mode
-func runSuiteAgentLoop(networkID string, svc *Services) {
+func runSuiteAgentLoop(networkID string, svc *Services, localSensor *models.Sensor) {
 	scanCount := 0
+	ctx := context.Background()
 
 	network, err := svc.NetworkService.FindByID(networkID)
 	if err != nil || network == nil {
@@ -340,7 +409,31 @@ func runSuiteAgentLoop(networkID string, svc *Services) {
 		return
 	}
 
+	// Start with scan status as idle - wait for user to trigger scan
+	if localSensor != nil {
+		svc.SensorService.UpdateScanStatus(ctx, localSensor.ID, models.SensorScanStatusIdle)
+	}
+
+	infoLogger.Printf("[AGENT] Ready and waiting for scan command...")
+
 	for {
+		// Check if we should be scanning
+		shouldScan := false
+		if localSensor != nil {
+			currentSensor, err := svc.SensorService.GetSensorByID(ctx, localSensor.ID)
+			if err == nil && currentSensor != nil {
+				shouldScan = currentSensor.ScanStatus == models.SensorScanStatusRunning
+			}
+			// Update last seen
+			svc.SensorService.Register(ctx, localSensor.Token, sensor.RegisterRequest{})
+		}
+
+		if !shouldScan {
+			// Not scanning - wait and check again
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
 		scanCount++
 		infoLogger.Printf("[AGENT] Starting scan #%d on %s", scanCount, network.CIDR)
 
@@ -378,7 +471,7 @@ var rootCmd = &cobra.Command{
 	Use:   "reconya",
 	Short: "reconYa - Network reconnaissance and monitoring tool",
 	Long:  `reconYa is a network reconnaissance and monitoring tool that helps you discover and track devices on your network.`,
-	Run:   runWeb, // Default to web mode when no subcommand is provided
+	Run:   runSuite, // Default to suite mode (web + agent)
 }
 
 var webCmd = &cobra.Command{
@@ -423,6 +516,9 @@ var suiteCmd = &cobra.Command{
 }
 
 func init() {
+	// Disable auto-generated completion command
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+
 	// Add -i/--interface flag to agent command
 	agentCmd.Flags().StringVarP(&scanInterface, "interface", "i", "", "Network interface to scan (e.g., en0, eth0)")
 	agentCmd.Flags().StringVar(&serverURL, "server", "", "Web server URL to register with (e.g., http://localhost:3000)")

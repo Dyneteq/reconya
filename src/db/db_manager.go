@@ -27,17 +27,17 @@ type OperationResult struct {
 
 // DBManager manages serialized access to the database
 type DBManager struct {
-	opQueue      chan Operation
+	opQueue       chan Operation
 	resultOpQueue chan OperationWithResult
-	stopping     chan struct{}
+	stopping      chan struct{}
 }
 
 // NewDBManager creates a new database manager
 func NewDBManager() *DBManager {
 	m := &DBManager{
-		opQueue:      make(chan Operation, 100),
+		opQueue:       make(chan Operation, 100),
 		resultOpQueue: make(chan OperationWithResult, 100),
-		stopping:     make(chan struct{}),
+		stopping:      make(chan struct{}),
 	}
 
 	// Start the worker goroutine
@@ -126,4 +126,3 @@ func (m *DBManager) CreateOrUpdateNetwork(repo NetworkRepository, ctx context.Co
 	}
 	return result.(*models.Network), nil
 }
-

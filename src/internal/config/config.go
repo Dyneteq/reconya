@@ -25,12 +25,11 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	// Try loading .env from multiple locations
 	envPaths := []string{
-		".env",           // Current directory
-		"src/.env",       // From project root
-		"../src/.env",    // From cmd directory
-		"../.env",        // Parent directory
+		".env",
+		"src/.env",
+		"../src/.env",
+		"../.env",
 	}
 	for _, path := range envPaths {
 		if _, err := os.Stat(path); err == nil {
@@ -41,14 +40,12 @@ func LoadConfig() (*Config, error) {
 
 	databaseName := os.Getenv("DATABASE_NAME")
 	if databaseName == "" {
-		databaseName = "reconya" // Default database name
+		databaseName = "reconya"
 	}
 
-	// Username/password are optional for agent mode
 	username := os.Getenv("LOGIN_USERNAME")
 	password := os.Getenv("LOGIN_PASSWORD")
 
-	// JWT secret - generate a default for agent mode
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "" {
 		jwtSecret = "agent-mode-default-secret"
@@ -72,19 +69,17 @@ func LoadConfig() (*Config, error) {
 
 	sqlitePath := os.Getenv("SQLITE_PATH")
 	if sqlitePath == "" {
-		// Try to find the data directory in multiple locations
 		dataPaths := []string{
-			"data",     // Current directory (running from src)
-			"src/data", // From project root
+			"data",
+			"src/data",
 		}
-		dataDir := "data" // Default
+		dataDir := "data"
 		for _, path := range dataPaths {
 			if info, err := os.Stat(path); err == nil && info.IsDir() {
 				dataDir = path
 				break
 			}
 		}
-		// Create data directory if it doesn't exist
 		if _, err := os.Stat(dataDir); os.IsNotExist(err) {
 			os.MkdirAll(dataDir, 0755)
 		}

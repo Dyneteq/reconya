@@ -36,7 +36,7 @@ func (s *OUIService) Initialize() error {
 	}
 
 	ouiFile := filepath.Join(s.dataPath, "oui.txt")
-	
+
 	// Check if we need to download/update the OUI database
 	if s.shouldUpdateOUI(ouiFile) {
 		log.Println("Downloading IEEE OUI database...")
@@ -47,12 +47,12 @@ func (s *OUIService) Initialize() error {
 			log.Println("IEEE OUI database downloaded successfully")
 		}
 	}
-	
+
 	// Load OUI database into memory
 	if err := s.loadOUIDatabase(ouiFile); err != nil {
 		return fmt.Errorf("failed to load OUI database: %w", err)
 	}
-	
+
 	log.Printf("Loaded %d OUI entries into memory", len(s.ouiMap))
 	return nil
 }
@@ -64,7 +64,7 @@ func (s *OUIService) shouldUpdateOUI(ouiFile string) bool {
 		// File doesn't exist, need to download
 		return true
 	}
-	
+
 	// Update if file is older than 30 days
 	return time.Since(info.ModTime()) > 30*24*time.Hour
 }
@@ -73,22 +73,22 @@ func (s *OUIService) shouldUpdateOUI(ouiFile string) bool {
 func (s *OUIService) downloadOUIDatabase(ouiFile string) error {
 	// IEEE OUI database URL
 	url := "http://standards-oui.ieee.org/oui/oui.txt"
-	
+
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 60 * time.Second,
 	}
-	
+
 	resp, err := client.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to download OUI database: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download OUI database: HTTP %d", resp.StatusCode)
 	}
-	
+
 	// Create temporary file
 	tempFile := ouiFile + ".tmp"
 	file, err := os.Create(tempFile)
@@ -96,20 +96,20 @@ func (s *OUIService) downloadOUIDatabase(ouiFile string) error {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer file.Close()
-	
+
 	// Copy response body to file
 	_, err = io.Copy(file, resp.Body)
 	if err != nil {
 		os.Remove(tempFile)
 		return fmt.Errorf("failed to write OUI database: %w", err)
 	}
-	
+
 	// Atomically replace the old file with the new one
 	if err := os.Rename(tempFile, ouiFile); err != nil {
 		os.Remove(tempFile)
 		return fmt.Errorf("failed to replace OUI database: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -120,22 +120,22 @@ func (s *OUIService) loadOUIDatabase(ouiFile string) error {
 		return fmt.Errorf("failed to open OUI database: %w", err)
 	}
 	defer file.Close()
-	
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	// Clear existing map
 	s.ouiMap = make(map[string]string)
-	
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		// Skip empty lines and comments
 		if len(line) == 0 || strings.HasPrefix(line, "#") {
 			continue
 		}
-		
+
 		// Look for lines with OUI assignments
 		// Format 1: "00-00-00   (hex)		XEROX CORPORATION"
 		// Format 2: "000000     (base 16)		XEROX CORPORATION"
@@ -164,11 +164,11 @@ func (s *OUIService) loadOUIDatabase(ouiFile string) error {
 			}
 		}
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("failed to read OUI database: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -177,21 +177,21 @@ func (s *OUIService) LookupVendor(macAddress string) string {
 	if macAddress == "" {
 		return ""
 	}
-	
+
 	// Extract OUI (first 6 characters after removing separators)
 	oui := s.extractOUI(macAddress)
 	if oui == "" {
 		return ""
 	}
-	
+
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	vendor, exists := s.ouiMap[oui]
 	if !exists {
 		return ""
 	}
-	
+
 	return vendor
 }
 
@@ -202,12 +202,12 @@ func (s *OUIService) extractOUI(macAddress string) string {
 	mac = strings.ReplaceAll(mac, "-", "")
 	mac = strings.ReplaceAll(mac, ".", "")
 	mac = strings.ToUpper(mac)
-	
+
 	// Ensure we have at least 6 characters for OUI
 	if len(mac) < 6 {
 		return ""
 	}
-	
+
 	return mac[:6]
 }
 
@@ -215,7 +215,7 @@ func (s *OUIService) extractOUI(macAddress string) string {
 func (s *OUIService) GetStatistics() map[string]interface{} {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	return map[string]interface{}{
 		"total_entries": len(s.ouiMap),
 		"last_updated":  s.getLastUpdated(),

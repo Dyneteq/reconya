@@ -23,21 +23,21 @@ func TestDeviceHandlers_Integration(t *testing.T) {
 
 	deviceRepo := factory.NewDeviceRepository()
 	networkRepo := factory.NewNetworkRepository()
-	
+
 	cfg := testutils.GetTestConfig()
 	dbManager := db.NewDBManager()
-	
+
 	// Create services
 	networkService := network.NewNetworkService(networkRepo, cfg, dbManager)
 	deviceService := device.NewDeviceService(deviceRepo, networkService, cfg, dbManager, nil) // nil OUI service for tests
-	
+
 	// Create handlers
 	deviceHandlers := device.NewDeviceHandlers(deviceService, cfg)
 
 	// Create test server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/devices", deviceHandlers.GetAllDevices)
-	
+
 	testServer := testutils.NewTestServer(t, mux)
 	defer testServer.Close()
 
@@ -52,7 +52,7 @@ func TestDeviceHandlers_Integration(t *testing.T) {
 		var devices []models.Device
 		err := json.NewDecoder(resp.Body).Decode(&devices)
 		require.NoError(t, err)
-		
+
 		// Should return empty array for no devices
 		assert.Equal(t, 0, len(devices))
 	})
@@ -92,16 +92,16 @@ func TestDeviceHandlers_Integration(t *testing.T) {
 		var devices []models.Device
 		err = json.NewDecoder(resp.Body).Decode(&devices)
 		require.NoError(t, err)
-		
+
 		// Should return our test devices
 		assert.GreaterOrEqual(t, len(devices), len(testDevices))
-		
+
 		// Verify our devices are present
 		deviceNames := make(map[string]bool)
 		for _, dev := range devices {
 			deviceNames[dev.Name] = true
 		}
-		
+
 		for _, testDev := range testDevices {
 			assert.True(t, deviceNames[testDev.Name], "Device %s should be in response", testDev.Name)
 		}
@@ -115,4 +115,3 @@ func TestDeviceHandlers_Integration(t *testing.T) {
 		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 	})
 }
-

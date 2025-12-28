@@ -13,7 +13,7 @@ func TestDevice_Creation(t *testing.T) {
 	hostname := "test-device"
 	vendor := "Test Vendor"
 	now := time.Now()
-	
+
 	device := Device{
 		ID:        uuid.New().String(),
 		Name:      "Test Device",

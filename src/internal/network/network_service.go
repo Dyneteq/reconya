@@ -76,7 +76,6 @@ func (s *NetworkService) FindByCIDR(cidr string) (*models.Network, error) {
 	return network, nil
 }
 
-
 func (s *NetworkService) FindAll() ([]models.Network, error) {
 	log.Printf("NetworkService.FindAll: Fetching all networks")
 	networks, err := s.Repository.FindAll(context.Background())
@@ -84,7 +83,7 @@ func (s *NetworkService) FindAll() ([]models.Network, error) {
 		log.Printf("NetworkService.FindAll: Error from repository: %v", err)
 		return nil, err
 	}
-	
+
 	log.Printf("NetworkService.FindAll: Found %d networks", len(networks))
 	result := make([]models.Network, len(networks))
 	for i, network := range networks {
@@ -102,12 +101,12 @@ func (s *NetworkService) Update(id, name, cidr, description string) (*models.Net
 	if network == nil {
 		return nil, db.ErrNotFound
 	}
-	
+
 	network.Name = name
 	network.CIDR = cidr
 	network.Description = description
 	network.UpdatedAt = time.Now()
-	
+
 	return s.dbManager.CreateOrUpdateNetwork(s.Repository, context.Background(), network)
 }
 
@@ -117,13 +116,13 @@ func (s *NetworkService) Delete(id string) error {
 
 func (s *NetworkService) GetDeviceCount(networkID string) (int, error) {
 	log.Printf("NetworkService.GetDeviceCount: Counting devices for network %s", networkID)
-	
+
 	count, err := s.Repository.GetDeviceCount(context.Background(), networkID)
 	if err != nil {
 		log.Printf("NetworkService.GetDeviceCount: Error counting devices: %v", err)
 		return 0, err
 	}
-	
+
 	log.Printf("NetworkService.GetDeviceCount: Found %d devices for network %s", count, networkID)
 	return count, nil
 }

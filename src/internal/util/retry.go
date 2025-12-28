@@ -10,7 +10,7 @@ import (
 func RetryOnLock(operation func() error) error {
 	maxRetries := 3
 	baseDelay := 100 * time.Millisecond
-	
+
 	var err error
 	for i := 0; i < maxRetries; i++ {
 		err = operation()
@@ -56,4 +56,3 @@ func RetryOnLockWithResult[T any](operation func() (T, error)) (T, error) {
 
 	return result, err
 }
-

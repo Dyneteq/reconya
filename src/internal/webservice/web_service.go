@@ -124,9 +124,9 @@ func (w *WebService) ScanWebServicesWithScreenshots(device *models.Device, captu
 // fetchWebInfo attempts to fetch web page info from a specific URL
 func (w *WebService) fetchWebInfo(ip string, port int, protocol string, captureScreenshots bool) *WebInfo {
 	urlStr := fmt.Sprintf("%s://%s:%d", protocol, ip, port)
-	
+
 	log.Printf("Fetching web info from: %s", urlStr)
-	
+
 	resp, err := w.client.Get(urlStr)
 	if err != nil {
 		log.Printf("Failed to fetch %s: %v", urlStr, err)
@@ -178,7 +178,7 @@ func (w *WebService) extractTitle(html string) string {
 	// Use regex to find title tag (case insensitive)
 	titleRegex := regexp.MustCompile(`(?i)<title[^>]*>([^<]+)</title>`)
 	matches := titleRegex.FindStringSubmatch(html)
-	
+
 	if len(matches) > 1 {
 		title := strings.TrimSpace(matches[1])
 		// Clean up title (remove extra whitespace, newlines)
@@ -274,7 +274,7 @@ func (w *WebService) captureScreenshot(urlStr string) string {
 // captureWithChromedp captures screenshot using chromedp (Go-based, no external dependencies)
 func (w *WebService) captureWithChromedp(urlStr string) string {
 	log.Printf("Attempting chromedp screenshot for %s", urlStr)
-	
+
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -319,7 +319,7 @@ func (w *WebService) captureWithChromedp(urlStr string) string {
 	// Encode to base64
 	encoded := base64.StdEncoding.EncodeToString(screenshotData)
 	log.Printf("chromedp screenshot successful for %s (size: %d bytes)", urlStr, len(screenshotData))
-	
+
 	return encoded
 }
 
@@ -328,14 +328,14 @@ func (w *WebService) captureWithChrome(urlStr, outputPath string) string {
 	// Try different Chrome binary names and paths
 	chromeBinaries := []string{
 		"google-chrome",
-		"chromium", 
-		"chromium-browser", 
+		"chromium",
+		"chromium-browser",
 		"chrome",
 		"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // macOS
-		"/usr/bin/google-chrome",     // Linux
-		"/usr/bin/chromium-browser",  // Linux
+		"/usr/bin/google-chrome",    // Linux
+		"/usr/bin/chromium-browser", // Linux
 	}
-	
+
 	var chromeCmd string
 	for _, binary := range chromeBinaries {
 		if _, err := exec.LookPath(binary); err == nil {
@@ -348,12 +348,12 @@ func (w *WebService) captureWithChrome(urlStr, outputPath string) string {
 			break
 		}
 	}
-	
+
 	if chromeCmd == "" {
 		log.Printf("Chrome/Chromium not found in PATH or standard locations")
 		return ""
 	}
-	
+
 	log.Printf("Using Chrome binary: %s", chromeCmd)
 
 	// Chrome headless command with security options for containers
@@ -373,7 +373,7 @@ func (w *WebService) captureWithChrome(urlStr, outputPath string) string {
 	cmd := exec.Command(chromeCmd, args...)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
-	
+
 	// Set timeout for screenshot capture
 	timer := time.AfterFunc(15*time.Second, func() {
 		if cmd.Process != nil {
@@ -414,7 +414,7 @@ func (w *WebService) captureWithFirefox(urlStr, outputPath string) string {
 	cmd := exec.Command("xvfb-run", append([]string{"-a", "firefox"}, args...)...)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
-	
+
 	// Set timeout for screenshot capture
 	timer := time.AfterFunc(15*time.Second, func() {
 		if cmd.Process != nil {
@@ -453,7 +453,7 @@ func (w *WebService) captureWithWkhtmltoimage(urlStr, outputPath string) string 
 	cmd := exec.Command("wkhtmltoimage", args...)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
-	
+
 	// Set timeout for screenshot capture
 	timer := time.AfterFunc(15*time.Second, func() {
 		if cmd.Process != nil {
@@ -481,7 +481,7 @@ func (w *WebService) captureWithWebkit2png(urlStr, outputPath string) string {
 
 	// webkit2png saves as .png by default, so we need to adjust the output path
 	baseOutputPath := strings.TrimSuffix(outputPath, ".png")
-	
+
 	args := []string{
 		"--width=1280",
 		"--height=1024",
@@ -495,7 +495,7 @@ func (w *WebService) captureWithWebkit2png(urlStr, outputPath string) string {
 	cmd := exec.Command("webkit2png", args...)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
-	
+
 	// Set timeout for screenshot capture
 	timer := time.AfterFunc(15*time.Second, func() {
 		if cmd.Process != nil {
@@ -512,7 +512,7 @@ func (w *WebService) captureWithWebkit2png(urlStr, outputPath string) string {
 
 	// webkit2png creates a file with -full.png suffix
 	actualOutputPath := fmt.Sprintf("%s-full.png", baseOutputPath)
-	
+
 	// Check if the file was created
 	if _, err := os.Stat(actualOutputPath); os.IsNotExist(err) {
 		log.Printf("webkit2png did not create expected file: %s", actualOutputPath)
@@ -541,6 +541,6 @@ func (w *WebService) encodeScreenshotToBase64(filePath string) string {
 	// Encode to base64
 	encoded := base64.StdEncoding.EncodeToString(imageData)
 	log.Printf("Screenshot encoded to base64, size: %d bytes", len(imageData))
-	
+
 	return encoded
 }

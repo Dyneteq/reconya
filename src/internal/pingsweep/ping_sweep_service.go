@@ -33,7 +33,7 @@ func NewPingSweepService(
 	eventLogService *eventlog.EventLogService,
 	networkService *network.NetworkService,
 	portScanService *portscan.PortScanService) *PingSweepService {
-	
+
 	service := &PingSweepService{
 		Config:          cfg,
 		DeviceService:   deviceService,
@@ -42,12 +42,13 @@ func NewPingSweepService(
 		PortScanService: portScanService,
 		portScanQueue:   make(chan models.Device, 100), // Buffer for 100 devices
 	}
-	
+
 	// Start 3 port scan workers
 	service.startPortScanWorkers(3)
-	
+
 	return service
 }
+
 // Run method is deprecated - use the scan manager to control scanning
 // This method is kept for compatibility but should not be called directly
 func (s *PingSweepService) Run() {
@@ -121,13 +122,13 @@ func (s *PingSweepService) executeWithFallback(network string) ([]models.Device,
 // tryNativeScanner uses the native Go scanner for network discovery
 func (s *PingSweepService) tryNativeScanner(network string) ([]models.Device, error) {
 	log.Printf("Trying native Go scanner on network: %s", network)
-	
+
 	nativeScanner := scanner.NewNativeScanner()
 	devices, err := nativeScanner.ScanNetwork(network)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return devices, nil
 }
 
@@ -138,14 +139,14 @@ func (s *PingSweepService) tryNmapCommand(args []string) ([]models.Device, error
 	// First attempt with 60-second timeout (nmap can take 20+ seconds for /24)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	
+
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	output, err := cmd.CombinedOutput()
-	
+
 	// If timeout occurred and command doesn't already have -n flag, retry with -n
 	if err != nil && ctx.Err() == context.DeadlineExceeded {
 		log.Printf("nmap command timed out, checking if we can retry with -n flag")
-		
+
 		// Check if -n flag is already present
 		hasNoResolve := false
 		for _, arg := range args {
@@ -154,31 +155,31 @@ func (s *PingSweepService) tryNmapCommand(args []string) ([]models.Device, error
 				break
 			}
 		}
-		
+
 		// If no -n flag present, retry with -n to skip DNS resolution
 		if !hasNoResolve {
 			log.Printf("Retrying nmap command with -n flag to skip DNS resolution")
-			
+
 			// Build new args with -n flag after the command name
 			retryArgs := []string{args[0]} // command (nmap or sudo)
 			if args[0] == "sudo" && len(args) > 1 {
-				retryArgs = append(retryArgs, args[1]) // nmap
-				retryArgs = append(retryArgs, "-n")    // add -n flag
+				retryArgs = append(retryArgs, args[1])     // nmap
+				retryArgs = append(retryArgs, "-n")        // add -n flag
 				retryArgs = append(retryArgs, args[2:]...) // rest of args
 			} else {
-				retryArgs = append(retryArgs, "-n")    // add -n flag
+				retryArgs = append(retryArgs, "-n")        // add -n flag
 				retryArgs = append(retryArgs, args[1:]...) // rest of args
 			}
-			
+
 			log.Printf("Retry command: %s", strings.Join(retryArgs, " "))
-			
+
 			// Retry with 90-second timeout for Raspberry Pi compatibility
 			retryCtx, retryCancel := context.WithTimeout(context.Background(), 90*time.Second)
 			defer retryCancel()
-			
+
 			retryCmd := exec.CommandContext(retryCtx, retryArgs[0], retryArgs[1:]...)
 			output, err = retryCmd.CombinedOutput()
-			
+
 			if err != nil {
 				if retryCtx.Err() == context.DeadlineExceeded {
 					log.Printf("nmap retry also timed out after 90 seconds")
@@ -201,7 +202,7 @@ func (s *PingSweepService) tryNmapCommand(args []string) ([]models.Device, error
 	}
 
 	log.Printf("nmap command output length: %d bytes", len(output))
-	
+
 	devices := s.DeviceService.ParseFromNmapXML(string(output))
 	return devices, nil
 }
@@ -212,17 +213,17 @@ func (s *PingSweepService) tryGetHostname(ip string) string {
 	if hostname := s.tryNmapHostnameScan(ip); hostname != "" {
 		return hostname
 	}
-	
+
 	// Try DNS reverse lookup with timeout
 	if hostname := s.tryDNSReverseLookup(ip); hostname != "" {
 		return hostname
 	}
-	
+
 	// Try alternative DNS lookup methods
 	if hostname := s.tryDigReverseLookup(ip); hostname != "" {
 		return hostname
 	}
-	
+
 	return ""
 }
 
@@ -234,13 +235,13 @@ func (s *PingSweepService) tryNmapHostnameScan(ip string) string {
 	if err != nil {
 		return ""
 	}
-	
+
 	// Parse the XML output for hostname
 	devices := s.DeviceService.ParseFromNmapXML(string(output))
 	if len(devices) > 0 && devices[0].Hostname != nil && *devices[0].Hostname != "" {
 		return *devices[0].Hostname
 	}
-	
+
 	return ""
 }
 
@@ -252,7 +253,7 @@ func (s *PingSweepService) tryDNSReverseLookup(ip string) string {
 	if err != nil {
 		return ""
 	}
-	
+
 	// Parse hostname from nslookup output
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
@@ -267,7 +268,7 @@ func (s *PingSweepService) tryDNSReverseLookup(ip string) string {
 			}
 		}
 	}
-	
+
 	return ""
 }
 
@@ -279,21 +280,21 @@ func (s *PingSweepService) tryDigReverseLookup(ip string) string {
 	if err != nil {
 		return ""
 	}
-	
+
 	hostname := strings.TrimSpace(string(output))
 	hostname = strings.TrimSuffix(hostname, ".") // Remove trailing dot
-	
+
 	if hostname != "" && !strings.Contains(hostname, "NXDOMAIN") && hostname != ip {
 		return hostname
 	}
-	
+
 	return ""
 }
 
 // startPortScanWorkers starts background workers for port scanning
 func (s *PingSweepService) startPortScanWorkers(numWorkers int) {
 	log.Printf("Starting %d port scan workers", numWorkers)
-	
+
 	for i := 0; i < numWorkers; i++ {
 		s.portScanWorkers.Add(1)
 		go s.portScanWorker(i)
@@ -303,14 +304,14 @@ func (s *PingSweepService) startPortScanWorkers(numWorkers int) {
 // portScanWorker continuously processes devices from the port scan queue
 func (s *PingSweepService) portScanWorker(workerID int) {
 	defer s.portScanWorkers.Done()
-	
+
 	log.Printf("Port scan worker %d started", workerID)
-	
+
 	for device := range s.portScanQueue {
 		log.Printf("Worker %d: Starting port scan for device %s", workerID, device.IPv4)
 		s.PortScanService.Run(device)
 		log.Printf("Worker %d: Completed port scan for device %s", workerID, device.IPv4)
 	}
-	
+
 	log.Printf("Port scan worker %d stopped", workerID)
 }

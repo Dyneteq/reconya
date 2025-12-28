@@ -214,50 +214,6 @@ function renderSensorCard(sensor) {
     `;
 }
 
-function startSensorScan(sensorId, buttonEl) {
-    handleSensorScanAction(sensorId, 'start', buttonEl);
-}
-
-function stopSensorScan(sensorId, buttonEl) {
-    handleSensorScanAction(sensorId, 'stop', buttonEl);
-}
-
-function handleSensorScanAction(sensorId, action, buttonEl) {
-    if (!sensorId) return;
-
-    let originalText = '';
-    if (buttonEl) {
-        originalText = buttonEl.textContent;
-        buttonEl.disabled = true;
-        buttonEl.textContent = action === 'start' ? 'Starting...' : 'Stopping...';
-    }
-
-    fetch(`/api/sensors/${sensorId}/${action}-scan`, {
-        method: 'POST',
-        credentials: 'include'
-    })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(text || 'Request failed');
-                });
-            }
-        })
-        .then(() => {
-            loadDashboardMetrics();
-        })
-        .catch(error => {
-            console.error(`Failed to ${action} scan:`, error);
-            alert(`Failed to ${action} scan: ${error.message}`);
-        })
-        .finally(() => {
-            if (buttonEl) {
-                buttonEl.disabled = false;
-                buttonEl.textContent = originalText || (action === 'start' ? 'Start Scan' : 'Stop Scan');
-            }
-        });
-}
-
 function loadEventLogs() {
     const targetEl = document.getElementById('logs-container');
     if (targetEl) {
@@ -311,9 +267,6 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
-
-window.startSensorScan = startSensorScan;
-window.stopSensorScan = stopSensorScan;
 
 function renderLogsPaginationControls() {
     const paginationId = 'logs-pagination-controls';
@@ -401,6 +354,41 @@ window.changeLogsPage = function(page) {
     renderLogsPaginationControls();
 };
 
+// Load public IP
+function loadPublicIP() {
+    const ipEl = document.getElementById('public-ip-address');
+    const locationEl = document.getElementById('public-ip-location');
+    if (!ipEl) return;
+
+    fetch('/api/system-status', { credentials: 'include' })
+        .then(response => response.json())
+        .then(data => {
+            const status = data.SystemStatus || data.system_status || {};
+            const publicIP = status.public_ip || status.PublicIP || 'N/A';
+            const geo = status.Geolocation || status.geolocation;
+
+            ipEl.textContent = publicIP;
+
+            if (locationEl && geo) {
+                const parts = [];
+                if (geo.city || geo.City) parts.push(geo.city || geo.City);
+                if (geo.country || geo.Country) parts.push(geo.country || geo.Country);
+                locationEl.textContent = parts.join(', ');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading public IP:', error);
+            ipEl.textContent = 'Error';
+        });
+}
+
+// Initialize public IP on load
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('public-ip-address')) {
+        loadPublicIP();
+    }
+});
+
 // Make functions available globally
 window.loadRecentActivity = loadRecentActivity;
 window.loadEventLogs = loadEventLogs;
@@ -413,3 +401,4 @@ window.formatLogTime = formatLogTime;
 window.loadDashboardMetrics = loadDashboardMetrics;
 window.updateDashboardMetrics = updateDashboardMetrics;
 window.updateNetworkSaturation = updateNetworkSaturation;
+window.loadPublicIP = loadPublicIP;

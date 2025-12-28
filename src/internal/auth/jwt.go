@@ -42,7 +42,7 @@ func (h *AuthHandlers) GenerateJWT(username string) (string, error) {
 
 func (h *AuthHandlers) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {

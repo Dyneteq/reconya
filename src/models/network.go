@@ -16,17 +16,17 @@ const (
 )
 
 type Network struct {
-	ID             string        `bson:"_id,omitempty" json:"id"`
-	Name           string        `bson:"name" json:"name"`
-	CIDR           string        `bson:"cidr" json:"cidr"`
-	IPv6Prefix     *string       `bson:"ipv6_prefix,omitempty" json:"ipv6_prefix,omitempty"`
-	AddressFamily  AddressFamily `bson:"address_family" json:"address_family"`
-	Description    string        `bson:"description" json:"description"`
-	Status         string        `bson:"status" json:"status"`
-	LastScannedAt  *time.Time    `bson:"last_scanned_at" json:"last_scanned_at"`
-	DeviceCount    int           `bson:"device_count" json:"device_count"`
-	CreatedAt      time.Time     `bson:"created_at" json:"created_at"`
-	UpdatedAt      time.Time     `bson:"updated_at" json:"updated_at"`
+	ID            string        `bson:"_id,omitempty" json:"id"`
+	Name          string        `bson:"name" json:"name"`
+	CIDR          string        `bson:"cidr" json:"cidr"`
+	IPv6Prefix    *string       `bson:"ipv6_prefix,omitempty" json:"ipv6_prefix,omitempty"`
+	AddressFamily AddressFamily `bson:"address_family" json:"address_family"`
+	Description   string        `bson:"description" json:"description"`
+	Status        string        `bson:"status" json:"status"`
+	LastScannedAt *time.Time    `bson:"last_scanned_at" json:"last_scanned_at"`
+	DeviceCount   int           `bson:"device_count" json:"device_count"`
+	CreatedAt     time.Time     `bson:"created_at" json:"created_at"`
+	UpdatedAt     time.Time     `bson:"updated_at" json:"updated_at"`
 }
 
 func (n *Network) IsIPv4Enabled() bool {
@@ -64,7 +64,7 @@ func (n *Network) ValidateNetworkAddresses() error {
 			return fmt.Errorf("invalid IPv4 CIDR: %w", err)
 		}
 	}
-	
+
 	if n.IsIPv6Enabled() {
 		if n.IPv6Prefix == nil || *n.IPv6Prefix == "" {
 			return fmt.Errorf("IPv6 prefix is required for IPv6 or dual-stack networks")
@@ -73,7 +73,7 @@ func (n *Network) ValidateNetworkAddresses() error {
 			return fmt.Errorf("invalid IPv6 prefix: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -81,17 +81,17 @@ func (n *Network) ContainsIPv4(ip string) bool {
 	if !n.IsIPv4Enabled() {
 		return false
 	}
-	
+
 	_, ipNet, err := net.ParseCIDR(n.CIDR)
 	if err != nil {
 		return false
 	}
-	
+
 	testIP := net.ParseIP(ip)
 	if testIP == nil {
 		return false
 	}
-	
+
 	return ipNet.Contains(testIP)
 }
 
@@ -99,17 +99,17 @@ func (n *Network) ContainsIPv6(ip string) bool {
 	if !n.IsIPv6Enabled() || n.IPv6Prefix == nil {
 		return false
 	}
-	
+
 	_, ipNet, err := net.ParseCIDR(*n.IPv6Prefix)
 	if err != nil {
 		return false
 	}
-	
+
 	testIP := net.ParseIP(ip)
 	if testIP == nil {
 		return false
 	}
-	
+
 	return ipNet.Contains(testIP)
 }
 
@@ -117,15 +117,15 @@ func (n *Network) GetDisplayName() string {
 	if n.Name != "" {
 		return n.Name
 	}
-	
+
 	if n.IsDualStack() {
 		return fmt.Sprintf("%s + %s", n.CIDR, n.GetIPv6Prefix())
 	}
-	
+
 	if n.IsIPv6Enabled() {
 		return n.GetIPv6Prefix()
 	}
-	
+
 	return n.CIDR
 }
 

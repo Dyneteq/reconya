@@ -255,41 +255,17 @@
                     </div>
                 {{else if eq .Page "settings"}}
                     <!-- Settings Page Content -->
-                    <div class="flex gap-4 p-4">
-                        <!-- Main Content -->
-                        <div class="flex-1 lg:w-3/4">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ SETTINGS ]</h1>
-                                </div>
-
-                                <!-- Settings Content -->
-                                <div id="settings-container" class="bg-gray-800 rounded">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading settings...</span>
-                                    </div>
-                                </div>
+                    <div class="p-4">
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h1 class="text-sm font-bold text-green-500">[ SETTINGS ]</h1>
                             </div>
-                        </div>
 
-                        <!-- Settings sidebar/help -->
-                        <div class="w-full lg:w-1/4">
-                            <div class="bg-gray-800 rounded p-4">
-                                <div class="flex items-center mb-3">
-                                    <i class="ti ti-info-circle text-green-500 mr-2"></i>
-                                    <h6 class="text-green-500 font-bold">Settings Help</h6>
-                                </div>
-                                <div class="space-y-3 text-sm text-gray-300">
-                                    <div>
-                                        <strong class="text-white">Network Scanning:</strong> Configure how often and which networks to scan for devices.
-                                    </div>
-                                    <div>
-                                        <strong class="text-white">Screenshots:</strong> Enable automatic screenshot capture when devices are detected.
-                                    </div>
-                                    <div>
-                                        <strong class="text-white">Notifications:</strong> Set up alerts for network changes and device status updates.
-                                    </div>
+                            <!-- Settings Content -->
+                            <div id="settings-container" class="bg-gray-800 rounded">
+                                <div class="flex justify-center items-center h-32">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
+                                    <span class="ml-3 text-gray-400">Loading settings...</span>
                                 </div>
                             </div>
                         </div>
@@ -310,27 +286,6 @@
                                     <div class="flex justify-center items-center h-32">
                                         <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
                                         <span class="ml-3 text-gray-400">Loading sensors...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="w-full lg:w-1/4">
-                            <div class="bg-gray-800 rounded p-4">
-                                <div class="flex items-center mb-3">
-                                    <i class="ti ti-info-circle text-green-500 mr-2"></i>
-                                    <h6 class="text-green-500 font-bold">Sensor Setup</h6>
-                                </div>
-                                <div class="space-y-3 text-sm text-gray-300">
-                                    <div>
-                                        <strong class="text-white">1. Create Sensor:</strong> Click "Add Sensor" and give it a name.
-                                    </div>
-                                    <div>
-                                        <strong class="text-white">2. Copy Token:</strong> Copy the generated token from the sensor details.
-                                    </div>
-                                    <div>
-                                        <strong class="text-white">3. Start Agent:</strong> Run the agent with the token:
-                                        <code class="block mt-1 bg-gray-900 p-2 rounded text-xs text-green-400">./reconya agent primary --server http://server:3000 --token YOUR_TOKEN</code>
                                     </div>
                                 </div>
                             </div>
@@ -453,6 +408,20 @@
 
                         <!-- Right Side: Scan Control & Events -->
                         <div class="space-y-6">
+                            <!-- Public IP -->
+                            <div class="bg-gray-800 rounded p-4">
+                                <h3 class="text-xs font-bold text-green-500 mb-3">PUBLIC IP</h3>
+                                <div id="public-ip-container" class="flex items-center justify-between">
+                                    <div class="flex items-center">
+                                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                        </svg>
+                                        <span id="public-ip-address" class="text-white font-mono">Loading...</span>
+                                    </div>
+                                    <span id="public-ip-location" class="text-xs text-gray-400"></span>
+                                </div>
+                            </div>
+
                             <!-- Scan Control -->
                             <div class="bg-gray-800 rounded p-6">
                                 <div id="scan-control-container">

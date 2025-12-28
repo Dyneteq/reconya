@@ -36,7 +36,7 @@ func (s *EventLogService) GetAll(limitSize int64) ([]models.EventLog, error) {
 		eventLogs[i] = *logPtr
 		eventLogs[i].Description = s.generateDescription(eventLogs[i])
 	}
-	
+
 	return eventLogs, nil
 }
 
@@ -51,13 +51,13 @@ func (s *EventLogService) generateDescription(eventLog models.EventLog) string {
 		}
 	}
 
-			switch eventLog.Type {
-		case models.PingSweep:
-			if eventLog.DurationSeconds != nil {
-				return fmt.Sprintf("Ping sweep completed in %d seconds", int(*eventLog.DurationSeconds))
-			} else {
-				return "Ping sweep performed"
-			}
+	switch eventLog.Type {
+	case models.PingSweep:
+		if eventLog.DurationSeconds != nil {
+			return fmt.Sprintf("Ping sweep completed in %d seconds", int(*eventLog.DurationSeconds))
+		} else {
+			return "Ping sweep performed"
+		}
 	case models.PortScanStarted:
 		return fmt.Sprintf("Port scan started for [%s]", deviceInfo)
 	case models.PortScanCompleted:
@@ -103,12 +103,12 @@ func (s *EventLogService) GetAllByDeviceId(deviceId string, limitSize int64) ([]
 	if count > len(eventLogPtrs) {
 		count = len(eventLogPtrs)
 	}
-	
+
 	eventLogs := make([]models.EventLog, count)
 	for i := 0; i < count; i++ {
 		eventLogs[i] = *eventLogPtrs[i]
 	}
-	
+
 	return eventLogs, nil
 }
 
@@ -126,10 +126,10 @@ func (s *EventLogService) Log(eventType models.EEventLogType, description string
 		Type:        eventType,
 		Description: description,
 	}
-	
+
 	if deviceID != "" {
 		eventLog.DeviceID = &deviceID
 	}
-	
+
 	return s.CreateOne(eventLog)
 }

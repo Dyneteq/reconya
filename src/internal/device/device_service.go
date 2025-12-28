@@ -43,13 +43,10 @@ func (s *DeviceService) CreateOrUpdate(device *models.Device) (*models.Device, e
 	currentTime := time.Now()
 	device.LastSeenOnlineAt = &currentTime
 
-	// If device doesn't have a network ID, we can't proceed
-	// The scan manager should set the network ID before calling this method
 	if device.NetworkID == "" {
 		return nil, fmt.Errorf("device must have a network ID set")
 	}
 
-	// Get the network to check CIDR
 	network, err := s.networkService.FindByID(device.NetworkID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find network: %v", err)
@@ -58,48 +55,40 @@ func (s *DeviceService) CreateOrUpdate(device *models.Device) (*models.Device, e
 		return nil, fmt.Errorf("network not found")
 	}
 
-	// Skip network and broadcast addresses
 	if s.isNetworkOrBroadcastAddress(device.IPv4, network.CIDR) {
 		log.Printf("Skipping network/broadcast address: %s", device.IPv4)
 		return nil, fmt.Errorf("network or broadcast address not allowed: %s", device.IPv4)
 	}
 
-	// First try to find device by IP address
 	existingDevice, err := s.FindByIPv4(device.IPv4)
 	if err != nil && err != db.ErrNotFound {
 		return nil, err
 	}
 
-	// If no device found by IP and we have a MAC address, try to find by MAC
-	// This handles cases where a device changes IP but keeps the same MAC (DHCP reassignment)
 	if existingDevice == nil && device.MAC != nil && *device.MAC != "" {
 		existingByMAC, err := s.FindDeviceByMAC(*device.MAC)
 		if err == nil && existingByMAC != nil {
-			log.Printf("Found existing device by MAC %s, updating IP from %s to %s", 
+			log.Printf("Found existing device by MAC %s, updating IP from %s to %s",
 				*device.MAC, existingByMAC.IPv4, device.IPv4)
-			
-			// Update the existing device's IP address and other fields
+
 			existingByMAC.IPv4 = device.IPv4
 			existingByMAC.Hostname = device.Hostname
 			existingByMAC.Vendor = device.Vendor
 			existingByMAC.NetworkID = device.NetworkID
 			existingByMAC.LastSeenOnlineAt = &currentTime
 			existingByMAC.Status = models.DeviceStatusOnline
-			
+
 			existingDevice = existingByMAC
-			// Set the device ID to the existing device to ensure we update rather than create
 			device.ID = existingDevice.ID
 		}
 	}
 
 	s.setTimestamps(device, existingDevice, currentTime)
 
-	// Set status if not already set
 	if device.Status == "" {
 		device.Status = models.DeviceStatusOnline
 	}
 
-	// Preserve name and comment if device already exists and incoming values are empty
 	if existingDevice != nil {
 		if device.Name == "" && existingDevice.Name != "" {
 			device.Name = existingDevice.Name
@@ -109,9 +98,6 @@ func (s *DeviceService) CreateOrUpdate(device *models.Device) (*models.Device, e
 		}
 	}
 
-	// Leave device name empty if not explicitly set
-
-	// Use DB manager to serialize database access
 	return s.dbManager.CreateOrUpdateDevice(s.repository, context.Background(), device)
 }
 
@@ -189,7 +175,6 @@ func (s *DeviceService) ParseFromNmapXML(xmlOutput string) []models.Device {
 		device := models.Device{}
 		var macAddress, vendor string
 
-		// Extract IP address, MAC address, and vendor info
 		for _, address := range host.Addresses {
 			if address.AddrType == "ipv4" {
 				device.IPv4 = address.Addr
@@ -199,30 +184,25 @@ func (s *DeviceService) ParseFromNmapXML(xmlOutput string) []models.Device {
 			}
 		}
 
-		// Skip if no IP address found
 		if device.IPv4 == "" {
 			continue
 		}
 
-		// Set MAC address if found
 		if macAddress != "" {
 			device.MAC = &macAddress
 			log.Printf("Found MAC Address: %s for IP: %s", macAddress, device.IPv4)
 		}
 
-		// Set vendor info if found from Nmap
 		if vendor != "" {
 			device.Vendor = &vendor
 			log.Printf("Found Vendor from Nmap: %s for IP: %s", vendor, device.IPv4)
 		} else if macAddress != "" && s.ouiService != nil {
-			// Fallback to OUI lookup if Nmap didn't provide vendor info
 			if ouiVendor := s.ouiService.LookupVendor(macAddress); ouiVendor != "" {
 				device.Vendor = &ouiVendor
 				log.Printf("Found Vendor from OUI: %s for MAC: %s (IP: %s)", ouiVendor, macAddress, device.IPv4)
 			}
 		}
 
-		// Extract hostname if available
 		if len(host.Hostnames) > 0 && host.Hostnames[0].Name != "" {
 			hostname := host.Hostnames[0].Name
 			device.Hostname = &hostname
@@ -281,16 +261,15 @@ func sortDevicesByIP(devices []models.Device) {
 	})
 }
 
-// sortDevicePointersByIP sorts a slice of device pointers by IP address
 func sortDevicePointersByIP(devices []*models.Device) {
 	sort.Slice(devices, func(i, j int) bool {
 		ip1 := net.ParseIP(devices[i].IPv4)
 		ip2 := net.ParseIP(devices[j].IPv4)
-		
+
 		if ip1 == nil || ip2 == nil {
 			return devices[i].IPv4 < devices[j].IPv4
 		}
-		
+
 		return bytes.Compare(ip1, ip2) < 0
 	})
 }
@@ -302,7 +281,6 @@ func (s *DeviceService) FindAll() ([]*models.Device, error) {
 		return nil, err
 	}
 
-	// Sort devices by IP address directly on pointers
 	sortDevicePointersByIP(devices)
 
 	return devices, nil
@@ -323,8 +301,7 @@ func (s *DeviceService) FindByID(deviceID string) (*models.Device, error) {
 
 func (s *DeviceService) Delete(deviceID string) error {
 	ctx := context.Background()
-	
-	// Check if device exists before attempting deletion
+
 	device, err := s.repository.FindByID(ctx, deviceID)
 	if err == db.ErrNotFound {
 		return fmt.Errorf("device not found")
@@ -333,34 +310,30 @@ func (s *DeviceService) Delete(deviceID string) error {
 		log.Printf("Error finding device with ID %s for deletion: %v", deviceID, err)
 		return err
 	}
-	
-	// Delete the device (this will cascade to ports and web services)
+
 	err = s.repository.DeleteByID(ctx, deviceID)
 	if err != nil {
 		log.Printf("Error deleting device with ID %s: %v", deviceID, err)
 		return err
 	}
-	
+
 	log.Printf("Successfully deleted device %s (%s)", device.IPv4, deviceID)
 	return nil
 }
 
-// DeleteByNetworkID deletes all devices belonging to a specific network
 func (s *DeviceService) DeleteByNetworkID(networkID string) error {
 	ctx := context.Background()
-	
-	// Find all devices for this network
+
 	devices, err := s.FindByNetworkID(networkID)
 	if err != nil {
 		return fmt.Errorf("failed to find devices for network %s: %v", networkID, err)
 	}
-	
+
 	log.Printf("Deleting %d devices from network %s", len(devices), networkID)
-	
-	// Delete each device
+
 	var errors []string
 	deletedCount := 0
-	
+
 	for _, device := range devices {
 		err := s.repository.DeleteByID(ctx, device.ID)
 		if err != nil {
@@ -370,7 +343,7 @@ func (s *DeviceService) DeleteByNetworkID(networkID string) error {
 		deletedCount++
 		log.Printf("Deleted device %s (%s)", device.IPv4, device.ID)
 	}
-	
+
 	if len(errors) > 0 {
 		log.Printf("Deleted %d devices with %d errors", deletedCount, len(errors))
 		for _, errMsg := range errors {
@@ -378,7 +351,7 @@ func (s *DeviceService) DeleteByNetworkID(networkID string) error {
 		}
 		return fmt.Errorf("deleted %d devices but encountered %d errors", deletedCount, len(errors))
 	}
-	
+
 	log.Printf("Successfully deleted all %d devices from network %s", deletedCount, networkID)
 	return nil
 }
@@ -403,7 +376,6 @@ func (s *DeviceService) FindByNetworkID(networkID string) ([]models.Device, erro
 		return nil, err
 	}
 
-	// Filter devices by network ID
 	var filteredDevices []models.Device
 	for _, d := range devices {
 		if d.NetworkID == networkID {
@@ -411,7 +383,6 @@ func (s *DeviceService) FindByNetworkID(networkID string) ([]models.Device, erro
 		}
 	}
 
-	// Sort devices by IP address
 	sortDevicesByIP(filteredDevices)
 
 	return filteredDevices, nil
@@ -428,25 +399,18 @@ func (s *DeviceService) FindAllForNetwork(cidr string) ([]models.Device, error) 
 	if network == nil {
 		return deviceValues, nil
 	}
-	// Get all devices first
 	ctx := context.Background()
 	allDevices, err := s.repository.FindAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter devices by network ID
 	for _, d := range allDevices {
-		// Make sure we're comparing non-empty values
 		if d.NetworkID != "" && network.ID != "" && d.NetworkID == network.ID {
 			deviceValues = append(deviceValues, *d)
 		} else if d.NetworkID == "" && network.ID != "" {
-			// If device has no network ID but belongs to the current network
-			// The device might be in this network but the ID wasn't saved
-			// This is a workaround for existing data
 			d.NetworkID = network.ID
 
-			// Use retry logic for updating the device
 			_, err := util.RetryOnLockWithResult(func() (*models.Device, error) {
 				return s.repository.CreateOrUpdate(context.Background(), d)
 			})
@@ -465,7 +429,6 @@ func (s *DeviceService) FindAllForNetwork(cidr string) ([]models.Device, error) 
 	return deviceValues, nil
 }
 
-// FindOnlineDevicesForNetwork returns only devices that have been actually discovered online
 func (s *DeviceService) FindOnlineDevicesForNetwork(cidr string) ([]models.Device, error) {
 	network, err := s.networkService.FindByCIDR(cidr)
 	if err != nil {
@@ -476,7 +439,6 @@ func (s *DeviceService) FindOnlineDevicesForNetwork(cidr string) ([]models.Devic
 		return []models.Device{}, nil
 	}
 
-	// Get all devices first
 	ctx := context.Background()
 	allDevices, err := s.repository.FindAll(ctx)
 	if err != nil {
@@ -485,32 +447,25 @@ func (s *DeviceService) FindOnlineDevicesForNetwork(cidr string) ([]models.Devic
 
 	var deviceValues []models.Device
 
-	// Filter devices by network ID AND only include devices that have been seen online
 	for _, d := range allDevices {
-		// Skip devices that have never been seen online
 		if d.LastSeenOnlineAt == nil {
 			continue
 		}
 
-		// Show online and idle devices - only skip offline devices
 		if d.Status == models.DeviceStatusOffline {
 			continue
 		}
 
-		// Skip network and broadcast addresses
 		if s.isNetworkOrBroadcastAddress(d.IPv4, cidr) {
 			continue
 		}
 
-		// Check network membership
 		shouldInclude := false
 		if d.NetworkID != "" && network.ID != "" && d.NetworkID == network.ID {
 			shouldInclude = true
 		} else if d.NetworkID == "" && network.ID != "" {
-			// If device has no network ID but belongs to the current network
 			d.NetworkID = network.ID
 
-			// Use retry logic for updating the device
 			_, err := util.RetryOnLockWithResult(func() (*models.Device, error) {
 				return s.repository.CreateOrUpdate(context.Background(), d)
 			})
@@ -531,25 +486,21 @@ func (s *DeviceService) FindOnlineDevicesForNetwork(cidr string) ([]models.Devic
 	return deviceValues, nil
 }
 
-// isNetworkOrBroadcastAddress checks if an IP is a network or broadcast address
 func (s *DeviceService) isNetworkOrBroadcastAddress(ipStr, cidrStr string) bool {
 	ip := net.ParseIP(ipStr)
 	if ip == nil {
-		return true // Invalid IP, exclude it
+		return true
 	}
 
 	_, network, err := net.ParseCIDR(cidrStr)
 	if err != nil {
-		return false // Can't parse CIDR, include the IP
+		return false
 	}
 
-	// Check if it's the network address
 	if ip.Equal(network.IP) {
 		return true
 	}
 
-	// Check if it's the broadcast address
-	// For IPv4, calculate the broadcast address
 	if ip.To4() != nil {
 		mask := network.Mask
 		broadcast := make(net.IP, len(network.IP))
@@ -609,7 +560,7 @@ func (s *DeviceService) FindDeviceByIPv6(ipv6Address string) (*models.Device, er
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, device := range devices {
 		if device.IPv6LinkLocal != nil && *device.IPv6LinkLocal == ipv6Address {
 			return device, nil
@@ -620,7 +571,7 @@ func (s *DeviceService) FindDeviceByIPv6(ipv6Address string) (*models.Device, er
 		if device.IPv6Global != nil && *device.IPv6Global == ipv6Address {
 			return device, nil
 		}
-		
+
 		// Check additional IPv6 addresses
 		for _, addr := range device.IPv6Addresses {
 			if addr == ipv6Address {
@@ -628,7 +579,7 @@ func (s *DeviceService) FindDeviceByIPv6(ipv6Address string) (*models.Device, er
 			}
 		}
 	}
-	
+
 	return nil, fmt.Errorf("device not found with IPv6 address: %s", ipv6Address)
 }
 
@@ -637,13 +588,13 @@ func (s *DeviceService) FindDeviceByMAC(macAddress string) (*models.Device, erro
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, device := range devices {
 		if device.MAC != nil && *device.MAC == macAddress {
 			return device, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("device not found with MAC address: %s", macAddress)
 }
 
@@ -652,7 +603,7 @@ func (s *DeviceService) UpdateDeviceIPv6Addresses(deviceID string, ipv6Addresses
 	if err != nil {
 		return err
 	}
-	
+
 	// Update IPv6 addresses
 	if linkLocal, ok := ipv6Addresses["link_local"]; ok && linkLocal != "" {
 		device.IPv6LinkLocal = &linkLocal
@@ -663,14 +614,14 @@ func (s *DeviceService) UpdateDeviceIPv6Addresses(deviceID string, ipv6Addresses
 	if global, ok := ipv6Addresses["global"]; ok && global != "" {
 		device.IPv6Global = &global
 	}
-	
+
 	// Update additional addresses
 	if additional, ok := ipv6Addresses["additional"]; ok && additional != "" {
 		device.AddIPv6Address(additional)
 	}
-	
+
 	device.UpdatedAt = time.Now()
-	
+
 	// Update device in database
 	_, err = s.repository.CreateOrUpdate(context.Background(), device)
 	return err
@@ -681,7 +632,7 @@ func (s *DeviceService) GetDevicesByIPv6Prefix(prefix string) ([]models.Device, 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result []models.Device
 	for _, device := range devices {
 		if device.HasIPv6() {
@@ -694,7 +645,7 @@ func (s *DeviceService) GetDevicesByIPv6Prefix(prefix string) ([]models.Device, 
 			}
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -703,12 +654,12 @@ func (s *DeviceService) CreateDevice(device *models.Device) error {
 	if device.ID == "" {
 		device.ID = generateDeviceID()
 	}
-	
+
 	// Set timestamps
 	now := time.Now()
 	device.CreatedAt = now
 	device.UpdatedAt = now
-	
+
 	// Create device in database
 	_, err := s.repository.CreateOrUpdate(context.Background(), device)
 	return err
@@ -726,25 +677,25 @@ func generateDeviceID() string {
 
 func (s *DeviceService) CleanupNetworkBroadcastDevices() error {
 	ctx := context.Background()
-	
+
 	// Get all devices
 	devices, err := s.repository.FindAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch devices: %v", err)
 	}
-	
+
 	// Get all networks to check CIDRs
 	networks, err := s.networkService.FindAll()
 	if err != nil {
 		return fmt.Errorf("failed to fetch networks: %v", err)
 	}
-	
+
 	var deletedCount int
 	for _, device := range devices {
 		if device.NetworkID == "" {
 			continue
 		}
-		
+
 		// Find the network for this device
 		var network *models.Network
 		for _, n := range networks {
@@ -753,11 +704,11 @@ func (s *DeviceService) CleanupNetworkBroadcastDevices() error {
 				break
 			}
 		}
-		
+
 		if network == nil {
 			continue
 		}
-		
+
 		// Check if this device is a network/broadcast address
 		if s.isNetworkOrBroadcastAddress(device.IPv4, network.CIDR) {
 			log.Printf("Cleaning up network/broadcast device: %s", device.IPv4)
@@ -768,38 +719,38 @@ func (s *DeviceService) CleanupNetworkBroadcastDevices() error {
 			}
 		}
 	}
-	
+
 	log.Printf("Cleaned up %d network/broadcast address devices", deletedCount)
 	return nil
 }
 
 func (s *DeviceService) CleanupAllDeviceNames() error {
 	ctx := context.Background()
-	
+
 	// Get all devices
 	devices, err := s.repository.FindAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch devices: %v", err)
 	}
-	
+
 	log.Printf("Starting device name cleanup for %d devices", len(devices))
-	
+
 	// Update each device to clear the name
 	var errors []string
 	for _, device := range devices {
 		// Clear the device name
 		device.Name = ""
-		
+
 		// Update the device
 		_, err := s.repository.CreateOrUpdate(ctx, device)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Failed to update device %s: %v", device.IPv4, err))
 			continue
 		}
-		
+
 		log.Printf("Cleared name for device %s", device.IPv4)
 	}
-	
+
 	if len(errors) > 0 {
 		log.Printf("Device name cleanup completed with %d errors", len(errors))
 		for _, errMsg := range errors {
@@ -807,7 +758,7 @@ func (s *DeviceService) CleanupAllDeviceNames() error {
 		}
 		return fmt.Errorf("cleanup completed with %d errors", len(errors))
 	}
-	
+
 	log.Printf("Device name cleanup completed successfully for %d devices", len(devices))
 	return nil
 }
@@ -816,15 +767,15 @@ func (s *DeviceService) CleanupAllDeviceNames() error {
 // Keeps the most recently updated device and preserves user-set names and comments
 func (s *DeviceService) CleanupDuplicateDevices() error {
 	ctx := context.Background()
-	
+
 	// Get all devices
 	devices, err := s.repository.FindAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch devices: %v", err)
 	}
-	
+
 	log.Printf("Starting duplicate device cleanup for %d devices", len(devices))
-	
+
 	// Group devices by MAC address (skip devices without MAC)
 	macGroups := make(map[string][]*models.Device)
 	for _, device := range devices {
@@ -832,49 +783,49 @@ func (s *DeviceService) CleanupDuplicateDevices() error {
 			macGroups[*device.MAC] = append(macGroups[*device.MAC], device)
 		}
 	}
-	
+
 	var deletedCount int
 	var errors []string
-	
+
 	// Process each MAC group
 	for mac, deviceGroup := range macGroups {
 		if len(deviceGroup) <= 1 {
 			continue // No duplicates
 		}
-		
+
 		log.Printf("Found %d devices with MAC %s", len(deviceGroup), mac)
-		
+
 		// Sort by UpdatedAt to find the most recent
 		sort.Slice(deviceGroup, func(i, j int) bool {
 			return deviceGroup[i].UpdatedAt.After(deviceGroup[j].UpdatedAt)
 		})
-		
+
 		keeper := deviceGroup[0] // Most recently updated
 		duplicates := deviceGroup[1:]
-		
+
 		// Preserve user-set data from duplicates
 		for _, duplicate := range duplicates {
 			if duplicate.Name != "" && keeper.Name == "" {
 				keeper.Name = duplicate.Name
 			}
-			if duplicate.Comment != nil && *duplicate.Comment != "" && 
-			   (keeper.Comment == nil || *keeper.Comment == "") {
+			if duplicate.Comment != nil && *duplicate.Comment != "" &&
+				(keeper.Comment == nil || *keeper.Comment == "") {
 				keeper.Comment = duplicate.Comment
 			}
 		}
-		
+
 		// Update the keeper with preserved data
 		_, err := s.repository.CreateOrUpdate(ctx, keeper)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Failed to update keeper device %s: %v", keeper.IPv4, err))
 			continue
 		}
-		
+
 		// Delete duplicates
 		for _, duplicate := range duplicates {
-			log.Printf("Removing duplicate device %s (MAC: %s, keeping %s)", 
+			log.Printf("Removing duplicate device %s (MAC: %s, keeping %s)",
 				duplicate.IPv4, mac, keeper.IPv4)
-			
+
 			err := s.repository.DeleteByID(ctx, duplicate.ID)
 			if err != nil {
 				errors = append(errors, fmt.Sprintf("Failed to delete duplicate device %s: %v", duplicate.IPv4, err))
@@ -883,7 +834,7 @@ func (s *DeviceService) CleanupDuplicateDevices() error {
 			deletedCount++
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		log.Printf("Duplicate cleanup completed with %d duplicates removed and %d errors", deletedCount, len(errors))
 		for _, errMsg := range errors {
@@ -891,7 +842,7 @@ func (s *DeviceService) CleanupDuplicateDevices() error {
 		}
 		return fmt.Errorf("cleanup completed with %d errors", len(errors))
 	}
-	
+
 	log.Printf("Duplicate device cleanup completed successfully, removed %d duplicates", deletedCount)
 	return nil
 }

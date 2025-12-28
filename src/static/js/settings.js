@@ -103,9 +103,24 @@ function renderSettings(settings) {
                             ${settings.created_at ? `<div><span class="font-medium">Created:</span> ${new Date(settings.created_at).toLocaleString()}</div>` : ''}
                             ${settings.updated_at ? `<div><span class="font-medium">Last Updated:</span> ${new Date(settings.updated_at).toLocaleString()}</div>` : ''}
                         </div>
+
+                        <!-- Hints -->
+                        <div class="mt-6 pt-4 border-t border-gray-700">
+                            <div class="flex items-center gap-2 mb-3">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="text-sm text-gray-400 font-medium">Hints</span>
+                            </div>
+                            <div class="space-y-2 text-sm text-gray-400">
+                                <div><span class="text-gray-300">Network Scanning:</span> Configure how often and which networks to scan for devices.</div>
+                                <div><span class="text-gray-300">Screenshots:</span> Enable automatic screenshot capture when devices are detected.</div>
+                                <div><span class="text-gray-300">Notifications:</span> Set up alerts for network changes and device status updates.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
+
                 <!-- Save Button -->
                 <div class="flex justify-end max-w-2xl">
                     <button type="submit" class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors">

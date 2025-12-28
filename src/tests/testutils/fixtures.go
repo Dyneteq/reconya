@@ -13,7 +13,7 @@ func CreateTestDevice() *models.Device {
 	hostname := "test-device"
 	vendor := "Test Vendor"
 	now := time.Now()
-	
+
 	return &models.Device{
 		ID:        uuid.New().String(),
 		Name:      "Test Device",
@@ -54,7 +54,7 @@ func CreateTestEventLog(deviceID string) *models.EventLog {
 func CreateTestSystemStatus() *models.SystemStatus {
 	publicIP := "203.0.113.1"
 	now := time.Now()
-	
+
 	return &models.SystemStatus{
 		LocalDevice: *CreateTestDevice(),
 		NetworkID:   uuid.New().String(),

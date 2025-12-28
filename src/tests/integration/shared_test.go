@@ -13,7 +13,7 @@ func createTestDevice(ip, name string) *models.Device {
 	hostname := "test-device"
 	vendor := "Test Vendor"
 	now := time.Now()
-	
+
 	return &models.Device{
 		ID:               uuid.New().String(),
 		Name:             name,

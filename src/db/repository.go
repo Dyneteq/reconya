@@ -139,4 +139,3 @@ func (f *RepositoryFactory) NewSensorRepository() SensorRepository {
 func GenerateID() string {
 	return uuid.New().String()
 }
-

@@ -47,7 +47,7 @@ func extractCIDR(ipv4 string) string {
 // extractIpRange generates IP range from a given NIC based on actual subnet
 func extractIpRange(nic models.NIC) []string {
 	var addresses []string
-	
+
 	// Try to get the actual CIDR for this IP
 	cidr := extractCIDR(nic.IPv4)
 	if cidr == "" {

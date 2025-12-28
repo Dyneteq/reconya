@@ -7,6 +7,12 @@ function escapeHtmlText(text) {
     return div.textContent;
 }
 
+// Track which sensors are in a pending state
+const pendingSensors = new Set();
+
+// Cache of last fetched sensors for immediate re-render
+let cachedSensors = [];
+
 function renderScanControlFromData(data) {
     const sensors = data.sensors || [];
 
@@ -29,7 +35,7 @@ function renderScanControlFromData(data) {
     const sensorRows = sensors.map(sensor => {
         const isOnline = sensor.status === 'online';
         const isScanning = sensor.scan_status === 'running';
-        const isPending = sensor.scan_status === 'pending';
+        const isPending = pendingSensors.has(sensor.id);
         const networkRange = sensor.network_cidr || 'Not connected';
 
         const statusDot = isOnline
@@ -42,11 +48,17 @@ function renderScanControlFromData(data) {
         if (!isOnline) {
             actionButton = '<span class="text-gray-500 text-xs">Offline</span>';
         } else if (isPending) {
-            actionButton = '<span class="text-yellow-400 text-xs animate-pulse">Starting...</span>';
+            actionButton = `<span class="text-yellow-400 text-xs flex items-center">
+                <svg class="animate-spin h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                ${isScanning ? 'Stopping...' : 'Starting...'}
+            </span>`;
         } else if (isScanning) {
-            actionButton = '<button onclick="stopSensorScan(\'' + sensor.id + '\', this)" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors">Stop</button>';
+            actionButton = '<button onclick="stopSensorScan(\'' + sensor.id + '\')" class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors">Stop</button>';
         } else {
-            actionButton = '<button onclick="startSensorScan(\'' + sensor.id + '\', this)" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors">Start</button>';
+            actionButton = '<button onclick="startSensorScan(\'' + sensor.id + '\')" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors">Start</button>';
         }
 
         return '<div class="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">' +
@@ -61,7 +73,7 @@ function renderScanControlFromData(data) {
         '</div>';
     }).join('');
 
-    const scanningSensors = sensors.filter(s => s.scan_status === 'running' || s.scan_status === 'pending').length;
+    const scanningSensors = sensors.filter(s => s.scan_status === 'running').length;
     const onlineSensors = sensors.filter(s => s.status === 'online').length;
 
     let statusText = '';
@@ -80,36 +92,32 @@ function renderScanControlFromData(data) {
             <div class="space-y-0 max-h-48 overflow-y-auto">
                 ${sensorRows}
             </div>
-            <div class="mt-3 pt-3 border-t border-gray-700">
-                <a href="/sensors" class="text-green-500 hover:text-green-400 text-xs flex items-center justify-center">
-                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    </svg>
-                    Manage Sensors
-                </a>
-            </div>
         </div>
     `;
 }
 
-// Cache to prevent duplicate concurrent requests
-let scanControlLoading = false;
+function renderToContainer() {
+    const container = document.getElementById('scan-control-container');
+    if (!container) return;
 
-function loadScanControl(showSpinner = true) {
-    const scanControlContainer = document.getElementById('scan-control-container');
-    if (!scanControlContainer) return;
+    const loadingEl = container.querySelector('#scan-control-loading');
+    if (loadingEl) loadingEl.remove();
 
-    if (scanControlLoading) return;
-    scanControlLoading = true;
+    const temp = document.createElement('div');
+    temp.innerHTML = renderScanControlFromData({ sensors: cachedSensors });
+    const newContent = temp.firstElementChild;
 
-    const loadingEl = document.getElementById('scan-control-loading');
-    const contentEl = document.getElementById('scan-control-content');
-
-    if (showSpinner && loadingEl && contentEl) {
-        loadingEl.classList.remove('hidden');
-        contentEl.classList.add('hidden');
+    const oldContent = container.querySelector('#scan-control-content');
+    if (oldContent) {
+        oldContent.replaceWith(newContent);
+    } else {
+        container.appendChild(newContent);
     }
+}
+
+function loadScanControl() {
+    const container = document.getElementById('scan-control-container');
+    if (!container) return;
 
     fetch('/api/sensors', { credentials: 'include' })
         .then(response => {
@@ -117,67 +125,101 @@ function loadScanControl(showSpinner = true) {
             return response.json();
         })
         .then(sensors => {
-            scanControlLoading = false;
-            scanControlContainer.querySelector('#scan-control-loading')?.classList.add('hidden');
-            const content = scanControlContainer.querySelector('#scan-control-content') || scanControlContainer;
-            content.classList.remove('hidden');
-            content.outerHTML = renderScanControlFromData({ sensors: sensors });
+            cachedSensors = sensors;
+            renderToContainer();
         })
         .catch(error => {
-            scanControlLoading = false;
             console.error('Error loading scan control:', error);
-            const content = scanControlContainer.querySelector('#scan-control-content') || scanControlContainer;
-            content.outerHTML = '<div id="scan-control-content" class="text-center py-4"><div class="text-red-400 text-sm">Failed to load sensors</div></div>';
         });
 }
 
-function startSensorScan(sensorId, buttonEl) {
-    if (!sensorId) return;
-    const originalText = buttonEl.textContent;
-    buttonEl.disabled = true;
-    buttonEl.textContent = '...';
+
+// Track when each sensor action started for minimum spinner duration
+const actionStartTimes = new Map();
+const MIN_SPINNER_DURATION = 1500; // Minimum 1.5 seconds spinner
+
+function pollForStatusChange(sensorId, expectedStatus, attempts = 0) {
+    if (attempts > 20) {
+        pendingSensors.delete(sensorId);
+        actionStartTimes.delete(sensorId);
+        loadScanControl();
+        return;
+    }
+
+    fetch('/api/sensors', { credentials: 'include' })
+        .then(response => response.json())
+        .then(sensors => {
+            const sensor = sensors.find(s => s.id === sensorId);
+            if (sensor && sensor.scan_status === expectedStatus) {
+                // Ensure minimum spinner duration
+                const startTime = actionStartTimes.get(sensorId) || Date.now();
+                const elapsed = Date.now() - startTime;
+                const remainingDelay = Math.max(0, MIN_SPINNER_DURATION - elapsed);
+
+                setTimeout(() => {
+                    pendingSensors.delete(sensorId);
+                    actionStartTimes.delete(sensorId);
+                    loadScanControl();
+                    if (expectedStatus === 'running') {
+                        if (typeof window.loadDevices === 'function') {
+                            setTimeout(() => window.loadDevices(false), 1000);
+                        }
+                    }
+                }, remainingDelay);
+            } else {
+                setTimeout(() => pollForStatusChange(sensorId, expectedStatus, attempts + 1), 500);
+            }
+        })
+        .catch(() => {
+            setTimeout(() => pollForStatusChange(sensorId, expectedStatus, attempts + 1), 500);
+        });
+}
+
+function startSensorScan(sensorId) {
+    if (!sensorId || pendingSensors.has(sensorId)) return;
+
+    pendingSensors.add(sensorId);
+    actionStartTimes.set(sensorId, Date.now());
+    renderToContainer(); // Immediate UI update
 
     fetch('/api/sensors/' + sensorId + '/start-scan', {
         method: 'POST',
         credentials: 'include'
     })
         .then(response => {
-            if (!response.ok) return response.text().then(t => { throw new Error(t || 'Failed'); });
-        })
-        .then(() => {
-            loadScanControl(false);
-            if (typeof window.loadDevices === 'function') setTimeout(() => window.loadDevices(false), 1000);
-            if (typeof window.loadNetworkMap === 'function') setTimeout(() => window.loadNetworkMap(), 1000);
+            if (!response.ok) throw new Error('Failed to start scan');
+            pollForStatusChange(sensorId, 'running');
         })
         .catch(error => {
             console.error('Failed to start scan:', error);
-            alert('Failed to start scan: ' + error.message);
-            buttonEl.disabled = false;
-            buttonEl.textContent = originalText;
+            alert('Failed to start scan');
+            pendingSensors.delete(sensorId);
+            actionStartTimes.delete(sensorId);
+            renderToContainer();
         });
 }
 
-function stopSensorScan(sensorId, buttonEl) {
-    if (!sensorId) return;
-    const originalText = buttonEl.textContent;
-    buttonEl.disabled = true;
-    buttonEl.textContent = '...';
+function stopSensorScan(sensorId) {
+    if (!sensorId || pendingSensors.has(sensorId)) return;
+
+    pendingSensors.add(sensorId);
+    actionStartTimes.set(sensorId, Date.now());
+    renderToContainer(); // Immediate UI update
 
     fetch('/api/sensors/' + sensorId + '/stop-scan', {
         method: 'POST',
         credentials: 'include'
     })
         .then(response => {
-            if (!response.ok) return response.text().then(t => { throw new Error(t || 'Failed'); });
-        })
-        .then(() => {
-            loadScanControl(false);
+            if (!response.ok) throw new Error('Failed to stop scan');
+            pollForStatusChange(sensorId, 'idle');
         })
         .catch(error => {
             console.error('Failed to stop scan:', error);
-            alert('Failed to stop scan: ' + error.message);
-            buttonEl.disabled = false;
-            buttonEl.textContent = originalText;
+            alert('Failed to stop scan');
+            pendingSensors.delete(sensorId);
+            actionStartTimes.delete(sensorId);
+            renderToContainer();
         });
 }
 
