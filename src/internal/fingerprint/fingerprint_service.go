@@ -1,15 +1,10 @@
 package fingerprint
 
 import (
-	"context"
-	"encoding/xml"
 	"log"
-	"os/exec"
 	"reconya/models"
-	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type FingerprintService struct{}
@@ -53,13 +48,9 @@ func (f *FingerprintService) AnalyzeDevice(device *models.Device) {
 		log.Printf("Device type detected from web services: %s", webType)
 	}
 
-	// 5. Nmap OS detection (more intensive)
-	if osInfo := f.performNmapOSDetection(device.IPv4); osInfo != nil {
-		device.OS = osInfo
-		log.Printf("OS detected: %s %s (confidence: %d%%)", osInfo.Name, osInfo.Version, osInfo.Confidence)
-
-		// Refine device type based on OS
-		if osBasedType := f.detectDeviceTypeFromOS(osInfo); osBasedType != models.DeviceTypeUnknown {
+	// 5. OS-based detection (if OS info available from other sources)
+	if device.OS != nil {
+		if osBasedType := f.detectDeviceTypeFromOS(device.OS); osBasedType != models.DeviceTypeUnknown {
 			if device.DeviceType == models.DeviceTypeUnknown {
 				device.DeviceType = osBasedType
 			}
@@ -292,95 +283,3 @@ func (f *FingerprintService) detectDeviceTypeFromOS(os *models.DeviceOS) models.
 	return models.DeviceTypeUnknown
 }
 
-// performNmapOSDetection runs nmap OS detection
-func (f *FingerprintService) performNmapOSDetection(ipv4 string) *models.DeviceOS {
-	log.Printf("Performing nmap OS detection for %s", ipv4)
-
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	// Run nmap OS detection
-	cmd := exec.CommandContext(ctx, "nmap", "-O", "-sT", "--osscan-guess", "-oX", "-", ipv4)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("nmap OS detection failed for %s: %v", ipv4, err)
-		return nil
-	}
-
-	return f.parseNmapOSOutput(string(output))
-}
-
-// parseNmapOSOutput parses nmap XML output for OS information
-func (f *FingerprintService) parseNmapOSOutput(xmlOutput string) *models.DeviceOS {
-	var nmapXML struct {
-		XMLName xml.Name `xml:"nmaprun"`
-		Hosts   []struct {
-			OS []struct {
-				OSMatches []struct {
-					Name     string `xml:"name,attr"`
-					Accuracy string `xml:"accuracy,attr"`
-					OSClass  []struct {
-						Vendor   string `xml:"vendor,attr"`
-						OSFamily string `xml:"osfamily,attr"`
-						OSGen    string `xml:"osgen,attr"`
-					} `xml:"osclass"`
-				} `xml:"osmatch"`
-			} `xml:"os"`
-		} `xml:"host"`
-	}
-
-	err := xml.Unmarshal([]byte(xmlOutput), &nmapXML)
-	if err != nil {
-		log.Printf("Error parsing nmap OS XML: %v", err)
-		return nil
-	}
-
-	for _, host := range nmapXML.Hosts {
-		for _, os := range host.OS {
-			if len(os.OSMatches) > 0 {
-				match := os.OSMatches[0] // Take the best match
-
-				confidence, _ := strconv.Atoi(match.Accuracy)
-
-				osInfo := &models.DeviceOS{
-					Name:       match.Name,
-					Confidence: confidence,
-				}
-
-				// Extract version and family from name
-				if version := f.extractVersionFromOSName(match.Name); version != "" {
-					osInfo.Version = version
-				}
-
-				if len(match.OSClass) > 0 {
-					osInfo.Family = match.OSClass[0].OSFamily
-				}
-
-				return osInfo
-			}
-		}
-	}
-
-	return nil
-}
-
-// extractVersionFromOSName tries to extract version number from OS name
-func (f *FingerprintService) extractVersionFromOSName(osName string) string {
-	// Common version patterns
-	patterns := []string{
-		`\b(\d+\.\d+(?:\.\d+)?)\b`, // 10.15.7, 8.1, etc.
-		`\b(Windows \d+)\b`,        // Windows 10, Windows 11
-		`\b(Ubuntu \d+\.\d+)\b`,    // Ubuntu 20.04
-		`\b(CentOS \d+)\b`,         // CentOS 7
-	}
-
-	for _, pattern := range patterns {
-		re := regexp.MustCompile(pattern)
-		if matches := re.FindStringSubmatch(osName); len(matches) > 1 {
-			return matches[1]
-		}
-	}
-
-	return ""
-}

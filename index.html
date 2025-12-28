@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-36YJLYNB5W"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-36YJLYNB5W');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa - Network Reconnaissance Tool</title>
-    <meta name="description" content="A powerful network reconnaissance and asset discovery tool built with Go and HTMX">
+    <meta name="description" content="Network reconnaissance and asset discovery tool built with Go. Zero external dependencies, no root privileges required.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Roboto+Condensed:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -33,16 +31,14 @@
             background-color: var(--background-color);
             color: var(--text-color);
             line-height: 1.6;
-            letter-spacing: 0.2px;
             overflow-x: hidden;
-            position: relative;
         }
         h1, h2, h3, h4, h5, h6, .navbar-brand, .nav-link, .btn, .section-title {
             font-family: 'Orbitron', sans-serif;
         }
         .navbar {
-            background-color: rgba(0, 0, 0, 0.9) !important;
-            border-bottom: 1px solid rgba(15, 127, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.95) !important;
+            border-bottom: 1px solid rgba(15, 127, 0, 0.3);
         }
         .navbar-brand {
             color: var(--primary-color) !important;
@@ -53,18 +49,12 @@
             color: var(--text-color) !important;
             font-weight: 500;
             transition: color 0.3s ease;
-            letter-spacing: 1px;
         }
-        .nav-link:hover {
-            color: var(--primary-color) !important;
-        }
+        .nav-link:hover { color: var(--primary-color) !important; }
         .hero {
             min-height: 100vh;
-            background-color: transparent;
-            color: white;
             padding: 8rem 0;
             position: relative;
-            overflow: hidden;
             z-index: 5;
         }
         .hero h1 {
@@ -72,17 +62,27 @@
             font-weight: 700;
             letter-spacing: 3px;
             text-transform: uppercase;
-            margin-bottom: 2rem;
-            text-shadow: 0 0 10px rgba(15, 127, 0, 0.5);
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 20px rgba(15, 127, 0, 0.5);
+        }
+        .hero .tagline {
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
         }
         .hero p {
-            letter-spacing: 0.2px;
             color: var(--muted-text);
-            font-size: 1.2rem;
-            font-weight: 400;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+        .badge-row {
+            margin-bottom: 2rem;
+        }
+        .badge-row img {
+            margin: 0 0.25rem;
         }
         .feature-icon {
             font-size: 2.5rem;
@@ -94,44 +94,35 @@
             border: 1px solid rgba(15, 127, 0, 0.2);
             border-radius: 8px;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            margin-bottom: 2rem;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            font-weight: 300;
-            line-height: 1.6;
         }
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(15, 127, 0, 0.2);
-            border: 1px solid rgba(15, 127, 0, 0.5);
+            border-color: rgba(15, 127, 0, 0.5);
         }
         .btn-primary {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
-            color: white;
             font-weight: 600;
             letter-spacing: 1px;
-            box-shadow: 0 0 10px rgba(15, 127, 0, 0.3);
         }
         .btn-primary:hover {
             background-color: var(--primary-dark);
             border-color: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(15, 127, 0, 0.5);
         }
         .btn-outline-primary {
             color: var(--primary-color);
             border-color: var(--primary-color);
             font-weight: 600;
-            letter-spacing: 1px;
         }
         .btn-outline-primary:hover {
             background-color: var(--primary-color);
             color: white;
-            box-shadow: 0 5px 15px rgba(15, 127, 0, 0.3);
         }
         .section {
             padding: 5rem 0;
-            position: relative;
         }
         .section-title {
             font-weight: 600;
@@ -150,9 +141,24 @@
             height: 3px;
             background-color: var(--primary-color);
         }
+        .bg-darker { background-color: #101010; }
+        .code-block {
+            background-color: #1a1a1a;
+            border-radius: 5px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Roboto Mono', monospace;
+            border-left: 3px solid var(--primary-color);
+            overflow-x: auto;
+        }
+        code { color: var(--primary-color); }
+        .screenshot {
+            border-radius: 8px;
+            box-shadow: 0 15px 30px rgba(15, 127, 0, 0.2);
+            border: 1px solid rgba(15, 127, 0, 0.2);
+        }
         footer {
             background-color: rgba(0, 0, 0, 0.95);
-            color: white;
             padding: 3rem 0;
             border-top: 1px solid rgba(15, 127, 0, 0.2);
         }
@@ -162,15 +168,7 @@
             color: var(--muted-text);
             transition: color 0.3s ease;
         }
-        .social-link:hover {
-            color: var(--primary-color);
-        }
-        .screenshot {
-            border-radius: 8px;
-            box-shadow: 0 15px 30px rgba(15, 127, 0, 0.2);
-            max-width: 100%;
-            border: 1px solid rgba(15, 127, 0, 0.2);
-        }
+        .social-link:hover { color: var(--primary-color); }
         .scroll-to-top {
             position: fixed;
             bottom: 2rem;
@@ -180,11 +178,9 @@
             border-radius: 50%;
             background-color: var(--primary-color);
             color: white;
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
-            text-decoration: none;
-            transition: background-color 0.3s, transform 0.3s;
             z-index: 1000;
         }
         .scroll-to-top:hover {
@@ -192,20 +188,14 @@
             color: white;
             transform: translateY(-5px);
         }
-        .code-block {
-            background-color: #1a1a1a;
-            border-radius: 5px;
-            padding: 1rem;
-            margin: 1rem 0;
-            overflow-x: auto;
-            font-family: monospace;
-            border-left: 3px solid var(--primary-color);
+        .tech-list li {
+            margin-bottom: 0.75rem;
+            transition: transform 0.3s;
         }
-        code {
+        .tech-list li:hover {
+            transform: translateX(5px);
             color: var(--primary-color);
         }
-        
-        /* Particle animation background */
         #particles-js {
             position: absolute;
             width: 100%;
@@ -213,71 +203,32 @@
             top: 0;
             left: 0;
             z-index: 0;
-            opacity: 1;
-            overflow: hidden;
         }
-        
         .hero-section {
             position: relative;
-            overflow: hidden;
             min-height: 100vh;
             background-color: rgba(0, 0, 0, 0.6);
-        }
-        
-        .hero-particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            z-index: 1;
         }
         .content-wrapper {
             position: relative;
             z-index: 2;
         }
-        .hero h1 {
-            text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(15, 127, 0, 0.1), rgba(15, 127, 0, 0.05));
+            border: 1px solid rgba(15, 127, 0, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
         }
-        
-        /* Dark Section */
-        .bg-darker {
-            background-color: #101010;
-        }
-        
-        /* List items */
-        .tech-list li {
-            margin-bottom: 1rem;
-            transition: transform 0.3s;
-        }
-        .tech-list li:hover {
-            transform: translateX(5px);
-            color: var(--primary-color);
-        }
-        
-        /* Media Queries */
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
-                letter-spacing: 2px;
-            }
-            .section-title {
-                font-size: 1.6rem;
-                letter-spacing: 1.5px;
-            }
-            h3, .h3, h4, .h4, h5, .h5 {
-                letter-spacing: 1px;
-            }
-            .hero-particles {
-                opacity: 0.9;
-            }
+            .hero h1 { font-size: 2rem; }
+            .section-title { font-size: 1.5rem; }
         }
     </style>
 </head>
 <body>
     <div class="content-wrapper">
         <!-- Navigation -->
-        <nav class="navbar navbar-expand-lg navbar-dark fixed-top shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
             <div class="container">
                 <a class="navbar-brand" href="#">reconYa</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -285,18 +236,11 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="#features">Features</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#installation">Setup</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#architecture">Tech</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#contribute">Contribute</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#installation">Install</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#usage">Usage</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#architecture">Tech</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#troubleshooting">Help</a></li>
                         <li class="nav-item ms-lg-3">
                             <a class="btn btn-primary" href="https://github.com/Dyneteq/reconya" target="_blank">
                                 <i class="bi bi-github me-1"></i> GitHub
@@ -307,158 +251,172 @@
             </div>
         </nav>
 
-        <!-- Hero Section with Particles -->
+        <!-- Hero Section -->
         <section class="hero-section">
-            <div id="particles-js" class="hero-particles"></div>
+            <div id="particles-js"></div>
             <section class="hero d-flex align-items-center">
                 <div class="container text-center">
                     <h1>reconYa</h1>
-                    <p class="lead mb-5 col-md-10 mx-auto">
-                        A powerful network reconnaissance and asset discovery tool built with Go and HTMX, designed to help map and monitor network devices with precision and elegance.
-                    </p>
+                    <p class="tagline">Network Reconnaissance Tool</p>
+                    <p>Discover and monitor devices on your network with a modern web interface. Built with Go — zero external dependencies, no root privileges required.</p>
+                    <div class="badge-row">
+                        <img src="https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go" alt="Go">
+                        <img src="https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg" alt="License">
+                        <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-blue" alt="Platform">
+                    </div>
                     <div>
-                        <a href="#installation" class="btn btn-primary btn-lg px-4 me-md-2">Get Started</a>
-                        <a href="#features" class="btn btn-outline-primary btn-lg px-4">Learn More</a>
+                        <a href="#installation" class="btn btn-primary btn-lg px-4 me-2">Get Started</a>
+                        <a href="https://github.com/Dyneteq/reconya" class="btn btn-outline-primary btn-lg px-4" target="_blank">View Source</a>
                     </div>
                 </div>
             </section>
         </section>
 
-        <!-- Screenshot Section -->
+        <!-- Screenshot -->
         <section class="section bg-darker">
             <div class="container text-center">
-                <img src="screenshots/dashboard.png" alt="reconYa Dashboard" class="screenshot img-fluid" style="max-width: 85%;">
+                <img src="screenshots/dashboard.png" alt="reconYa Dashboard" class="screenshot img-fluid" style="max-width: 90%;">
             </div>
         </section>
 
-        <!-- Features Section -->
+        <!-- Features -->
         <section id="features" class="section">
             <div class="container">
-                <h2 class="section-title">Key Features</h2>
-                <div class="row g-4 py-3">
+                <h2 class="section-title">Features</h2>
+                <div class="row g-4">
                     <div class="col-md-4">
                         <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-search"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Advanced Scanning</h3>
-                            <p>Comprehensive port scanning and ping sweeping to discover all devices on your network quickly and efficiently.</p>
+                            <div class="feature-icon"><i class="bi bi-search"></i></div>
+                            <h3 class="h5 fw-bold">Network Scanning</h3>
+                            <p>Native Go TCP probing with 100 concurrent workers. Scans a /24 network in under 3 seconds.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-puzzle"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Device Identification</h3>
-                            <p>Accurate identification and classification of network devices to help you understand your network infrastructure.</p>
+                            <div class="feature-icon"><i class="bi bi-cpu"></i></div>
+                            <h3 class="h5 fw-bold">Device Discovery</h3>
+                            <p>MAC addresses, vendor identification via IEEE OUI database, hostnames, and device type classification.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-diagram-3"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Network Visualization</h3>
-                            <p>Clear and interactive network topology mapping for a comprehensive view of your entire network.</p>
+                            <div class="feature-icon"><i class="bi bi-hdd-network"></i></div>
+                            <h3 class="h5 fw-bold">Port Scanning</h3>
+                            <p>Top 100 ports with service identification and banner grabbing. Background worker pool pattern.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-graph-up"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Event Monitoring</h3>
-                            <p>Real-time logging and monitoring of network events to stay informed about changes and potential issues.</p>
+                            <div class="feature-icon"><i class="bi bi-globe2"></i></div>
+                            <h3 class="h5 fw-bold">IPv6 Support</h3>
+                            <p>Passive IPv6 monitoring via Neighbor Discovery Protocol. Dual-stack device linking via MAC.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-display"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Modern Dashboard</h3>
-                            <p>Sleek, responsive web interface for all devices, making network management accessible from anywhere.</p>
+                            <div class="feature-icon"><i class="bi bi-display"></i></div>
+                            <h3 class="h5 fw-bold">Web Dashboard</h3>
+                            <p>Modern HTMX-powered interface with dark theme, real-time updates, and network visualization.</p>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-shield-check"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Security Focused</h3>
-                            <p>Built with security in mind, helping you identify potential vulnerabilities in your network infrastructure.</p>
+                            <div class="feature-icon"><i class="bi bi-box-seam"></i></div>
+                            <h3 class="h5 fw-bold">Zero Dependencies</h3>
+                            <p>Single Go binary. No nmap, no external tools. SQLite database included. Works out of the box.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Installation Section -->
+        <!-- Installation -->
         <section id="installation" class="section bg-darker">
             <div class="container">
                 <h2 class="section-title">Installation</h2>
                 <div class="row g-4">
                     <div class="col-lg-6">
-                        <h3 class="h4 fw-bold mb-3">Prerequisites</h3>
+                        <h3 class="h4 fw-bold mb-3">Requirements</h3>
                         <ul class="list-group mb-4">
                             <li class="list-group-item bg-dark text-light border-dark">
-                                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                Go 1.21+
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>Go 1.21+
                             </li>
                             <li class="list-group-item bg-dark text-light border-dark">
-                                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                nmap
-                            </li>
-                            <li class="list-group-item bg-dark text-light border-dark">
-                                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                make (pre-installed on most systems)
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>make (pre-installed on most systems)
                             </li>
                         </ul>
                         <h3 class="h4 fw-bold mb-3">Quick Start</h3>
                         <div class="code-block">
-                            <code>
-                                $ git clone https://github.com/Dyneteq/reconya.git<br>
-                                $ cd reconya<br>
-                                $ make install<br>
-                                $ make start
-                            </code>
+                            <code>git clone https://github.com/Dyneteq/reconya.git<br>cd reconya<br>make install<br>make start</code>
                         </div>
-                        <p>Access the application at <code>http://localhost:3008</code></p>
+                        <p class="mt-3">Open <code>http://localhost:3008</code><br>Login: <code>admin</code> / <code>password</code></p>
                     </div>
                     <div class="col-lg-6">
                         <div class="card h-100 p-4">
-                            <h3 class="h4 fw-bold mb-3">Available Commands</h3>
-                            <p>After installation, use these commands to manage reconYa:</p>
-                            <ol class="text-light">
-                                <li class="mb-2">Start reconYa:
-                                    <div class="code-block my-2">
-                                        <code>$ make start</code>
-                                    </div>
-                                </li>
-                                <li class="mb-2">Check service status:
-                                    <div class="code-block my-2">
-                                        <code>$ make status</code>
-                                    </div>
-                                </li>
-                                <li class="mb-2">Stop the service:
-                                    <div class="code-block my-2">
-                                        <code>$ make stop</code>
-                                    </div>
-                                </li>
-                                <li>Access the application at <code>http://localhost:3008</code></li>
-                            </ol>
-                            <a href="https://github.com/Dyneteq/reconya#local-installation-recommended" class="btn btn-primary mt-auto" target="_blank">
-                                Detailed Guide <i class="bi bi-arrow-right"></i>
-                            </a>
+                            <h3 class="h4 fw-bold mb-3">Commands</h3>
+                            <div class="code-block"><code>make start</code></div>
+                            <p class="small text-muted mb-3">Start reconYa as background daemon</p>
+                            <div class="code-block"><code>make stop</code></div>
+                            <p class="small text-muted mb-3">Stop the service</p>
+                            <div class="code-block"><code>make status</code></div>
+                            <p class="small text-muted mb-3">Check if service is running</p>
+                            <div class="code-block"><code>make logs</code></div>
+                            <p class="small text-muted mb-3">View application logs</p>
+                            <div class="code-block"><code>make start-dev</code></div>
+                            <p class="small text-muted">Run in foreground (development mode)</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Architecture Section -->
-        <section id="architecture" class="section">
+        <!-- Usage -->
+        <section id="usage" class="section">
+            <div class="container">
+                <h2 class="section-title">Usage</h2>
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="card p-4 h-100">
+                            <h3 class="h4 fw-bold mb-3">Getting Started</h3>
+                            <ol class="tech-list">
+                                <li>Login with your credentials</li>
+                                <li>Create a new network (e.g., <code>192.168.1.0/24</code>)</li>
+                                <li>Select the network and click <strong>Start Scan</strong></li>
+                                <li>Devices appear in real-time as they're discovered</li>
+                                <li>Click any device for detailed information</li>
+                            </ol>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card p-4 h-100">
+                            <h3 class="h4 fw-bold mb-3">Device Details</h3>
+                            <ul class="tech-list list-unstyled">
+                                <li><i class="bi bi-ethernet text-primary me-2"></i>MAC address and vendor</li>
+                                <li><i class="bi bi-hdd-stack text-primary me-2"></i>Open ports and services</li>
+                                <li><i class="bi bi-pc-display text-primary me-2"></i>Device type classification</li>
+                                <li><i class="bi bi-globe text-primary me-2"></i>IPv4 and IPv6 addresses</li>
+                                <li><i class="bi bi-camera text-primary me-2"></i>Web service screenshots</li>
+                                <li><i class="bi bi-clock-history text-primary me-2"></i>Online/offline history</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="highlight-box">
+                            <h3 class="h5 fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Configuration</h3>
+                            <p>Edit <code>src/.env</code> to customize settings:</p>
+                            <div class="code-block">
+                                <code>LOGIN_USERNAME=admin<br>LOGIN_PASSWORD=your_secure_password<br>JWT_SECRET_KEY=your_jwt_secret<br>SQLITE_PATH=data/reconya.db<br>IPV6_MONITORING_ENABLED=true</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture -->
+        <section id="architecture" class="section bg-darker">
             <div class="container">
                 <h2 class="section-title">Architecture</h2>
                 <div class="row g-4">
@@ -466,58 +424,23 @@
                         <div class="card h-100 p-4">
                             <h3 class="h4 fw-bold">Technology Stack</h3>
                             <ul class="list-unstyled tech-list">
-                                <li class="mb-3">
-                                    <i class="bi bi-code-square text-primary me-2"></i>
-                                    <strong>Backend:</strong> Go API server with SQLite for storage
-                                </li>
-                                <li class="mb-3">
-                                    <i class="bi bi-brush text-primary me-2"></i>
-                                    <strong>Frontend:</strong> HTMX templates with responsive Bootstrap UI
-                                </li>
-                                <li class="mb-3">
-                                    <i class="bi bi-search text-primary me-2"></i>
-                                    <strong>Scanning:</strong> Network operations through nmap and native Go libraries
-                                </li>
-                                <li class="mb-3">
-                                    <i class="bi bi-arrow-repeat text-primary me-2"></i>
-                                    <strong>Real-time:</strong> Polling system with configurable intervals
-                                </li>
-                                <li>
-                                    <i class="bi bi-terminal text-primary me-2"></i>
-                                    <strong>Deployment:</strong> Simple Makefile-based installation and management
-                                </li>
+                                <li><i class="bi bi-code-square text-primary me-2"></i><strong>Backend:</strong> Go API with HTMX templates</li>
+                                <li><i class="bi bi-database text-primary me-2"></i><strong>Database:</strong> SQLite (embedded, no setup)</li>
+                                <li><i class="bi bi-search text-primary me-2"></i><strong>Scanning:</strong> Native Go TCP/ARP (no nmap)</li>
+                                <li><i class="bi bi-brush text-primary me-2"></i><strong>Frontend:</strong> Bootstrap 5 dark theme</li>
+                                <li><i class="bi bi-arrow-repeat text-primary me-2"></i><strong>Updates:</strong> Real-time polling</li>
                             </ul>
                         </div>
                     </div>
                     <div class="col-lg-6">
                         <div class="card h-100 p-4">
-                            <h3 class="h4 fw-bold">Database: SQLite</h3>
-                            <p>The application uses SQLite for its database, offering several advantages:</p>
+                            <h3 class="h4 fw-bold">Scanning Process</h3>
                             <ul class="list-unstyled tech-list">
-                                <li class="mb-2">
-                                    <i class="bi bi-box text-primary me-2"></i>
-                                    Self-contained, no separate database service required
-                                </li>
-                                <li class="mb-2">
-                                    <i class="bi bi-puzzle text-primary me-2"></i>
-                                    Simple setup with minimal configuration
-                                </li>
-                                <li class="mb-2">
-                                    <i class="bi bi-house text-primary me-2"></i>
-                                    Perfect for personal or organizational deployments
-                                </li>
-                                <li class="mb-2">
-                                    <i class="bi bi-feather text-primary me-2"></i>
-                                    Lightweight and portable
-                                </li>
-                                <li class="mb-2">
-                                    <i class="bi bi-lock text-primary me-2"></i>
-                                    Data is stored locally in a single file
-                                </li>
-                                <li>
-                                    <i class="bi bi-x-circle text-primary me-2"></i>
-                                    No need for database administration
-                                </li>
+                                <li><i class="bi bi-1-circle text-primary me-2"></i><strong>Host Discovery:</strong> Parallel TCP probes (80, 443, 22...)</li>
+                                <li><i class="bi bi-2-circle text-primary me-2"></i><strong>MAC Resolution:</strong> ARP table lookups</li>
+                                <li><i class="bi bi-3-circle text-primary me-2"></i><strong>Port Scan:</strong> Top 100 ports with 100 workers</li>
+                                <li><i class="bi bi-4-circle text-primary me-2"></i><strong>Fingerprint:</strong> Vendor + port-based classification</li>
+                                <li><i class="bi bi-5-circle text-primary me-2"></i><strong>Web Scan:</strong> HTTP title/header extraction</li>
                             </ul>
                         </div>
                     </div>
@@ -525,77 +448,73 @@
             </div>
         </section>
 
-        <!-- Security Section -->
-        <section class="section bg-darker">
+        <!-- Troubleshooting -->
+        <section id="troubleshooting" class="section">
             <div class="container">
-                <h2 class="section-title">Security Notes</h2>
-                <div class="row">
-                    <div class="col-lg-8 mx-auto">
-                        <div class="card p-4">
-                            <ul class="list-unstyled tech-list">
-                                <li class="mb-3">
-                                    <i class="bi bi-key text-warning me-2"></i>
-                                    Always use strong passwords in production environments
-                                </li>
-                                <li class="mb-3">
-                                    <i class="bi bi-lock text-warning me-2"></i>
-                                    Use an <code>.env</code> file for all sensitive configuration
-                                </li>
-                                <li class="mb-3">
-                                    <i class="bi bi-shield text-warning me-2"></i>
-                                    Never expose the backend API directly to the internet
-                                </li>
-                                <li class="mb-3">
-                                    <i class="bi bi-person-badge text-warning me-2"></i>
-                                    Run with least privilege required for network scanning
-                                </li>
-                                <li class="mb-3">
-                                    <i class="bi bi-arrow-repeat text-warning me-2"></i>
-                                    Keep dependencies updated to patch security vulnerabilities
-                                </li>
-                                <li>
-                                    <i class="bi bi-bug text-warning me-2"></i>
-                                    Regularly test your deployment for security issues
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Contribute Section -->
-        <section id="contribute" class="section">
-            <div class="container">
-                <h2 class="section-title">Contributing</h2>
+                <h2 class="section-title">Troubleshooting</h2>
                 <div class="row g-4">
-                    <div class="col-lg-6 mx-auto">
-                        <div class="card p-4">
-                            <p class="lead">Contributions are welcome! Please feel free to submit a Pull Request.</p>
-                            <ol class="text-light">
-                                <li class="mb-2">Fork the repository on GitHub</li>
-                                <li class="mb-2">Create your feature branch 
-                                    <div class="code-block my-2">
-                                        <code>git checkout -b feature/amazing-feature</code>
-                                    </div>
-                                </li>
-                                <li class="mb-2">Commit your changes 
-                                    <div class="code-block my-2">
-                                        <code>git commit -m 'Add some amazing feature'</code>
-                                    </div>
-                                </li>
-                                <li class="mb-2">Push to the branch 
-                                    <div class="code-block my-2">
-                                        <code>git push origin feature/amazing-feature</code>
-                                    </div>
-                                </li>
-                                <li>Open a Pull Request with a detailed description</li>
-                            </ol>
-                            <a href="https://github.com/Dyneteq/reconya/issues" class="btn btn-primary mt-3" target="_blank">
-                                <i class="bi bi-bug me-1"></i> Open an Issue
-                            </a>
+                    <div class="col-md-6">
+                        <div class="card p-4 h-100">
+                            <h3 class="h5 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>No Devices Found</h3>
+                            <ul class="tech-list list-unstyled mt-3">
+                                <li>Check you're on the same network segment</li>
+                                <li>Verify the CIDR range is correct</li>
+                                <li>Ensure devices have open ports (80, 443, 22)</li>
+                                <li>Run <code>make status</code> to check service</li>
+                            </ul>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div class="card p-4 h-100">
+                            <h3 class="h5 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Missing MAC Addresses</h3>
+                            <ul class="tech-list list-unstyled mt-3">
+                                <li>MAC only visible on same network segment</li>
+                                <li>Check ARP table: <code>arp -a</code></li>
+                                <li>Some devices don't respond to ARP</li>
+                                <li>Try pinging the device first</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-4 h-100">
+                            <h3 class="h5 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Service Won't Start</h3>
+                            <ul class="tech-list list-unstyled mt-3">
+                                <li>Run <code>make stop</code> first</li>
+                                <li>Check port 3008 is available</li>
+                                <li>Verify <code>src/.env</code> exists</li>
+                                <li>Check logs: <code>make logs</code></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-4 h-100">
+                            <h3 class="h5 fw-bold"><i class="bi bi-exclamation-triangle text-warning me-2"></i>Windows CGO Error</h3>
+                            <ul class="tech-list list-unstyled mt-3">
+                                <li>Use <code>make build-cgo</code></li>
+                                <li>Install TDM-GCC or MSVC Build Tools</li>
+                                <li>Ensure CGO_ENABLED=1 is set</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Community -->
+        <section class="section bg-darker">
+            <div class="container text-center">
+                <h2 class="section-title mx-auto" style="display: inline-block;">Community</h2>
+                <p class="lead mt-4 mb-4">Join our community for support and updates</p>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="https://discord.gg/JW7VtBnNXp" class="btn btn-lg btn-outline-primary" target="_blank">
+                        <i class="bi bi-discord me-2"></i>Discord
+                    </a>
+                    <a href="https://www.reddit.com/r/reconya/" class="btn btn-lg btn-outline-primary" target="_blank">
+                        <i class="bi bi-reddit me-2"></i>Reddit
+                    </a>
+                    <a href="https://github.com/Dyneteq/reconya/issues" class="btn btn-lg btn-outline-primary" target="_blank">
+                        <i class="bi bi-bug me-2"></i>Report Issue
+                    </a>
                 </div>
             </div>
         </section>
@@ -605,195 +524,72 @@
             <div class="container">
                 <div class="row">
                     <div class="col-lg-6">
-                        <h3 class="h4 mb-4">reconYa</h3>
-                        <p>A powerful network reconnaissance and asset discovery tool built with Go and HTMX.</p>
-                        <p>This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.</p>
+                        <h3 class="h4 mb-3">reconYa</h3>
+                        <p>Network reconnaissance tool built with Go.<br>Licensed under CC BY-NC 4.0.</p>
                     </div>
                     <div class="col-lg-3">
-                        <h4 class="h5 mb-4">LINKS</h4>
-                        <ul class="list-unstyled tech-list">
-                            <li><a href="#features" class="text-light">FEATURES</a></li>
-                            <li><a href="#installation" class="text-light">INSTALLATION</a></li>
-                            <li><a href="#architecture" class="text-light">ARCHITECTURE</a></li>
-                            <li><a href="#contribute" class="text-light">CONTRIBUTE</a></li>
+                        <h4 class="h5 mb-3">Links</h4>
+                        <ul class="list-unstyled">
+                            <li><a href="#features" class="text-light">Features</a></li>
+                            <li><a href="#installation" class="text-light">Installation</a></li>
+                            <li><a href="#usage" class="text-light">Usage</a></li>
+                            <li><a href="#troubleshooting" class="text-light">Troubleshooting</a></li>
                         </ul>
                     </div>
                     <div class="col-lg-3">
-                        <h4 class="h5 mb-4">CONNECT</h4>
+                        <h4 class="h5 mb-3">Connect</h4>
                         <div class="mb-3">
-                            <a href="https://github.com/Dyneteq/reconya" class="social-link" target="_blank">
-                                <i class="bi bi-github"></i>
-                            </a>
-                            <a href="https://discord.gg/JW7VtBnNXp" class="social-link" target="_blank">
-                                <i class="bi bi-discord"></i>
-                            </a>
-                            <a href="https://www.reddit.com/r/reconya/" class="social-link" target="_blank">
-                                <i class="bi bi-reddit"></i>
-                            </a>
+                            <a href="https://github.com/Dyneteq/reconya" class="social-link" target="_blank"><i class="bi bi-github"></i></a>
+                            <a href="https://discord.gg/JW7VtBnNXp" class="social-link" target="_blank"><i class="bi bi-discord"></i></a>
+                            <a href="https://www.reddit.com/r/reconya/" class="social-link" target="_blank"><i class="bi bi-reddit"></i></a>
                         </div>
-                        <p>Found an issue? <a href="https://github.com/Dyneteq/reconya/issues" class="text-light">Report it</a></p>
                     </div>
                 </div>
-                <hr class="mt-4 mb-4 border-secondary">
-                <div class="text-center">
-                    <p>&copy; 2025 reconYa. All rights reserved.</p>
-                </div>
+                <hr class="my-4 border-secondary">
+                <p class="text-center mb-0">&copy; 2025 reconYa</p>
             </div>
         </footer>
 
-        <!-- Scroll to top button -->
-        <a href="#" class="scroll-to-top">
-            <i class="bi bi-arrow-up"></i>
-        </a>
+        <a href="#" class="scroll-to-top"><i class="bi bi-arrow-up"></i></a>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script>
-        // Particle.js configuration
         particlesJS("particles-js", {
-            "particles": {
-                "number": {
-                    "value": 150,
-                    "density": {
-                        "enable": true,
-                        "value_area": 800
-                    }
-                },
-                "color": {
-                    "value": "#0f7f00"
-                },
-                "shape": {
-                    "type": "circle",
-                    "stroke": {
-                        "width": 0,
-                        "color": "#000000"
-                    },
-                    "polygon": {
-                        "nb_sides": 5
-                    }
-                },
-                "opacity": {
-                    "value": 0.9,
-                    "random": true,
-                    "anim": {
-                        "enable": true,
-                        "speed": 1,
-                        "opacity_min": 0.5,
-                        "sync": false
-                    }
-                },
-                "size": {
-                    "value": 5,
-                    "random": true,
-                    "anim": {
-                        "enable": true,
-                        "speed": 6,
-                        "size_min": 0.3,
-                        "sync": false
-                    }
-                },
-                "line_linked": {
-                    "enable": true,
-                    "distance": 150,
-                    "color": "#0f7f00",
-                    "opacity": 0.7,
-                    "width": 1.5
-                },
-                "move": {
-                    "enable": true,
-                    "speed": 2,
-                    "direction": "none",
-                    "random": true,
-                    "straight": false,
-                    "out_mode": "out",
-                    "bounce": false,
-                    "attract": {
-                        "enable": true,
-                        "rotateX": 600,
-                        "rotateY": 1200
-                    }
-                }
+            particles: {
+                number: { value: 120, density: { enable: true, value_area: 800 } },
+                color: { value: "#0f7f00" },
+                shape: { type: "circle" },
+                opacity: { value: 0.8, random: true, anim: { enable: true, speed: 1, opacity_min: 0.4 } },
+                size: { value: 4, random: true, anim: { enable: true, speed: 4, size_min: 0.5 } },
+                line_linked: { enable: true, distance: 150, color: "#0f7f00", opacity: 0.6, width: 1 },
+                move: { enable: true, speed: 2, random: true, out_mode: "out" }
             },
-            "interactivity": {
-                "detect_on": "canvas",
-                "events": {
-                    "onhover": {
-                        "enable": true,
-                        "mode": "grab"
-                    },
-                    "onclick": {
-                        "enable": true,
-                        "mode": "push"
-                    },
-                    "resize": true
-                },
-                "modes": {
-                    "grab": {
-                        "distance": 140,
-                        "line_linked": {
-                            "opacity": 1
-                        }
-                    },
-                    "bubble": {
-                        "distance": 400,
-                        "size": 40,
-                        "duration": 2,
-                        "opacity": 8,
-                        "speed": 3
-                    },
-                    "repulse": {
-                        "distance": 200,
-                        "duration": 0.4
-                    },
-                    "push": {
-                        "particles_nb": 4
-                    },
-                    "remove": {
-                        "particles_nb": 2
-                    }
-                }
+            interactivity: {
+                detect_on: "canvas",
+                events: { onhover: { enable: true, mode: "grab" }, onclick: { enable: true, mode: "push" } },
+                modes: { grab: { distance: 140, line_linked: { opacity: 1 } }, push: { particles_nb: 4 } }
             },
-            "retina_detect": true
+            retina_detect: true
         });
 
-        // Scroll to top button
-        const scrollToTopBtn = document.querySelector('.scroll-to-top');
-        
+        const scrollBtn = document.querySelector('.scroll-to-top');
         window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 300) {
-                scrollToTopBtn.style.display = 'flex';
-            } else {
-                scrollToTopBtn.style.display = 'none';
-            }
+            scrollBtn.style.display = window.pageYOffset > 300 ? 'flex' : 'none';
         });
-        
-        scrollToTopBtn.addEventListener('click', (e) => {
+        scrollBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
+            anchor.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    const navbarHeight = document.querySelector('.navbar').offsetHeight;
-                    const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - navbarHeight;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const offset = document.querySelector('.navbar').offsetHeight;
+                    window.scrollTo({ top: target.offsetTop - offset, behavior: 'smooth' });
                 }
             });
         });
