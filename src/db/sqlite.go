@@ -400,6 +400,46 @@ func InitializeSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create index on sensors.token: %w", err)
 	}
 
+	// Create arp_history table for tracking MAC-IP associations over time
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS arp_history (
+		id TEXT PRIMARY KEY,
+		ip TEXT NOT NULL,
+		mac TEXT NOT NULL,
+		network_id TEXT,
+		first_seen TIMESTAMP NOT NULL,
+		last_seen TIMESTAMP NOT NULL,
+		is_gateway BOOLEAN DEFAULT 0,
+		created_at TIMESTAMP NOT NULL,
+		updated_at TIMESTAMP NOT NULL,
+		FOREIGN KEY (network_id) REFERENCES networks(id)
+	)`)
+	if err != nil {
+		return fmt.Errorf("failed to create arp_history table: %w", err)
+	}
+
+	// Create indexes for arp_history
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_arp_history_ip ON arp_history(ip)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on arp_history.ip: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_arp_history_mac ON arp_history(mac)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on arp_history.mac: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_arp_history_network_id ON arp_history(network_id)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on arp_history.network_id: %w", err)
+	}
+
+	// Unique constraint on IP+MAC combination
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_arp_history_ip_mac ON arp_history(ip, mac)`)
+	if err != nil {
+		log.Printf("Note: arp_history unique index might already exist: %v", err)
+	}
+
 	log.Println("Database schema initialized successfully")
 	return nil
 }

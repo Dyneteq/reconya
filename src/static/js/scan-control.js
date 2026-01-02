@@ -1,5 +1,3 @@
-// Scan control functionality - Sensor-based scanning
-
 function escapeHtmlText(text) {
     if (text === undefined || text === null) return '';
     const div = document.createElement('div');
@@ -7,10 +5,7 @@ function escapeHtmlText(text) {
     return div.textContent;
 }
 
-// Track which sensors are in a pending state
 const pendingSensors = new Set();
-
-// Cache of last fetched sensors for immediate re-render
 let cachedSensors = [];
 
 function renderScanControlFromData(data) {
@@ -39,7 +34,7 @@ function renderScanControlFromData(data) {
         const networkRange = sensor.network_cidr || 'Not connected';
 
         const statusDot = isOnline
-            ? 'bg-green-500'
+            ? (isScanning ? 'bg-green-500 animate-pulse' : 'bg-green-500')
             : sensor.status === 'pending'
                 ? 'bg-yellow-500'
                 : 'bg-red-500';
@@ -61,12 +56,20 @@ function renderScanControlFromData(data) {
             actionButton = '<button onclick="startSensorScan(\'' + sensor.id + '\')" class="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors">Start</button>';
         }
 
+        const statusText = isScanning && !isPending
+            ? '<span class="text-green-400 font-mono text-xs">' + escapeHtmlText(networkRange) + '</span>'
+            : '<span class="text-gray-500">' + escapeHtmlText(networkRange) + '</span>';
+
+        const statusDotHtml = isScanning && !isPending
+            ? '<svg class="animate-spin h-4 w-4 mr-2 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>'
+            : '<div class="w-3 h-3 rounded-full ' + statusDot + ' mr-2 flex-shrink-0"></div>';
+
         return '<div class="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">' +
             '<div class="flex items-center flex-1 min-w-0">' +
-                '<div class="w-2 h-2 rounded-full ' + statusDot + ' mr-2 flex-shrink-0"></div>' +
+                statusDotHtml +
                 '<div class="min-w-0">' +
                     '<div class="text-sm text-white truncate">' + escapeHtmlText(sensor.name) + '</div>' +
-                    '<div class="text-xs text-gray-500 truncate">' + escapeHtmlText(networkRange) + '</div>' +
+                    '<div class="text-xs truncate">' + statusText + '</div>' +
                 '</div>' +
             '</div>' +
             '<div class="flex-shrink-0 ml-2">' + actionButton + '</div>' +
@@ -134,9 +137,8 @@ function loadScanControl() {
 }
 
 
-// Track when each sensor action started for minimum spinner duration
 const actionStartTimes = new Map();
-const MIN_SPINNER_DURATION = 1500; // Minimum 1.5 seconds spinner
+const MIN_SPINNER_DURATION = 1500;
 
 function pollForStatusChange(sensorId, expectedStatus, attempts = 0) {
     if (attempts > 20) {
@@ -151,7 +153,6 @@ function pollForStatusChange(sensorId, expectedStatus, attempts = 0) {
         .then(sensors => {
             const sensor = sensors.find(s => s.id === sensorId);
             if (sensor && sensor.scan_status === expectedStatus) {
-                // Ensure minimum spinner duration
                 const startTime = actionStartTimes.get(sensorId) || Date.now();
                 const elapsed = Date.now() - startTime;
                 const remainingDelay = Math.max(0, MIN_SPINNER_DURATION - elapsed);
@@ -180,7 +181,7 @@ function startSensorScan(sensorId) {
 
     pendingSensors.add(sensorId);
     actionStartTimes.set(sensorId, Date.now());
-    renderToContainer(); // Immediate UI update
+    renderToContainer();
 
     fetch('/api/sensors/' + sensorId + '/start-scan', {
         method: 'POST',
@@ -204,7 +205,7 @@ function stopSensorScan(sensorId) {
 
     pendingSensors.add(sensorId);
     actionStartTimes.set(sensorId, Date.now());
-    renderToContainer(); // Immediate UI update
+    renderToContainer();
 
     fetch('/api/sensors/' + sensorId + '/stop-scan', {
         method: 'POST',
@@ -223,10 +224,7 @@ function stopSensorScan(sensorId) {
         });
 }
 
-// Make functions available globally
 window.renderScanControlFromData = renderScanControlFromData;
 window.loadScanControl = loadScanControl;
 window.startSensorScan = startSensorScan;
 window.stopSensorScan = stopSensorScan;
-
-// End of scan-control.js - sensor-based implementation

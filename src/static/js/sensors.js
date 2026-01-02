@@ -36,12 +36,15 @@ function renderSensorsTable(container, sensors) {
         const row = document.createElement('tr');
         row.className = 'border-b border-gray-700 hover:bg-gray-750';
         
+        const isScanning = sensor.scan_status === 'running';
         const statusClass = sensor.status === 'online' ? 'text-green-500' : sensor.status === 'offline' ? 'text-red-500' : 'text-yellow-500';
+        const statusDisplay = isScanning ? '<span class="inline-flex items-center"><span class="relative flex h-2 w-2 mr-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>SCANNING</span>' : sensor.status.toUpperCase();
+        const statusAnimClass = isScanning ? statusClass + ' animate-pulse' : statusClass;
         const lastSeen = sensor.last_seen_at ? new Date(sensor.last_seen_at).toLocaleString() : 'Never';
         const token = sensor.token ? sensor.token.substring(0, 12) + '...' : '-';
         
         row.innerHTML = '<td class="p-3"><span class="font-medium text-white">' + escapeHtml(sensor.name) + '</span></td>' +
-            '<td class="p-3 ' + statusClass + '">' + sensor.status.toUpperCase() + '</td>' +
+            '<td class="p-3 ' + statusAnimClass + '">' + statusDisplay + '</td>' +
             '<td class="p-3 text-gray-300">' + (sensor.ip || '-') + '</td>' +
             '<td class="p-3 text-gray-300">' + (sensor.network_cidr || '-') + '</td>' +
             '<td class="p-3 text-gray-400 text-xs">' + lastSeen + '</td>' +

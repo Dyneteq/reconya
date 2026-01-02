@@ -691,8 +691,8 @@ func (r *SQLiteDeviceRepository) UpdateDeviceStatuses(ctx context.Context, timeo
 		return fmt.Errorf("error updating device statuses: %w", err)
 	}
 
-	// Set devices to idle after 1 minute of inactivity
-	idleThreshold := now.Add(-1 * time.Minute)
+	// Set devices to idle after 2 minutes of inactivity
+	idleThreshold := now.Add(-2 * time.Minute)
 	query = `
 	UPDATE devices 
 	SET status = ?, updated_at = ?
@@ -1328,4 +1328,209 @@ func (r *SQLiteSensorRepository) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("error deleting sensor: %w", err)
 	}
 	return nil
+}
+
+// SQLiteARPHistoryRepository implements the ARPHistoryRepository interface
+type SQLiteARPHistoryRepository struct {
+	db *sql.DB
+}
+
+// NewSQLiteARPHistoryRepository creates a new SQLiteARPHistoryRepository
+func NewSQLiteARPHistoryRepository(db *sql.DB) *SQLiteARPHistoryRepository {
+	return &SQLiteARPHistoryRepository{db: db}
+}
+
+// Close closes the database connection
+func (r *SQLiteARPHistoryRepository) Close() error {
+	return r.db.Close()
+}
+
+// FindByIP finds all ARP history entries for an IP
+func (r *SQLiteARPHistoryRepository) FindByIP(ctx context.Context, ip string) ([]*models.ARPHistory, error) {
+	query := `SELECT id, ip, mac, network_id, first_seen, last_seen, is_gateway, created_at, updated_at
+	          FROM arp_history WHERE ip = ? ORDER BY last_seen DESC`
+	rows, err := r.db.QueryContext(ctx, query, ip)
+	if err != nil {
+		return nil, fmt.Errorf("error querying arp_history by IP: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanARPHistoryRows(rows)
+}
+
+// FindByMAC finds all ARP history entries for a MAC
+func (r *SQLiteARPHistoryRepository) FindByMAC(ctx context.Context, mac string) ([]*models.ARPHistory, error) {
+	query := `SELECT id, ip, mac, network_id, first_seen, last_seen, is_gateway, created_at, updated_at
+	          FROM arp_history WHERE mac = ? ORDER BY last_seen DESC`
+	rows, err := r.db.QueryContext(ctx, query, mac)
+	if err != nil {
+		return nil, fmt.Errorf("error querying arp_history by MAC: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanARPHistoryRows(rows)
+}
+
+// FindByIPAndMAC finds a specific IP-MAC combination
+func (r *SQLiteARPHistoryRepository) FindByIPAndMAC(ctx context.Context, ip, mac string) (*models.ARPHistory, error) {
+	query := `SELECT id, ip, mac, network_id, first_seen, last_seen, is_gateway, created_at, updated_at
+	          FROM arp_history WHERE ip = ? AND mac = ?`
+	row := r.db.QueryRowContext(ctx, query, ip, mac)
+
+	var entry models.ARPHistory
+	var networkID sql.NullString
+
+	err := row.Scan(
+		&entry.ID, &entry.IP, &entry.MAC, &networkID,
+		&entry.FirstSeen, &entry.LastSeen, &entry.IsGateway,
+		&entry.CreatedAt, &entry.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("error scanning arp_history: %w", err)
+	}
+
+	if networkID.Valid {
+		entry.NetworkID = networkID.String
+	}
+
+	return &entry, nil
+}
+
+// CreateOrUpdate creates or updates an ARP history entry
+func (r *SQLiteARPHistoryRepository) CreateOrUpdate(ctx context.Context, entry *models.ARPHistory) (*models.ARPHistory, error) {
+	// Try to find existing entry
+	existing, err := r.FindByIPAndMAC(ctx, entry.IP, entry.MAC)
+
+	if err == nil && existing != nil {
+		// Update last_seen
+		query := `UPDATE arp_history SET last_seen = ?, updated_at = ?, is_gateway = ? WHERE id = ?`
+		now := time.Now()
+		_, err := r.db.ExecContext(ctx, query, now, now, entry.IsGateway, existing.ID)
+		if err != nil {
+			return nil, fmt.Errorf("error updating arp_history: %w", err)
+		}
+		existing.LastSeen = now
+		existing.UpdatedAt = now
+		existing.IsGateway = entry.IsGateway
+		return existing, nil
+	}
+
+	// Insert new entry
+	if entry.ID == "" {
+		entry.ID = GenerateID()
+	}
+	now := time.Now()
+	entry.CreatedAt = now
+	entry.UpdatedAt = now
+	if entry.FirstSeen.IsZero() {
+		entry.FirstSeen = now
+	}
+	if entry.LastSeen.IsZero() {
+		entry.LastSeen = now
+	}
+
+	query := `INSERT INTO arp_history (id, ip, mac, network_id, first_seen, last_seen, is_gateway, created_at, updated_at)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+
+	var networkID interface{}
+	if entry.NetworkID != "" {
+		networkID = entry.NetworkID
+	}
+
+	_, err = r.db.ExecContext(ctx, query,
+		entry.ID, entry.IP, entry.MAC, networkID,
+		entry.FirstSeen, entry.LastSeen, entry.IsGateway,
+		entry.CreatedAt, entry.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating arp_history: %w", err)
+	}
+
+	return entry, nil
+}
+
+// FindGatewayForNetwork finds the gateway entry for a network
+func (r *SQLiteARPHistoryRepository) FindGatewayForNetwork(ctx context.Context, networkID string) (*models.ARPHistory, error) {
+	query := `SELECT id, ip, mac, network_id, first_seen, last_seen, is_gateway, created_at, updated_at
+	          FROM arp_history WHERE network_id = ? AND is_gateway = 1 ORDER BY last_seen DESC LIMIT 1`
+	row := r.db.QueryRowContext(ctx, query, networkID)
+
+	var entry models.ARPHistory
+	var netID sql.NullString
+
+	err := row.Scan(
+		&entry.ID, &entry.IP, &entry.MAC, &netID,
+		&entry.FirstSeen, &entry.LastSeen, &entry.IsGateway,
+		&entry.CreatedAt, &entry.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("error scanning arp_history gateway: %w", err)
+	}
+
+	if netID.Valid {
+		entry.NetworkID = netID.String
+	}
+
+	return &entry, nil
+}
+
+// GetCurrentMACsForIP returns all MACs currently associated with an IP (for duplicate detection)
+func (r *SQLiteARPHistoryRepository) GetCurrentMACsForIP(ctx context.Context, ip string, since time.Duration) ([]*models.ARPHistory, error) {
+	threshold := time.Now().Add(-since)
+	query := `SELECT id, ip, mac, network_id, first_seen, last_seen, is_gateway, created_at, updated_at
+	          FROM arp_history WHERE ip = ? AND last_seen > ? ORDER BY last_seen DESC`
+	rows, err := r.db.QueryContext(ctx, query, ip, threshold)
+	if err != nil {
+		return nil, fmt.Errorf("error querying current MACs for IP: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanARPHistoryRows(rows)
+}
+
+// GetCurrentIPsForMAC returns all IPs currently associated with a MAC
+func (r *SQLiteARPHistoryRepository) GetCurrentIPsForMAC(ctx context.Context, mac string, since time.Duration) ([]*models.ARPHistory, error) {
+	threshold := time.Now().Add(-since)
+	query := `SELECT id, ip, mac, network_id, first_seen, last_seen, is_gateway, created_at, updated_at
+	          FROM arp_history WHERE mac = ? AND last_seen > ? ORDER BY last_seen DESC`
+	rows, err := r.db.QueryContext(ctx, query, mac, threshold)
+	if err != nil {
+		return nil, fmt.Errorf("error querying current IPs for MAC: %w", err)
+	}
+	defer rows.Close()
+
+	return r.scanARPHistoryRows(rows)
+}
+
+// scanARPHistoryRows scans multiple rows into ARPHistory structs
+func (r *SQLiteARPHistoryRepository) scanARPHistoryRows(rows *sql.Rows) ([]*models.ARPHistory, error) {
+	var entries []*models.ARPHistory
+
+	for rows.Next() {
+		var entry models.ARPHistory
+		var networkID sql.NullString
+
+		err := rows.Scan(
+			&entry.ID, &entry.IP, &entry.MAC, &networkID,
+			&entry.FirstSeen, &entry.LastSeen, &entry.IsGateway,
+			&entry.CreatedAt, &entry.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning arp_history row: %w", err)
+		}
+
+		if networkID.Valid {
+			entry.NetworkID = networkID.String
+		}
+
+		entries = append(entries, &entry)
+	}
+
+	return entries, nil
 }

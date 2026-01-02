@@ -746,6 +746,44 @@
             font-weight: 600;
             color: #fff;
         }
+
+        @keyframes radar-ping {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 5px #22c55e, 0 0 10px #22c55e;
+            }
+            50% {
+                opacity: 0.7;
+                box-shadow: 0 0 15px #22c55e, 0 0 25px #22c55e, 0 0 35px #22c55e;
+            }
+        }
+
+        @keyframes holo-scan {
+            0%, 100% {
+                text-shadow: 0 0 5px #22c55e, 0 0 10px #22c55e;
+                opacity: 1;
+            }
+            50% {
+                text-shadow: 0 0 15px #22c55e, 0 0 25px #22c55e, 0 0 35px #22c55e;
+                opacity: 0.8;
+            }
+        }
+
+        @keyframes scan-line {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
     </style>
     
     <script>   

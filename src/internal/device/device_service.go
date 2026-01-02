@@ -11,6 +11,7 @@ import (
 	"reconya/internal/fingerprint"
 	"reconya/internal/network"
 	"reconya/internal/oui"
+	"reconya/internal/security"
 	"reconya/internal/util"
 	"reconya/models"
 	"sort"
@@ -25,6 +26,8 @@ type DeviceService struct {
 	dbManager          *db.DBManager
 	fingerprintService *fingerprint.FingerprintService
 	ouiService         *oui.OUIService
+	arpHistoryRepo     db.ARPHistoryRepository
+	mitmDetector       *security.MITMDetector
 }
 
 func NewDeviceService(deviceRepo db.DeviceRepository, networkService *network.NetworkService, cfg *config.Config, dbManager *db.DBManager, ouiService *oui.OUIService) *DeviceService {
@@ -35,6 +38,52 @@ func NewDeviceService(deviceRepo db.DeviceRepository, networkService *network.Ne
 		dbManager:          dbManager,
 		fingerprintService: fingerprint.NewFingerprintService(),
 		ouiService:         ouiService,
+	}
+}
+
+// SetARPHistoryComponents sets the ARP history repository and MITM detector
+// This is called after service initialization to avoid circular dependencies
+func (s *DeviceService) SetARPHistoryComponents(arpHistoryRepo db.ARPHistoryRepository, mitmDetector *security.MITMDetector) {
+	s.arpHistoryRepo = arpHistoryRepo
+	s.mitmDetector = mitmDetector
+	log.Println("ARP history tracking enabled for device service")
+}
+
+// updateARPHistory tracks the MAC-IP association and runs MITM detection
+func (s *DeviceService) updateARPHistory(device *models.Device) {
+	if s.arpHistoryRepo == nil || device.MAC == nil || *device.MAC == "" {
+		return
+	}
+
+	ctx := context.Background()
+	now := time.Now()
+
+	// Check if this is likely a gateway
+	isGateway := security.IsLikelyGateway(device.IPv4)
+
+	// Run MITM detection before updating history
+	if s.mitmDetector != nil {
+		changes := s.mitmDetector.AnalyzeARPEntry(ctx, device.IPv4, *device.MAC, device.NetworkID, isGateway)
+		if len(changes) > 0 {
+			log.Printf("MITM detection found %d suspicious ARP changes for %s", len(changes), device.IPv4)
+		}
+	}
+
+	// Update or create ARP history entry
+	entry := &models.ARPHistory{
+		IP:        device.IPv4,
+		MAC:       *device.MAC,
+		NetworkID: device.NetworkID,
+		FirstSeen: now,
+		LastSeen:  now,
+		IsGateway: isGateway,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	_, err := s.arpHistoryRepo.CreateOrUpdate(ctx, entry)
+	if err != nil {
+		log.Printf("Error updating ARP history for %s: %v", device.IPv4, err)
 	}
 }
 
@@ -97,7 +146,15 @@ func (s *DeviceService) CreateOrUpdate(device *models.Device) (*models.Device, e
 		}
 	}
 
-	return s.dbManager.CreateOrUpdateDevice(s.repository, context.Background(), device)
+	savedDevice, err := s.dbManager.CreateOrUpdateDevice(s.repository, context.Background(), device)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update ARP history after successful save
+	s.updateARPHistory(savedDevice)
+
+	return savedDevice, nil
 }
 
 func (s *DeviceService) setTimestamps(device, existingDevice *models.Device, currentTime time.Time) {
@@ -389,8 +446,9 @@ func (s *DeviceService) UpdateDeviceStatuses() error {
 	defer cancel()
 
 	// Use DB manager to serialize database access
-	// Device status transitions: online -> idle after 1 minute, idle/online -> offline after 3 minutes
-	return s.dbManager.UpdateDeviceStatuses(s.repository, ctx, 3*time.Minute)
+	// Device status transitions: online -> idle after 1 minute, idle/online -> offline after 10 minutes
+	// Increased from 3 minutes to 10 minutes to account for ARP table entry expiration
+	return s.dbManager.UpdateDeviceStatuses(s.repository, ctx, 10*time.Minute)
 }
 
 // PerformDeviceFingerprinting analyzes device characteristics to determine type and OS

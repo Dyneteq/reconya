@@ -25,6 +25,7 @@ import (
 	"reconya/internal/pingsweep"
 	"reconya/internal/portscan"
 	"reconya/internal/scan"
+	"reconya/internal/security"
 	"reconya/internal/sensor"
 	"reconya/internal/settings"
 	"reconya/internal/systemstatus"
@@ -103,6 +104,11 @@ func initServices() (*Services, error) {
 	networkService := network.NewNetworkService(networkRepo, cfg, dbManager)
 	deviceService := device.NewDeviceService(deviceRepo, networkService, cfg, dbManager, ouiService)
 	eventLogService := eventlog.NewEventLogService(eventLogRepo, deviceService, dbManager)
+
+	// Initialize ARP history tracking and MITM detection
+	arpHistoryRepo := repoFactory.NewARPHistoryRepository()
+	mitmDetector := security.NewMITMDetector(arpHistoryRepo, eventLogService)
+	deviceService.SetARPHistoryComponents(arpHistoryRepo, mitmDetector)
 	systemStatusService := systemstatus.NewSystemStatusService(systemStatusRepo, geolocationRepo)
 	settingsService := settings.NewSettingsService(settingsRepo)
 	sensorService := sensor.NewSensorService(sensorRepo)

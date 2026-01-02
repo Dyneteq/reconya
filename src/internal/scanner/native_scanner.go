@@ -27,6 +27,7 @@ type NativeScanner struct {
 	enableMACLookup          bool
 	enableHostnameLookup     bool
 	enableOnlineVendorLookup bool
+	arpScanner               *ARPScanner
 }
 
 type ScanResult struct {
@@ -46,6 +47,7 @@ func NewNativeScanner() *NativeScanner {
 		enableMACLookup:          true,
 		enableHostnameLookup:     true,
 		enableOnlineVendorLookup: true, // Allow online vendor lookups
+		arpScanner:               NewARPScanner(),
 	}
 }
 
@@ -58,9 +60,12 @@ func (s *NativeScanner) SetOptions(timeout time.Duration, concurrent int, enable
 	s.enableOnlineVendorLookup = enableOnlineVendor
 }
 
-// ScanNetwork performs a ping sweep on the given CIDR network
+// ScanNetwork performs a multilayer network scan on the given CIDR network
+// Layer 1: ARP scan (most reliable for local networks)
+// Layer 2: ICMP ping (for devices not found by ARP)
+// Layer 3: TCP connect (fallback for devices blocking ICMP)
 func (s *NativeScanner) ScanNetwork(network string) ([]models.Device, error) {
-	log.Printf("Starting native Go network scan on: %s", network)
+	log.Printf("Starting multilayer network scan on: %s", network)
 
 	// Parse the network CIDR
 	_, ipNet, err := net.ParseCIDR(network)
@@ -68,63 +73,113 @@ func (s *NativeScanner) ScanNetwork(network string) ([]models.Device, error) {
 		return nil, fmt.Errorf("invalid CIDR: %v", err)
 	}
 
-	// Generate all IPs in the network
-	ips := s.generateIPList(ipNet)
-	log.Printf("Scanning %d IP addresses", len(ips))
-
-	// Create channels for work distribution
-	ipChan := make(chan string, len(ips))
-	resultChan := make(chan ScanResult, len(ips))
-
-	// Fill the work channel
-	for _, ip := range ips {
-		ipChan <- ip
-	}
-	close(ipChan)
-
-	// Start worker goroutines
-	var wg sync.WaitGroup
-	for i := 0; i < s.concurrent; i++ {
-		wg.Add(1)
-		go s.worker(ipChan, resultChan, &wg)
-	}
-
-	// Wait for all workers to complete
-	go func() {
-		wg.Wait()
-		close(resultChan)
-	}()
-
-	// Collect results
+	// Track found IPs to avoid duplicate scanning
+	foundIPs := make(map[string]bool)
 	var devices []models.Device
-	for result := range resultChan {
-		if result.Online {
+
+	// ========== Layer 1: ARP Scan ==========
+	log.Printf("Layer 1: ARP scanning network %s", network)
+	arpResults, err := s.arpScanner.ScanNetwork(network)
+	if err != nil {
+		log.Printf("ARP scan error (continuing with other layers): %v", err)
+	} else {
+		log.Printf("Layer 1: ARP scan found %d devices", len(arpResults))
+		for _, arp := range arpResults {
+			foundIPs[arp.IP] = true
+			mac := arp.MAC
 			device := models.Device{
-				IPv4:   result.IP,
+				IPv4:   arp.IP,
+				MAC:    &mac,
 				Status: models.DeviceStatusOnline,
 			}
 
-			// Add MAC address if available
-			if result.MAC != "" {
-				device.MAC = &result.MAC
+			// Lookup vendor from MAC
+			if s.enableMACLookup {
+				vendor := s.lookupVendor(mac)
+				if vendor != "" {
+					device.Vendor = &vendor
+				}
 			}
 
-			// Add vendor if available
-			if result.Vendor != "" {
-				device.Vendor = &result.Vendor
-			}
-
-			// Add hostname if available
-			if result.Hostname != "" {
-				device.Hostname = &result.Hostname
+			// Lookup hostname
+			if s.enableHostnameLookup {
+				hostname := s.getHostname(arp.IP)
+				if hostname != "" {
+					device.Hostname = &hostname
+				}
 			}
 
 			devices = append(devices, device)
-			log.Printf("Found online device: %s (RTT: %v)", result.IP, result.RTT)
+			log.Printf("Layer 1 [ARP]: Found device %s (MAC: %s)", arp.IP, mac)
 		}
 	}
 
-	log.Printf("Native scan completed. Found %d online devices", len(devices))
+	// ========== Layer 2 & 3: ICMP/TCP for remaining IPs ==========
+	ips := s.generateIPList(ipNet)
+	remainingIPs := make([]string, 0)
+	for _, ip := range ips {
+		if !foundIPs[ip] {
+			remainingIPs = append(remainingIPs, ip)
+		}
+	}
+
+	if len(remainingIPs) > 0 {
+		log.Printf("Layer 2-3: Scanning %d remaining IPs with ICMP/TCP", len(remainingIPs))
+
+		// Create channels for work distribution
+		ipChan := make(chan string, len(remainingIPs))
+		resultChan := make(chan ScanResult, len(remainingIPs))
+
+		// Fill the work channel
+		for _, ip := range remainingIPs {
+			ipChan <- ip
+		}
+		close(ipChan)
+
+		// Start worker goroutines
+		var wg sync.WaitGroup
+		for i := 0; i < s.concurrent; i++ {
+			wg.Add(1)
+			go s.worker(ipChan, resultChan, &wg)
+		}
+
+		// Wait for all workers to complete
+		go func() {
+			wg.Wait()
+			close(resultChan)
+		}()
+
+		// Collect results from ICMP/TCP scan
+		for result := range resultChan {
+			if result.Online && !foundIPs[result.IP] {
+				foundIPs[result.IP] = true
+				device := models.Device{
+					IPv4:   result.IP,
+					Status: models.DeviceStatusOnline,
+				}
+
+				// Add MAC address if available
+				if result.MAC != "" {
+					device.MAC = &result.MAC
+				}
+
+				// Add vendor if available
+				if result.Vendor != "" {
+					device.Vendor = &result.Vendor
+				}
+
+				// Add hostname if available
+				if result.Hostname != "" {
+					device.Hostname = &result.Hostname
+				}
+
+				devices = append(devices, device)
+				log.Printf("Layer 2-3 [ICMP/TCP]: Found device %s", result.IP)
+			}
+		}
+	}
+
+	log.Printf("Multilayer scan completed. Found %d online devices total", len(devices))
 	return devices, nil
 }
 

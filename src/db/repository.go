@@ -86,6 +86,18 @@ type SensorRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// ARPHistoryRepository defines the interface for ARP history operations
+type ARPHistoryRepository interface {
+	Repository
+	FindByIP(ctx context.Context, ip string) ([]*models.ARPHistory, error)
+	FindByMAC(ctx context.Context, mac string) ([]*models.ARPHistory, error)
+	FindByIPAndMAC(ctx context.Context, ip, mac string) (*models.ARPHistory, error)
+	CreateOrUpdate(ctx context.Context, entry *models.ARPHistory) (*models.ARPHistory, error)
+	FindGatewayForNetwork(ctx context.Context, networkID string) (*models.ARPHistory, error)
+	GetCurrentMACsForIP(ctx context.Context, ip string, since time.Duration) ([]*models.ARPHistory, error)
+	GetCurrentIPsForMAC(ctx context.Context, mac string, since time.Duration) ([]*models.ARPHistory, error)
+}
+
 // RepositoryFactory creates repositories
 type RepositoryFactory struct {
 	SQLiteDB *sql.DB
@@ -133,6 +145,11 @@ func (f *RepositoryFactory) NewSettingsRepository() SettingsRepository {
 // NewSensorRepository creates a new sensor repository
 func (f *RepositoryFactory) NewSensorRepository() SensorRepository {
 	return NewSQLiteSensorRepository(f.SQLiteDB)
+}
+
+// NewARPHistoryRepository creates a new ARP history repository
+func (f *RepositoryFactory) NewARPHistoryRepository() ARPHistoryRepository {
+	return NewSQLiteARPHistoryRepository(f.SQLiteDB)
 }
 
 // GenerateID generates a unique ID for a record

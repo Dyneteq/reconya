@@ -288,9 +288,19 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 		log.Printf("Failed to load devices: %v", err)
 	}
 
-	devicesFound := len(devices)
+	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	devicesFound := 0
 	devicesOnline := 0
 	for _, device := range devices {
+		if device.LastSeenOnlineAt == nil && device.Status != models.DeviceStatusOnline {
+			continue
+		}
+		if device.Status == models.DeviceStatusOffline {
+			if device.LastSeenOnlineAt == nil || device.LastSeenOnlineAt.Before(oneHourAgo) {
+				continue
+			}
+		}
+		devicesFound++
 		if device.Status == models.DeviceStatusOnline {
 			devicesOnline++
 		}
