@@ -24,6 +24,7 @@ type Sensor struct {
 	ScanStatus          SensorScanStatus `json:"scan_status"`
 	Hostname            *string          `json:"hostname,omitempty"`
 	IP                  *string          `json:"ip,omitempty"`
+	PublicIP            *string          `json:"public_ip,omitempty"`
 	MAC                 *string          `json:"mac,omitempty"`
 	Interface           *string          `json:"interface,omitempty"`
 	NetworkCIDR         *string          `json:"network_cidr,omitempty"`
@@ -32,6 +33,10 @@ type Sensor struct {
 	LastScanStartedAt   *time.Time       `json:"last_scan_started_at,omitempty"`
 	LastScanCompletedAt *time.Time       `json:"last_scan_completed_at,omitempty"`
 	LastScanError       *string          `json:"last_scan_error,omitempty"`
-	CreatedAt           time.Time        `json:"created_at"`
-	UpdatedAt           time.Time        `json:"updated_at"`
+	// Settings
+	SweepInterval   *int `json:"sweep_interval,omitempty"`   // seconds between ping sweeps (default 30)
+	PortscanInterval *int `json:"portscan_interval,omitempty"` // seconds between port scans (default 300)
+	PortscanWorkers  *int `json:"portscan_workers,omitempty"`  // concurrent port scan workers (default 5)
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }

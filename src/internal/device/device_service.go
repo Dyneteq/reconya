@@ -49,6 +49,14 @@ func (s *DeviceService) SetARPHistoryComponents(arpHistoryRepo db.ARPHistoryRepo
 	log.Println("ARP history tracking enabled for device service")
 }
 
+// LookupVendor looks up vendor name from MAC address using local OUI database
+func (s *DeviceService) LookupVendor(mac string) string {
+	if s.ouiService == nil {
+		return ""
+	}
+	return s.ouiService.LookupVendor(mac)
+}
+
 // updateARPHistory tracks the MAC-IP association and runs MITM detection
 func (s *DeviceService) updateARPHistory(device *models.Device) {
 	if s.arpHistoryRepo == nil || device.MAC == nil || *device.MAC == "" {
@@ -312,6 +320,18 @@ func (s *DeviceService) FindByNetworkID(networkID string) ([]models.Device, erro
 	sortDevicesByIP(filteredDevices)
 
 	return filteredDevices, nil
+}
+
+func (s *DeviceService) FindBySensorID(sensorID string) ([]*models.Device, error) {
+	ctx := context.Background()
+	devices, err := s.repository.FindBySensorID(ctx, sensorID)
+	if err != nil {
+		return nil, err
+	}
+
+	sortDevicePointersByIP(devices)
+
+	return devices, nil
 }
 
 func (s *DeviceService) FindAllForNetwork(cidr string) ([]models.Device, error) {

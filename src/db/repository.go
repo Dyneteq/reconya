@@ -36,6 +36,7 @@ type DeviceRepository interface {
 	FindByID(ctx context.Context, id string) (*models.Device, error)
 	FindByIP(ctx context.Context, ip string) (*models.Device, error)
 	FindAll(ctx context.Context) ([]*models.Device, error)
+	FindBySensorID(ctx context.Context, sensorID string) ([]*models.Device, error)
 	CreateOrUpdate(ctx context.Context, device *models.Device) (*models.Device, error)
 	UpdateDeviceStatuses(ctx context.Context, timeout time.Duration) error
 	DeleteByID(ctx context.Context, id string) error
@@ -47,6 +48,7 @@ type EventLogRepository interface {
 	Create(ctx context.Context, eventLog *models.EventLog) error
 	FindLatest(ctx context.Context, limit int) ([]*models.EventLog, error)
 	FindAllByDeviceID(ctx context.Context, deviceID string) ([]*models.EventLog, error)
+	FindBySensorID(ctx context.Context, sensorID string, limit int) ([]*models.EventLog, error)
 }
 
 // SystemStatusRepository defines the interface for system status operations

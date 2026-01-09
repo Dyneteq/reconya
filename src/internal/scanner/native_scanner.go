@@ -27,6 +27,7 @@ type NativeScanner struct {
 	enableMACLookup          bool
 	enableHostnameLookup     bool
 	enableOnlineVendorLookup bool
+	fastMode                 bool // Skip slow operations (hostname, online vendor)
 	arpScanner               *ARPScanner
 }
 
@@ -58,6 +59,17 @@ func (s *NativeScanner) SetOptions(timeout time.Duration, concurrent int, enable
 	s.enableMACLookup = enableMAC
 	s.enableHostnameLookup = enableHostname
 	s.enableOnlineVendorLookup = enableOnlineVendor
+}
+
+// SetFastMode enables/disables fast mode (skips hostname, MAC, and vendor lookups)
+// Background enrichment will handle these after device discovery
+func (s *NativeScanner) SetFastMode(enabled bool) {
+	s.fastMode = enabled
+	if enabled {
+		s.enableMACLookup = false
+		s.enableHostnameLookup = false
+		s.enableOnlineVendorLookup = false
+	}
 }
 
 // ScanNetwork performs a multilayer network scan on the given CIDR network
@@ -530,7 +542,8 @@ func (s *NativeScanner) lookupVendor(mac string) string {
 	}
 
 	// Try online OUI lookup if local database doesn't have it and online lookup is enabled
-	if s.enableOnlineVendorLookup {
+	// Skip in fast mode
+	if s.enableOnlineVendorLookup && !s.fastMode {
 		return s.lookupVendorOnline(oui)
 	}
 

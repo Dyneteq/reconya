@@ -53,11 +53,13 @@ func (s *EventLogService) generateDescription(eventLog models.EventLog) string {
 
 	switch eventLog.Type {
 	case models.PingSweep:
+		if eventLog.Description != "" {
+			return eventLog.Description
+		}
 		if eventLog.DurationSeconds != nil {
 			return fmt.Sprintf("Ping sweep completed in %d seconds", int(*eventLog.DurationSeconds))
-		} else {
-			return "Ping sweep performed"
 		}
+		return "Ping sweep performed"
 	case models.PortScanStarted:
 		return fmt.Sprintf("Port scan started for [%s]", deviceInfo)
 	case models.PortScanCompleted:
@@ -79,9 +81,15 @@ func (s *EventLogService) generateDescription(eventLog models.EventLog) string {
 	case models.NetworkDeleted:
 		return eventLog.Description // Use the custom description for network events
 	case models.ScanStarted:
-		return eventLog.Description // Use the custom description for scan events
+		if eventLog.Description != "" {
+			return eventLog.Description
+		}
+		return "Network scan started"
 	case models.ScanStopped:
-		return eventLog.Description // Use the custom description for scan events
+		if eventLog.Description != "" {
+			return eventLog.Description
+		}
+		return "Network scan stopped"
 	case models.Warning:
 		return "Warning event occurred"
 	case models.Alert:
@@ -117,6 +125,14 @@ func (s *EventLogService) CreateOne(eventLog *models.EventLog) error {
 	eventLog.CreatedAt = &now
 	eventLog.UpdatedAt = &now
 
+	// Auto-populate sensor_id from device if not already set
+	if (eventLog.SensorID == nil || *eventLog.SensorID == "") && eventLog.DeviceID != nil && *eventLog.DeviceID != "" {
+		device, err := s.DeviceService.FindByID(*eventLog.DeviceID)
+		if err == nil && device != nil && device.SensorID != nil && *device.SensorID != "" {
+			eventLog.SensorID = device.SensorID
+		}
+	}
+
 	// Use DB manager to serialize database access
 	return s.dbManager.CreateEventLog(s.repository, context.Background(), eventLog)
 }
@@ -132,4 +148,33 @@ func (s *EventLogService) Log(eventType models.EEventLogType, description string
 	}
 
 	return s.CreateOne(eventLog)
+}
+
+func (s *EventLogService) LogForSensor(eventType models.EEventLogType, description string, sensorID string) error {
+	eventLog := &models.EventLog{
+		Type:        eventType,
+		Description: description,
+	}
+
+	if sensorID != "" {
+		eventLog.SensorID = &sensorID
+	}
+
+	return s.CreateOne(eventLog)
+}
+
+func (s *EventLogService) GetBySensorID(sensorID string, limit int) ([]models.EventLog, error) {
+	ctx := context.Background()
+	eventLogPtrs, err := s.repository.FindBySensorID(ctx, sensorID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	eventLogs := make([]models.EventLog, len(eventLogPtrs))
+	for i, logPtr := range eventLogPtrs {
+		eventLogs[i] = *logPtr
+		eventLogs[i].Description = s.generateDescription(eventLogs[i])
+	}
+
+	return eventLogs, nil
 }

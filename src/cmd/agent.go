@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,17 +41,20 @@ type sensorCommandResponse struct {
 }
 
 var (
-	scanInterface    string
-	serverURL        string
-	sensorToken      string
-	scanDevices      = make(map[string]*scanDevice)
-	scanMutex        sync.RWMutex
-	scanStatus       string
-	scanLastAction   string
-	scanLogs         []string
-	scanLogsMutex    sync.RWMutex
-	cloudMode        bool
-	cloudScanEnabled bool
+	scanInterface      string
+	serverURL          string
+	sensorToken        string
+	scanDevices        = make(map[string]*scanDevice)
+	scanMutex          sync.RWMutex
+	scanStatus         string
+	scanLastAction     string
+	scanLogs           []string
+	scanLogsMutex      sync.RWMutex
+	cloudMode          bool
+	cloudScanEnabled   bool
+	enrichedDevices    = make(map[string]bool) // Track devices already enriched this session
+	enrichedMutex      sync.Mutex
+	enrichSemaphore    = make(chan struct{}, 10) // Allow more concurrent enrichments
 )
 
 // agentServices holds services for agent mode
@@ -148,6 +152,37 @@ func runAgentScan(cmd *cobra.Command, args []string) {
 		go runRemoteCommandWatcher(stopCommandWatcher)
 	}
 
+	// Start mDNS discovery for hostnames (runs in background)
+	addScanLog("Starting mDNS discovery...")
+	startMDNSDiscovery()
+
+	// Load existing devices from database immediately (fast startup)
+	addScanLog("Loading cached devices...")
+	refreshDevicesFromDB(network.ID)
+
+	// Wait for mDNS discovery to complete, then enrich devices with discovered hostnames
+	go func() {
+		<-mdnsDiscoveryDone
+		addScanLog("mDNS discovery complete, enriching devices...")
+		// Re-run enrichment for devices that might now have hostnames in cache
+		devices, _ := agentServices.DeviceService.FindByNetworkID(network.ID)
+		for _, device := range devices {
+			if device.Hostname == nil || *device.Hostname == "" {
+				mdnsHostnamesMu.RLock()
+				hostname := mdnsHostnames[device.IPv4]
+				mdnsHostnamesMu.RUnlock()
+				if hostname != "" {
+					d := device
+					d.Hostname = &hostname
+					if saved, err := agentServices.DeviceService.CreateOrUpdate(&d); err == nil && saved != nil {
+						updateScanDevice(saved)
+						addScanLog("Hostname: %s → %s", d.IPv4, hostname)
+					}
+				}
+			}
+		}
+	}()
+
 	// Start the scanning loop (respects cloud scan commands)
 	go runAgentScanLoop(network.ID, stopDisplay)
 
@@ -222,8 +257,8 @@ func runAgentScanLoop(networkID string, stop chan bool) {
 			scanStatus = "SCANNING"
 			addScanLog("Starting scan #%d on %s", scanCount, network.CIDR)
 
-			// Use existing PingSweepService
-			devices, err := agentServices.ScanManager.GetPingSweepService().ExecuteSweepScanCommand(network.CIDR)
+			// Use FAST scan mode for quick device discovery (no hostname/vendor lookups)
+			devices, err := agentServices.ScanManager.GetPingSweepService().ExecuteFastSweepScanCommand(network.CIDR)
 			if err != nil {
 				addScanLog("Scan error: %v", err)
 			} else {
@@ -239,8 +274,13 @@ func runAgentScanLoop(networkID string, stop chan bool) {
 						continue
 					}
 
-					// Update local display
+					// Update local display immediately
 					updateScanDevice(savedDevice)
+
+					// Background enrichment: hostname and vendor lookup
+					if shouldEnrichDevice(savedDevice.IPv4) {
+						go enrichDeviceInBackground(savedDevice)
+					}
 
 					// Trigger port scan if eligible
 					if agentServices.DeviceService.EligibleForPortScan(savedDevice) {
@@ -325,7 +365,7 @@ func updateScanDevice(device *models.Device) {
 	}
 }
 
-// refreshDevicesFromDB refreshes all devices from database
+// refreshDevicesFromDB refreshes all devices from database and triggers enrichment for missing data
 func refreshDevicesFromDB(networkID string) {
 	devices, err := agentServices.DeviceService.FindByNetworkID(networkID)
 	if err != nil {
@@ -334,8 +374,253 @@ func refreshDevicesFromDB(networkID string) {
 
 	for _, device := range devices {
 		updateScanDevice(&device)
+		// Trigger background enrichment for devices missing hostname or vendor
+		if (device.Hostname == nil || *device.Hostname == "") ||
+			(device.MAC != nil && *device.MAC != "" && (device.Vendor == nil || *device.Vendor == "")) {
+			d := device // copy for goroutine
+			if shouldEnrichDevice(d.IPv4) {
+				go enrichDeviceInBackground(&d)
+			}
+		}
 	}
 }
+
+// shouldEnrichDevice checks and marks if device should be enriched (thread-safe)
+func shouldEnrichDevice(ip string) bool {
+	enrichedMutex.Lock()
+	defer enrichedMutex.Unlock()
+	if enrichedDevices[ip] {
+		return false
+	}
+	enrichedDevices[ip] = true
+	return true
+}
+
+// enrichDeviceInBackground performs hostname and vendor lookups asynchronously
+// Note: Caller must use shouldEnrichDevice() before calling this
+func enrichDeviceInBackground(device *models.Device) {
+	if device == nil || agentServices == nil {
+		return
+	}
+
+	// Acquire semaphore to limit concurrent operations
+	enrichSemaphore <- struct{}{}
+	defer func() { <-enrichSemaphore }()
+
+	// Fetch fresh data from database to avoid stale data
+	freshDevice, err := agentServices.DeviceService.FindByID(device.ID)
+	if err != nil || freshDevice == nil {
+		return
+	}
+
+	updated := false
+
+	// Lookup vendor FIRST (instant, local OUI database)
+	if freshDevice.MAC != nil && *freshDevice.MAC != "" && (freshDevice.Vendor == nil || *freshDevice.Vendor == "") {
+		vendor := agentServices.DeviceService.LookupVendor(*freshDevice.MAC)
+		if vendor != "" {
+			freshDevice.Vendor = &vendor
+			updated = true
+			addScanLog("Vendor: %s → %s", freshDevice.IPv4, vendor)
+		}
+	}
+
+	// Lookup hostname - first check mDNS cache, then network lookup
+	if freshDevice.Hostname == nil || *freshDevice.Hostname == "" {
+		// Check mDNS cache first (populated by background discovery)
+		mdnsHostnamesMu.RLock()
+		hostname := mdnsHostnames[freshDevice.IPv4]
+		mdnsHostnamesMu.RUnlock()
+
+		// If not in cache, try network lookup
+		if hostname == "" {
+			hostname = lookupHostname(freshDevice.IPv4)
+		}
+
+		if hostname != "" {
+			freshDevice.Hostname = &hostname
+			updated = true
+			addScanLog("Hostname: %s → %s", freshDevice.IPv4, hostname)
+		}
+	}
+
+	// Save and update UI if anything changed
+	if updated {
+		if saved, err := agentServices.DeviceService.CreateOrUpdate(freshDevice); err == nil && saved != nil {
+			updateScanDevice(saved)
+		}
+	}
+}
+
+// mDNS hostname cache (populated by background discovery)
+var (
+	mdnsHostnames       = make(map[string]string) // IP -> hostname
+	mdnsHostnamesMu     sync.RWMutex
+	mdnsDiscoveryDone   = make(chan struct{})
+	mdnsResolvedNames   = make(map[string]bool) // Track already resolved names
+	mdnsResolvedNamesMu sync.Mutex
+)
+
+// startMDNSDiscovery runs background mDNS service browsing to discover hostnames
+func startMDNSDiscovery() {
+	go func() {
+		defer close(mdnsDiscoveryDone)
+
+		// Services to browse for hostname discovery
+		services := []string{
+			"_http._tcp",
+			"_workstation._tcp",
+			"_device-info._tcp",
+			"_airplay._tcp",
+			"_printer._tcp",
+			"_ipp._tcp",
+			"_smb._tcp",
+			"_home-assistant._tcp",
+		}
+
+		// Discover all services in parallel for faster startup
+		var wg sync.WaitGroup
+		for _, svc := range services {
+			wg.Add(1)
+			go func(s string) {
+				defer wg.Done()
+				discoverMDNSService(s)
+			}(svc)
+		}
+		wg.Wait()
+	}()
+}
+
+// discoverMDNSService browses a specific mDNS service type and resolves hostnames
+func discoverMDNSService(serviceType string) {
+	if runtime.GOOS != "darwin" {
+		return
+	}
+
+	// Use dns-sd to browse and get instance names with IPs
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "dns-sd", "-Z", serviceType, "local")
+	// Use CombinedOutput to get output even if command times out
+	output, _ := cmd.CombinedOutput()
+
+	// Parse output for hostnames
+	// Format: "service._tcp SRV 0 0 80 hostname.local. ; comment"
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		// Look for SRV records that contain hostname.local.
+		if strings.Contains(line, "SRV") && strings.Contains(line, ".local.") {
+			parts := strings.Fields(line)
+			for _, part := range parts {
+				if strings.HasSuffix(part, ".local.") {
+					hostname := strings.TrimSuffix(part, ".local.")
+					// Skip service type entries (contain _)
+					if hostname != "" && !strings.Contains(hostname, "_") && !strings.Contains(hostname, "\\") {
+						// Deduplicate - only resolve each hostname once
+						mdnsResolvedNamesMu.Lock()
+						if mdnsResolvedNames[hostname] {
+							mdnsResolvedNamesMu.Unlock()
+							continue
+						}
+						mdnsResolvedNames[hostname] = true
+						mdnsResolvedNamesMu.Unlock()
+
+						go resolveAndCacheHostname(hostname) // Resolve in parallel
+					}
+				}
+			}
+		}
+	}
+}
+
+// resolveAndCacheHostname resolves a .local hostname to IP and caches it
+func resolveAndCacheHostname(hostname string) {
+	var ip string
+
+	if runtime.GOOS == "darwin" {
+		// dns-sd -G doesn't exit on its own, so we run it with timeout
+		// and then kill it after getting the result
+		cmd := exec.Command("timeout", "2", "dns-sd", "-G", "v4", hostname+".local")
+		output, _ := cmd.CombinedOutput()
+
+		// Parse output for IP - format: "timestamp Add flags if hostname address ttl"
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			// Skip header lines
+			if strings.Contains(line, "STARTING") || strings.Contains(line, "Timestamp") || strings.Contains(line, "DATE:") {
+				continue
+			}
+			// Look for lines with IP addresses
+			parts := strings.Fields(line)
+			for _, part := range parts {
+				parsed := net.ParseIP(part)
+				if parsed != nil && parsed.To4() != nil {
+					// Found IPv4 address
+					ip = part
+					break
+				}
+			}
+			if ip != "" {
+				break
+			}
+		}
+	} else {
+		// Fallback to Go resolver
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+		ips, err := net.DefaultResolver.LookupIP(ctx, "ip4", hostname+".local")
+		if err == nil && len(ips) > 0 {
+			ip = ips[0].String()
+		}
+	}
+
+	if ip == "" || ip == "127.0.0.1" || strings.HasPrefix(ip, "127.") {
+		return
+	}
+
+	mdnsHostnamesMu.Lock()
+	mdnsHostnames[ip] = hostname
+	mdnsHostnamesMu.Unlock()
+
+	addScanLog("mDNS: %s → %s", ip, hostname)
+
+	// Update device in database and display
+	if agentServices != nil {
+		device, err := agentServices.DeviceService.FindByIPv4(ip)
+		if err == nil && device != nil {
+			device.Hostname = &hostname
+			if saved, err := agentServices.DeviceService.CreateOrUpdate(device); err == nil && saved != nil {
+				updateScanDevice(saved)
+			}
+		}
+	}
+}
+
+// lookupHostname tries to resolve hostname for an IP
+func lookupHostname(ip string) string {
+	// Check mDNS cache first
+	mdnsHostnamesMu.RLock()
+	if hostname, ok := mdnsHostnames[ip]; ok {
+		mdnsHostnamesMu.RUnlock()
+		return hostname
+	}
+	mdnsHostnamesMu.RUnlock()
+
+	// Try reverse DNS with short timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+
+	names, err := net.DefaultResolver.LookupAddr(ctx, ip)
+	if err == nil && len(names) > 0 {
+		hostname := strings.TrimSuffix(names[0], ".")
+		hostname = strings.TrimSuffix(hostname, ".local")
+		return hostname
+	}
+
+	return ""
+}
+
 
 // displayScanResults displays the scan results in terminal green style
 func displayScanResults(ifaceName, networkCIDR, localIP, localMAC string, stop chan bool) {
@@ -507,7 +792,7 @@ func displayScanResults(ifaceName, networkCIDR, localIP, localMAC string, stop c
 			fmt.Printf("%s  [CTRL+C] Exit%s%s\n", dim, reset, clr)
 			fmt.Print("\033[J") // Clear from cursor to end of screen (removes old content)
 
-			time.Sleep(250 * time.Millisecond)
+			time.Sleep(150 * time.Millisecond) // Fast refresh for responsive updates
 		}
 	}
 }
@@ -735,17 +1020,32 @@ func detectPrimaryInterface() string {
 	return ""
 }
 
-// registerWithServer registers the agent with the web server using the provided token
+func getPublicIP() string {
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("https://api.ipify.org")
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(body))
+}
+
 func registerWithServer(ifaceName, networkCIDR, localIP, localMAC string) error {
 	if serverURL == "" || sensorToken == "" {
-		return nil // Not configured for remote registration
+		return nil
 	}
 
 	hostname, _ := os.Hostname()
+	publicIP := getPublicIP()
 
 	payload := map[string]string{
 		"hostname":     hostname,
 		"ip":           localIP,
+		"public_ip":    publicIP,
 		"mac":          localMAC,
 		"interface":    ifaceName,
 		"network_cidr": networkCIDR,

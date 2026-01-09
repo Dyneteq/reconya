@@ -54,6 +54,7 @@ type Device struct {
 	OS                *DeviceOS    `bson:"os,omitempty" json:"os,omitempty"`
 	Status            DeviceStatus `bson:"status" json:"status"`
 	NetworkID         string       `bson:"network_id,omitempty" json:"network_id,omitempty"`
+	SensorID          *string      `bson:"sensor_id,omitempty" json:"sensor_id,omitempty"`
 	Ports             []Port       `bson:"ports,omitempty" json:"ports,omitempty"`
 	Hostname          *string      `bson:"hostname,omitempty" json:"hostname,omitempty"`
 	WebServices       []WebService `bson:"web_services,omitempty" json:"web_services,omitempty"`

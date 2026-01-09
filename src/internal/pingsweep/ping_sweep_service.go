@@ -52,9 +52,22 @@ func (s *PingSweepService) Run() {
 }
 
 func (s *PingSweepService) ExecuteSweepScanCommand(network string) ([]models.Device, error) {
-	log.Printf("Executing network scan on: %s", network)
+	return s.executeScan(network, false)
+}
 
-	devices, err := s.executeWithFallback(network)
+// ExecuteFastSweepScanCommand performs a quick scan without hostname/vendor lookups
+func (s *PingSweepService) ExecuteFastSweepScanCommand(network string) ([]models.Device, error) {
+	return s.executeScan(network, true)
+}
+
+func (s *PingSweepService) executeScan(network string, fastMode bool) ([]models.Device, error) {
+	if fastMode {
+		log.Printf("Executing FAST network scan on: %s", network)
+	} else {
+		log.Printf("Executing network scan on: %s", network)
+	}
+
+	devices, err := s.executeWithFallback(network, fastMode)
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +78,9 @@ func (s *PingSweepService) ExecuteSweepScanCommand(network string) ([]models.Dev
 }
 
 // executeWithFallback performs network scan using native Go scanner
-func (s *PingSweepService) executeWithFallback(network string) ([]models.Device, error) {
+func (s *PingSweepService) executeWithFallback(network string, fastMode bool) ([]models.Device, error) {
 	// Use native Go scanner (no external dependencies, no privileges required)
-	devices, err := s.tryNativeScanner(network)
+	devices, err := s.tryNativeScanner(network, fastMode)
 	if err != nil {
 		return nil, fmt.Errorf("network scan failed for %s: %v", network, err)
 	}
@@ -76,10 +89,13 @@ func (s *PingSweepService) executeWithFallback(network string) ([]models.Device,
 }
 
 // tryNativeScanner uses the native Go scanner for network discovery
-func (s *PingSweepService) tryNativeScanner(network string) ([]models.Device, error) {
-	log.Printf("Trying native Go scanner on network: %s", network)
+func (s *PingSweepService) tryNativeScanner(network string, fastMode bool) ([]models.Device, error) {
+	log.Printf("Trying native Go scanner on network: %s (fastMode=%v)", network, fastMode)
 
 	nativeScanner := scanner.NewNativeScanner()
+	if fastMode {
+		nativeScanner.SetFastMode(true)
+	}
 	devices, err := nativeScanner.ScanNetwork(network)
 	if err != nil {
 		return nil, err

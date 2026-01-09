@@ -15,7 +15,36 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// GetSensors returns all sensors
+type deviceInfo struct {
+	IP     string `json:"ip"`
+	Status string `json:"status"`
+}
+
+type eventLogInfo struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type geolocationInfo struct {
+	City        string  `json:"city"`
+	Region      string  `json:"region"`
+	Country     string  `json:"country"`
+	CountryCode string  `json:"country_code"`
+	Latitude    float64 `json:"latitude"`
+	Longitude   float64 `json:"longitude"`
+	ISP         string  `json:"isp"`
+}
+
+type sensorWithStats struct {
+	models.Sensor
+	DevicesTotal  int              `json:"devices_total"`
+	DevicesOnline int              `json:"devices_online"`
+	Devices       []deviceInfo     `json:"devices"`
+	RecentLogs    []eventLogInfo   `json:"recent_logs"`
+	Geolocation   *geolocationInfo `json:"geolocation,omitempty"`
+}
+
 func (h *WebHandler) GetSensors(w http.ResponseWriter, r *http.Request) {
 	sensors, err := h.sensorService.GetAllSensors(r.Context())
 	if err != nil {
@@ -23,8 +52,77 @@ func (h *WebHandler) GetSensors(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result := make([]sensorWithStats, 0, len(sensors))
+	for _, sensor := range sensors {
+		stats := sensorWithStats{Sensor: *sensor, Devices: []deviceInfo{}, RecentLogs: []eventLogInfo{}}
+
+		devices, err := h.deviceService.FindBySensorID(sensor.ID)
+		if err != nil {
+			log.Printf("GetSensors: FindBySensorID error for %s: %v", sensor.ID, err)
+		}
+
+		// Fallback: if no devices found by sensor_id, try by network_cidr
+		// and update those devices with the sensor_id for future queries
+		if len(devices) == 0 && sensor.NetworkCIDR != nil && *sensor.NetworkCIDR != "" {
+			network, err := h.networkService.FindByCIDR(*sensor.NetworkCIDR)
+			if err == nil && network != nil {
+				networkDevices, err := h.deviceService.FindByNetworkID(network.ID)
+				if err == nil {
+					for _, d := range networkDevices {
+						// Update device with sensor_id
+						dCopy := d
+						dCopy.SensorID = &sensor.ID
+						h.deviceService.CreateOrUpdate(&dCopy)
+						devices = append(devices, &dCopy)
+					}
+				}
+			}
+		}
+
+		stats.DevicesTotal = len(devices)
+		for _, d := range devices {
+			if d.Status == models.DeviceStatusOnline {
+				stats.DevicesOnline++
+			}
+			stats.Devices = append(stats.Devices, deviceInfo{
+				IP:     d.IPv4,
+				Status: string(d.Status),
+			})
+		}
+
+		logs, err := h.eventLogService.GetBySensorID(sensor.ID, 10)
+		if err != nil {
+			log.Printf("GetSensors: GetBySensorID error for %s: %v", sensor.ID, err)
+		}
+		for _, l := range logs {
+			stats.RecentLogs = append(stats.RecentLogs, eventLogInfo{
+				Type:        string(l.Type),
+				Description: l.Description,
+				CreatedAt:   l.CreatedAt.Format("15:04:05"),
+			})
+		}
+
+		// Fetch geolocation for sensor's public IP
+		if sensor.PublicIP != nil && *sensor.PublicIP != "" {
+			geo, err := h.systemStatusService.FetchGeolocation(*sensor.PublicIP)
+			if err == nil && geo != nil {
+				stats.Geolocation = &geolocationInfo{
+					City:        geo.City,
+					Region:      geo.Region,
+					Country:     geo.Country,
+					CountryCode: geo.CountryCode,
+					Latitude:    geo.Latitude,
+					Longitude:   geo.Longitude,
+					ISP:         geo.ISP,
+				}
+			}
+		}
+
+		result = append(result, stats)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sensors)
+	json.NewEncoder(w).Encode(result)
 }
 
 // CreateSensor creates a new sensor
@@ -217,7 +315,7 @@ func (h *WebHandler) ReceiveSensorDevices(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	network, err := h.networkService.FindOrCreate(networkCIDR)
+	network, err := h.networkService.FindOrCreateWithSensor(networkCIDR, sensorObj.ID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to find/create network: %v", err), http.StatusInternalServerError)
 		return
@@ -231,6 +329,7 @@ func (h *WebHandler) ReceiveSensorDevices(w http.ResponseWriter, r *http.Request
 			Vendor:    dev.Vendor,
 			Hostname:  dev.Hostname,
 			NetworkID: network.ID,
+			SensorID:  &sensorObj.ID,
 			Status:    models.DeviceStatus(dev.Status),
 		}
 
@@ -247,6 +346,14 @@ func (h *WebHandler) ReceiveSensorDevices(w http.ResponseWriter, r *http.Request
 			continue
 		}
 		savedCount++
+	}
+
+	if savedCount > 0 {
+		h.eventLogService.LogForSensor(
+			models.DeviceOnline,
+			fmt.Sprintf("Received %d devices from sensor scan", savedCount),
+			sensorObj.ID,
+		)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

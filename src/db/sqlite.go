@@ -440,6 +440,61 @@ func InitializeSchema(db *sql.DB) error {
 		log.Printf("Note: arp_history unique index might already exist: %v", err)
 	}
 
+	// Add sensor_id to devices table
+	_, err = db.Exec(`ALTER TABLE devices ADD COLUMN sensor_id TEXT REFERENCES sensors(id)`)
+	if err != nil {
+		log.Printf("Note: devices.sensor_id column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_devices_sensor_id ON devices(sensor_id)`)
+	if err != nil {
+		log.Printf("Note: devices.sensor_id index might already exist: %v", err)
+	}
+
+	// Add sensor_id to networks table
+	_, err = db.Exec(`ALTER TABLE networks ADD COLUMN sensor_id TEXT REFERENCES sensors(id)`)
+	if err != nil {
+		log.Printf("Note: networks.sensor_id column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_networks_sensor_id ON networks(sensor_id)`)
+	if err != nil {
+		log.Printf("Note: networks.sensor_id index might already exist: %v", err)
+	}
+
+	// Add sensor_id to event_logs table
+	_, err = db.Exec(`ALTER TABLE event_logs ADD COLUMN sensor_id TEXT REFERENCES sensors(id)`)
+	if err != nil {
+		log.Printf("Note: event_logs.sensor_id column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_event_logs_sensor_id ON event_logs(sensor_id)`)
+	if err != nil {
+		log.Printf("Note: event_logs.sensor_id index might already exist: %v", err)
+	}
+
+	// Add public_ip to sensors table
+	_, err = db.Exec(`ALTER TABLE sensors ADD COLUMN public_ip TEXT`)
+	if err != nil {
+		log.Printf("Note: sensors.public_ip column might already exist: %v", err)
+	}
+
+	// Add sensor settings columns
+	_, err = db.Exec(`ALTER TABLE sensors ADD COLUMN sweep_interval INTEGER DEFAULT 30`)
+	if err != nil {
+		log.Printf("Note: sensors.sweep_interval column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`ALTER TABLE sensors ADD COLUMN portscan_interval INTEGER DEFAULT 300`)
+	if err != nil {
+		log.Printf("Note: sensors.portscan_interval column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`ALTER TABLE sensors ADD COLUMN portscan_workers INTEGER DEFAULT 5`)
+	if err != nil {
+		log.Printf("Note: sensors.portscan_workers column might already exist: %v", err)
+	}
+
 	log.Println("Database schema initialized successfully")
 	return nil
 }

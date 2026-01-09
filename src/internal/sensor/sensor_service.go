@@ -55,6 +55,7 @@ func (s *SensorService) DeleteSensor(ctx context.Context, id string) error {
 type RegisterRequest struct {
 	Hostname    string `json:"hostname"`
 	IP          string `json:"ip"`
+	PublicIP    string `json:"public_ip"`
 	MAC         string `json:"mac"`
 	Interface   string `json:"interface"`
 	NetworkCIDR string `json:"network_cidr"`
@@ -79,6 +80,9 @@ func (s *SensorService) Register(ctx context.Context, token string, req Register
 	}
 	if req.IP != "" {
 		sensor.IP = &req.IP
+	}
+	if req.PublicIP != "" {
+		sensor.PublicIP = &req.PublicIP
 	}
 	if req.MAC != "" {
 		sensor.MAC = &req.MAC

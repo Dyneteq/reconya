@@ -176,6 +176,7 @@ func (sm *ScanManager) StartScan(networkID string) error {
 	err = sm.pingSweepService.EventLogService.CreateOne(&models.EventLog{
 		Type:        models.ScanStarted,
 		Description: fmt.Sprintf("Network scan started (%s)", network.CIDR),
+		SensorID:    network.SensorID,
 	})
 	if err != nil {
 		log.Printf("Error creating scan started event log: %v", err)
@@ -277,7 +278,9 @@ func (sm *ScanManager) runSingleScan() {
 
 	// Log ping sweep started event
 	err := sm.pingSweepService.EventLogService.CreateOne(&models.EventLog{
-		Type: models.PingSweep,
+		Type:        models.PingSweep,
+		Description: fmt.Sprintf("Ping sweep started (%s)", network.CIDR),
+		SensorID:    network.SensorID,
 	})
 	if err != nil {
 		log.Printf("Error creating ping sweep started event log: %v", err)
@@ -339,7 +342,9 @@ func (sm *ScanManager) runSingleScan() {
 	durationInSeconds := float64(duration.Seconds())
 	err = sm.pingSweepService.EventLogService.CreateOne(&models.EventLog{
 		Type:            models.PingSweep,
+		Description:     fmt.Sprintf("Ping sweep found %d devices (%s)", len(devices), network.CIDR),
 		DurationSeconds: &durationInSeconds,
+		SensorID:        network.SensorID,
 	})
 	if err != nil {
 		log.Printf("Error creating ping sweep completion event log: %v", err)
