@@ -36,7 +36,6 @@ type DeviceRepository interface {
 	FindByID(ctx context.Context, id string) (*models.Device, error)
 	FindByIP(ctx context.Context, ip string) (*models.Device, error)
 	FindAll(ctx context.Context) ([]*models.Device, error)
-	FindBySensorID(ctx context.Context, sensorID string) ([]*models.Device, error)
 	CreateOrUpdate(ctx context.Context, device *models.Device) (*models.Device, error)
 	UpdateDeviceStatuses(ctx context.Context, timeout time.Duration) error
 	DeleteByID(ctx context.Context, id string) error
@@ -48,7 +47,6 @@ type EventLogRepository interface {
 	Create(ctx context.Context, eventLog *models.EventLog) error
 	FindLatest(ctx context.Context, limit int) ([]*models.EventLog, error)
 	FindAllByDeviceID(ctx context.Context, deviceID string) ([]*models.EventLog, error)
-	FindBySensorID(ctx context.Context, sensorID string, limit int) ([]*models.EventLog, error)
 }
 
 // SystemStatusRepository defines the interface for system status operations
@@ -75,29 +73,6 @@ type SettingsRepository interface {
 	FindByUserID(userID string) (*models.Settings, error)
 	Create(settings *models.Settings) error
 	Update(settings *models.Settings) error
-}
-
-// SensorRepository defines the interface for sensor operations
-type SensorRepository interface {
-	Repository
-	FindByID(ctx context.Context, id string) (*models.Sensor, error)
-	FindByToken(ctx context.Context, token string) (*models.Sensor, error)
-	FindAll(ctx context.Context) ([]*models.Sensor, error)
-	Create(ctx context.Context, sensor *models.Sensor) (*models.Sensor, error)
-	Update(ctx context.Context, sensor *models.Sensor) (*models.Sensor, error)
-	Delete(ctx context.Context, id string) error
-}
-
-// ARPHistoryRepository defines the interface for ARP history operations
-type ARPHistoryRepository interface {
-	Repository
-	FindByIP(ctx context.Context, ip string) ([]*models.ARPHistory, error)
-	FindByMAC(ctx context.Context, mac string) ([]*models.ARPHistory, error)
-	FindByIPAndMAC(ctx context.Context, ip, mac string) (*models.ARPHistory, error)
-	CreateOrUpdate(ctx context.Context, entry *models.ARPHistory) (*models.ARPHistory, error)
-	FindGatewayForNetwork(ctx context.Context, networkID string) (*models.ARPHistory, error)
-	GetCurrentMACsForIP(ctx context.Context, ip string, since time.Duration) ([]*models.ARPHistory, error)
-	GetCurrentIPsForMAC(ctx context.Context, mac string, since time.Duration) ([]*models.ARPHistory, error)
 }
 
 // RepositoryFactory creates repositories
@@ -142,16 +117,6 @@ func (f *RepositoryFactory) NewGeolocationRepository() *GeolocationRepository {
 // NewSettingsRepository creates a new settings repository
 func (f *RepositoryFactory) NewSettingsRepository() SettingsRepository {
 	return NewSQLiteSettingsRepository(f.SQLiteDB)
-}
-
-// NewSensorRepository creates a new sensor repository
-func (f *RepositoryFactory) NewSensorRepository() SensorRepository {
-	return NewSQLiteSensorRepository(f.SQLiteDB)
-}
-
-// NewARPHistoryRepository creates a new ARP history repository
-func (f *RepositoryFactory) NewARPHistoryRepository() ARPHistoryRepository {
-	return NewSQLiteARPHistoryRepository(f.SQLiteDB)
 }
 
 // GenerateID generates a unique ID for a record

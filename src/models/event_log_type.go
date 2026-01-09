@@ -20,10 +20,4 @@ const (
 	NewNetworkDetected EEventLogType = "New network detected"
 	Warning            EEventLogType = "Warning"
 	Alert              EEventLogType = "Alert"
-
-	// Security-related event types for MITM detection
-	SecurityMACChange    EEventLogType = "Security: MAC address changed"
-	SecurityDuplicateMAC EEventLogType = "Security: Duplicate MAC detected"
-	SecurityGatewayMAC   EEventLogType = "Security: Gateway MAC changed"
-	SecurityARPAnomaly   EEventLogType = "Security: ARP anomaly detected"
 )

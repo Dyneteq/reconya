@@ -15,7 +15,6 @@ import (
 
 	"reconya/db"
 	"reconya/internal/config"
-	"reconya/models"
 	"reconya/internal/device"
 	"reconya/internal/eventlog"
 	"reconya/internal/ipv6monitor"
@@ -25,8 +24,6 @@ import (
 	"reconya/internal/pingsweep"
 	"reconya/internal/portscan"
 	"reconya/internal/scan"
-	"reconya/internal/security"
-	"reconya/internal/sensor"
 	"reconya/internal/settings"
 	"reconya/internal/systemstatus"
 )
@@ -36,7 +33,6 @@ var (
 	errorLogger = log.New(os.Stderr, "", log.LstdFlags)
 )
 
-// Services holds all initialized services
 type Services struct {
 	Config              *config.Config
 	DB                  *sql.DB
@@ -46,14 +42,12 @@ type Services struct {
 	EventLogService     *eventlog.EventLogService
 	SystemStatusService *systemstatus.SystemStatusService
 	SettingsService     *settings.SettingsService
-	SensorService       *sensor.SensorService
 	ScanManager         *scan.ScanManager
 	NicService          *nicidentifier.NicIdentifierService
 	GeolocationRepo     *db.GeolocationRepository
 	Done                chan bool
 }
 
-// initServices initializes all services needed by the application
 func initServices() (*Services, error) {
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -99,27 +93,17 @@ func initServices() (*Services, error) {
 			stats["total_entries"], stats["last_updated"])
 	}
 
-	sensorRepo := repoFactory.NewSensorRepository()
-
 	networkService := network.NewNetworkService(networkRepo, cfg, dbManager)
 	deviceService := device.NewDeviceService(deviceRepo, networkService, cfg, dbManager, ouiService)
 	eventLogService := eventlog.NewEventLogService(eventLogRepo, deviceService, dbManager)
-
-	// Initialize ARP history tracking and MITM detection
-	arpHistoryRepo := repoFactory.NewARPHistoryRepository()
-	mitmDetector := security.NewMITMDetector(arpHistoryRepo, eventLogService)
-	deviceService.SetARPHistoryComponents(arpHistoryRepo, mitmDetector)
 	systemStatusService := systemstatus.NewSystemStatusService(systemStatusRepo, geolocationRepo)
 	settingsService := settings.NewSettingsService(settingsRepo)
-	sensorService := sensor.NewSensorService(sensorRepo)
 	portScanService := portscan.NewPortScanService(deviceService, eventLogService)
 	pingSweepService := pingsweep.NewPingSweepService(cfg, deviceService, eventLogService, networkService, portScanService)
-
 	ipv6MonitorService := ipv6monitor.NewIPv6MonitorService(deviceService, networkService, infoLogger)
+	nicService := nicidentifier.NewNicIdentifierService(networkService, systemStatusService, eventLogService, deviceService, cfg)
 
 	scanManager := scan.NewScanManager(pingSweepService, networkService, ipv6MonitorService)
-
-	nicService := nicidentifier.NewNicIdentifierService(networkService, systemStatusService, eventLogService, deviceService, cfg)
 
 	done := make(chan bool)
 
@@ -128,6 +112,7 @@ func initServices() (*Services, error) {
 	go runDeviceUpdater(deviceService, done)
 	go runNetworkDetection(nicService, done)
 	go runGeolocationCacheCleanup(geolocationRepo, done)
+	go runPublicIPRefresh(nicService, done)
 
 	return &Services{
 		Config:              cfg,
@@ -138,12 +123,26 @@ func initServices() (*Services, error) {
 		EventLogService:     eventLogService,
 		SystemStatusService: systemStatusService,
 		SettingsService:     settingsService,
-		SensorService:       sensorService,
 		ScanManager:         scanManager,
 		NicService:          nicService,
 		GeolocationRepo:     geolocationRepo,
 		Done:                done,
 	}, nil
+}
+
+func runPublicIPRefresh(nicService *nicidentifier.NicIdentifierService, done <-chan bool) {
+	ticker := time.NewTicker(config.PublicIPRefreshInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			nicService.RefreshPublicIPGeolocation()
+			updateAgentSystemStatusCache()
+		}
+	}
 }
 
 func runDeviceUpdater(service *device.DeviceService, done <-chan bool) {
@@ -155,7 +154,7 @@ func runDeviceUpdater(service *device.DeviceService, done <-chan bool) {
 		infoLogger.Println("Device updater service stopped")
 	}()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(config.DeviceUpdaterInterval)
 	defer ticker.Stop()
 
 	infoLogger.Println("Device updater started")
@@ -175,7 +174,7 @@ func runDeviceUpdater(service *device.DeviceService, done <-chan bool) {
 				err := service.UpdateDeviceStatuses()
 				if err != nil {
 					infoLogger.Printf("Failed to update device statuses: %v", err)
-					time.Sleep(1 * time.Second)
+					time.Sleep(config.DeviceUpdateRetryDelay)
 				}
 			}()
 		}
@@ -191,7 +190,7 @@ func runGeolocationCacheCleanup(repo *db.GeolocationRepository, done <-chan bool
 		infoLogger.Println("Geolocation cache cleanup service stopped")
 	}()
 
-	ticker := time.NewTicker(6 * time.Hour)
+	ticker := time.NewTicker(config.GeolocationCleanupInterval)
 	defer ticker.Stop()
 
 	infoLogger.Println("Geolocation cache cleanup service started")
@@ -231,7 +230,7 @@ func runNetworkDetection(nicService *nicidentifier.NicIdentifierService, done <-
 		infoLogger.Println("Network detection service stopped")
 	}()
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(config.NetworkDetectionInterval)
 	defer ticker.Stop()
 
 	infoLogger.Println("Network detection service started")
@@ -255,14 +254,12 @@ func runNetworkDetection(nicService *nicidentifier.NicIdentifierService, done <-
 	}
 }
 
-// runSuite starts both the web server and agent in parallel
 func runSuite(cmd *cobra.Command, args []string) {
 	fmt.Println()
 	fmt.Println(" reconYa Suite - Starting Web Server + Agent")
 	fmt.Println(" ════════════════════════════════════════════════════════════════════")
 	fmt.Println()
 
-	// Detect primary interface for agent
 	primaryIface := detectPrimaryInterface()
 	if primaryIface == "" {
 		fmt.Println(" Warning: Could not detect primary network interface for agent.")
@@ -275,7 +272,6 @@ func runSuite(cmd *cobra.Command, args []string) {
 	fmt.Printf(" Primary interface: %s\n", primaryIface)
 	fmt.Println()
 
-	// Initialize services once for both web and agent
 	fmt.Println(" [INIT] Initializing services...")
 	svc, err := initServices()
 	if err != nil {
@@ -283,10 +279,8 @@ func runSuite(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Store services for agent use
 	agentServices = svc
 
-	// Find network for agent scanning
 	iface, err := net.InterfaceByName(primaryIface)
 	if err != nil {
 		errorLogger.Printf("Error: interface '%s' not found: %v", primaryIface, err)
@@ -300,6 +294,7 @@ func runSuite(cmd *cobra.Command, args []string) {
 	}
 
 	var networkCIDR string
+	var localIP string
 	for _, addr := range addrs {
 		ip, ipNet, err := net.ParseCIDR(addr.String())
 		if err != nil || ip.To4() == nil || ip.IsLoopback() {
@@ -308,6 +303,7 @@ func runSuite(cmd *cobra.Command, args []string) {
 		ones, _ := ipNet.Mask.Size()
 		networkIP := ip.Mask(ipNet.Mask)
 		networkCIDR = fmt.Sprintf("%s/%d", networkIP.String(), ones)
+		localIP = ip.String()
 		break
 	}
 
@@ -316,202 +312,39 @@ func runSuite(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Find or create the network
 	network, err := svc.NetworkService.FindOrCreate(networkCIDR)
 	if err != nil {
 		errorLogger.Printf("Error finding/creating network: %v", err)
 		os.Exit(1)
 	}
 
-	// Create or update local sensor
-	localSensor := createLocalSensor(svc, primaryIface, networkCIDR, iface.HardwareAddr.String())
-	if localSensor != nil {
-		fmt.Printf(" [SENSOR] Local agent registered: %s\n", localSensor.ID[:8])
-	}
-
-	fmt.Printf(" [AGENT] Scanning network: %s\n", networkCIDR)
 	fmt.Printf(" [WEB] Starting web server on port %s...\n", svc.Config.Port)
 	fmt.Println()
 
-	// Start agent scanning in background (headless - no TUI)
-	go runSuiteAgentLoop(network.ID, svc, localSensor)
-
-	// Set shared services for web server to use
 	suiteServices = svc
 
-	// Run web server in foreground (this handles its own signal handling)
-	runWeb(cmd, args)
+	localMAC := iface.HardwareAddr.String()
+	startAgentWithServices(svc, primaryIface, network.ID, networkCIDR, localIP, localMAC)
+
+	go runWebWithServices(svc)
+
+	<-svc.Done
+	fmt.Print("\033[2J\033[H")
+	fmt.Println("\nScan stopped. Goodbye!")
 }
 
-// createLocalSensor creates or updates the local agent sensor
-func createLocalSensor(svc *Services, ifaceName, networkCIDR, mac string) *models.Sensor {
-	ctx := context.Background()
-
-	// Check if local sensor already exists
-	sensors, err := svc.SensorService.GetAllSensors(ctx)
-	if err != nil {
-		errorLogger.Printf("Error getting sensors: %v", err)
-		return nil
-	}
-
-	var localSensor *models.Sensor
-	for _, s := range sensors {
-		if s.Name == "Local Agent" {
-			localSensor = s
-			break
-		}
-	}
-
-	// Create if not exists
-	if localSensor == nil {
-		localSensor, err = svc.SensorService.CreateSensor(ctx, "Local Agent")
-		if err != nil {
-			errorLogger.Printf("Error creating local sensor: %v", err)
-			return nil
-		}
-	}
-
-	// Get hostname
-	hostname, _ := os.Hostname()
-
-	// Get local IP from interface
-	var localIP string
-	if iface, err := net.InterfaceByName(ifaceName); err == nil {
-		if addrs, err := iface.Addrs(); err == nil {
-			for _, addr := range addrs {
-				if ip, _, err := net.ParseCIDR(addr.String()); err == nil && ip.To4() != nil {
-					localIP = ip.String()
-					break
-				}
-			}
-		}
-	}
-
-	// Register/update the sensor
-	req := sensor.RegisterRequest{
-		Hostname:    hostname,
-		IP:          localIP,
-		MAC:         mac,
-		Interface:   ifaceName,
-		NetworkCIDR: networkCIDR,
-	}
-	localSensor, err = svc.SensorService.Register(ctx, localSensor.Token, req)
-	if err != nil {
-		errorLogger.Printf("Error registering local sensor: %v", err)
-		return nil
-	}
-
-	return localSensor
-}
-
-// runSuiteAgentLoop runs agent scanning without TUI for suite mode
-func runSuiteAgentLoop(networkID string, svc *Services, localSensor *models.Sensor) {
-	scanCount := 0
-	ctx := context.Background()
-
-	network, err := svc.NetworkService.FindByID(networkID)
-	if err != nil || network == nil {
-		errorLogger.Printf("Error: network not found")
-		return
-	}
-
-	// Start with scan status as idle - wait for user to trigger scan
-	if localSensor != nil {
-		svc.SensorService.UpdateScanStatus(ctx, localSensor.ID, models.SensorScanStatusIdle)
-	}
-
-	infoLogger.Printf("[AGENT] Ready and waiting for scan command...")
-
-	for {
-		// Check if we should be scanning
-		shouldScan := false
-		if localSensor != nil {
-			currentSensor, err := svc.SensorService.GetSensorByID(ctx, localSensor.ID)
-			if err == nil && currentSensor != nil {
-				shouldScan = currentSensor.ScanStatus == models.SensorScanStatusRunning
-			}
-			// Update last seen
-			svc.SensorService.Register(ctx, localSensor.Token, sensor.RegisterRequest{})
-		}
-
-		if !shouldScan {
-			// Not scanning - wait and check again
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-		scanCount++
-		infoLogger.Printf("[AGENT] Starting scan #%d on %s", scanCount, network.CIDR)
-
-		// Use existing PingSweepService
-		devices, err := svc.ScanManager.GetPingSweepService().ExecuteSweepScanCommand(network.CIDR)
-		if err != nil {
-			infoLogger.Printf("[AGENT] Scan error: %v", err)
-		} else {
-			infoLogger.Printf("[AGENT] Found %d devices", len(devices))
-
-			// Process each device
-			for _, device := range devices {
-				device.NetworkID = network.ID
-				savedDevice, err := svc.DeviceService.CreateOrUpdate(&device)
-				if err != nil {
-					continue
-				}
-
-				// Trigger port scan if eligible
-				if svc.DeviceService.EligibleForPortScan(savedDevice) {
-					go svc.ScanManager.GetPortScanService().Run(*savedDevice)
-				}
-			}
-		}
-
-		infoLogger.Printf("[AGENT] Scan #%d complete", scanCount)
-
-		// Wait 30 seconds between scans
-		time.Sleep(30 * time.Second)
-	}
-}
-
-// Command definitions
 var rootCmd = &cobra.Command{
 	Use:   "reconya",
 	Short: "reconYa - Network reconnaissance and monitoring tool",
 	Long:  `reconYa is a network reconnaissance and monitoring tool that helps you discover and track devices on your network.`,
-	Run:   runSuite, // Default to suite mode (web + agent)
-}
-
-var webCmd = &cobra.Command{
-	Use:   "web",
-	Short: "Start the web interface",
-	Long:  `Start the reconYa web interface for network monitoring and management.`,
-	Run:   runWeb,
+	Run:   runSuite,
 }
 
 var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "Agent mode commands",
-	Long: `Agent mode provides headless network monitoring and reconnaissance utilities.
-
-Examples:
-  reconya agent detect           # List available network interfaces
-  reconya agent primary          # Start scanning on primary interface (auto-detect)
-  reconya agent -i en0           # Start scanning on interface en0
-  reconya agent --interface eth0 # Start scanning on interface eth0`,
-	Run: runAgent,
-}
-
-var detectCmd = &cobra.Command{
-	Use:   "detect",
-	Short: "Detect available network interfaces",
-	Long:  `Detect and display all available network interfaces with their IP addresses and MAC addresses.`,
-	Run:   runAgentDetect,
-}
-
-var primaryCmd = &cobra.Command{
-	Use:   "primary",
-	Short: "Start scanning on primary interface",
-	Long:  `Automatically detect the primary network interface and start scanning.`,
-	Run:   runAgentPrimary,
+	Long:  `Agent mode provides headless network monitoring and reconnaissance utilities.`,
+	Run:   runAgent,
 }
 
 var suiteCmd = &cobra.Command{
@@ -522,23 +355,12 @@ var suiteCmd = &cobra.Command{
 }
 
 func init() {
-	// Disable auto-generated completion command
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
-	// Add -i/--interface flag to agent command
 	agentCmd.Flags().StringVarP(&scanInterface, "interface", "i", "", "Network interface to scan (e.g., en0, eth0)")
-	agentCmd.Flags().StringVar(&serverURL, "server", "", "Web server URL to register with (e.g., http://localhost:3000)")
-	agentCmd.Flags().StringVar(&sensorToken, "token", "", "Sensor token for registration")
 
-	// Add same flags to primary command
-	primaryCmd.Flags().StringVar(&serverURL, "server", "", "Web server URL to register with (e.g., http://localhost:3000)")
-	primaryCmd.Flags().StringVar(&sensorToken, "token", "", "Sensor token for registration")
-
-	rootCmd.AddCommand(webCmd)
 	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(suiteCmd)
-	agentCmd.AddCommand(detectCmd)
-	agentCmd.AddCommand(primaryCmd)
 }
 
 func main() {

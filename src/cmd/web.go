@@ -60,7 +60,7 @@ func runWeb(cmd *cobra.Command, args []string) {
 // runWebWithServices starts the web server with provided services
 func runWebWithServices(svc *Services) {
 	sessionSecret := "your-secret-key-here-replace-in-production"
-	webHandler := handlers.NewWebHandler(svc.DeviceService, svc.EventLogService, svc.NetworkService, svc.SystemStatusService, svc.ScanManager, svc.GeolocationRepo, svc.SettingsService, svc.SensorService, svc.NicService, svc.Config, sessionSecret)
+	webHandler := handlers.NewWebHandler(svc.DeviceService, svc.EventLogService, svc.NetworkService, svc.SystemStatusService, svc.ScanManager, svc.GeolocationRepo, svc.SettingsService, svc.NicService, svc.Config, sessionSecret)
 	router := webHandler.SetupRoutes()
 	loggedRouter := middleware.LoggingMiddleware(router)
 

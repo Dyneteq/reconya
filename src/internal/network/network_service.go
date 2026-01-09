@@ -54,31 +54,6 @@ func (s *NetworkService) FindOrCreate(cidr string) (*models.Network, error) {
 	return network, nil
 }
 
-func (s *NetworkService) FindOrCreateWithSensor(cidr string, sensorID string) (*models.Network, error) {
-	network, err := s.Repository.FindByCIDR(context.Background(), cidr)
-	if err == db.ErrNotFound {
-		now := time.Now()
-		network = &models.Network{
-			CIDR:      cidr,
-			SensorID:  &sensorID,
-			Status:    "active",
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
-		return s.dbManager.CreateOrUpdateNetwork(s.Repository, context.Background(), network)
-	}
-	if err != nil {
-		return nil, err
-	}
-	// Update existing network with sensor_id if not set
-	if network.SensorID == nil || *network.SensorID == "" {
-		network.SensorID = &sensorID
-		network.UpdatedAt = time.Now()
-		return s.dbManager.CreateOrUpdateNetwork(s.Repository, context.Background(), network)
-	}
-	return network, nil
-}
-
 func (s *NetworkService) FindByID(id string) (*models.Network, error) {
 	network, err := s.Repository.FindByID(context.Background(), id)
 	if err == db.ErrNotFound {

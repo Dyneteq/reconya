@@ -3,6 +3,7 @@ package scan
 import (
 	"fmt"
 	"log"
+	"reconya/internal/config"
 	"reconya/internal/ipv6monitor"
 	"reconya/internal/network"
 	"reconya/internal/pingsweep"
@@ -176,7 +177,6 @@ func (sm *ScanManager) StartScan(networkID string) error {
 	err = sm.pingSweepService.EventLogService.CreateOne(&models.EventLog{
 		Type:        models.ScanStarted,
 		Description: fmt.Sprintf("Network scan started (%s)", network.CIDR),
-		SensorID:    network.SensorID,
 	})
 	if err != nil {
 		log.Printf("Error creating scan started event log: %v", err)
@@ -245,7 +245,7 @@ func (sm *ScanManager) StopScan() error {
 func (sm *ScanManager) runScanLoop() {
 	defer close(sm.done)
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(config.ScanLoopInterval)
 	defer ticker.Stop()
 
 	log.Printf("Starting scan loop for network: %s", sm.state.CurrentNetwork.CIDR)
@@ -280,7 +280,6 @@ func (sm *ScanManager) runSingleScan() {
 	err := sm.pingSweepService.EventLogService.CreateOne(&models.EventLog{
 		Type:        models.PingSweep,
 		Description: fmt.Sprintf("Ping sweep started (%s)", network.CIDR),
-		SensorID:    network.SensorID,
 	})
 	if err != nil {
 		log.Printf("Error creating ping sweep started event log: %v", err)
@@ -344,7 +343,6 @@ func (sm *ScanManager) runSingleScan() {
 		Type:            models.PingSweep,
 		Description:     fmt.Sprintf("Ping sweep found %d devices (%s)", len(devices), network.CIDR),
 		DurationSeconds: &durationInSeconds,
-		SensorID:        network.SensorID,
 	})
 	if err != nil {
 		log.Printf("Error creating ping sweep completion event log: %v", err)

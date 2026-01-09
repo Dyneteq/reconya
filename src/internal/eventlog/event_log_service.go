@@ -125,14 +125,6 @@ func (s *EventLogService) CreateOne(eventLog *models.EventLog) error {
 	eventLog.CreatedAt = &now
 	eventLog.UpdatedAt = &now
 
-	// Auto-populate sensor_id from device if not already set
-	if (eventLog.SensorID == nil || *eventLog.SensorID == "") && eventLog.DeviceID != nil && *eventLog.DeviceID != "" {
-		device, err := s.DeviceService.FindByID(*eventLog.DeviceID)
-		if err == nil && device != nil && device.SensorID != nil && *device.SensorID != "" {
-			eventLog.SensorID = device.SensorID
-		}
-	}
-
 	// Use DB manager to serialize database access
 	return s.dbManager.CreateEventLog(s.repository, context.Background(), eventLog)
 }
@@ -148,33 +140,4 @@ func (s *EventLogService) Log(eventType models.EEventLogType, description string
 	}
 
 	return s.CreateOne(eventLog)
-}
-
-func (s *EventLogService) LogForSensor(eventType models.EEventLogType, description string, sensorID string) error {
-	eventLog := &models.EventLog{
-		Type:        eventType,
-		Description: description,
-	}
-
-	if sensorID != "" {
-		eventLog.SensorID = &sensorID
-	}
-
-	return s.CreateOne(eventLog)
-}
-
-func (s *EventLogService) GetBySensorID(sensorID string, limit int) ([]models.EventLog, error) {
-	ctx := context.Background()
-	eventLogPtrs, err := s.repository.FindBySensorID(ctx, sensorID, limit)
-	if err != nil {
-		return nil, err
-	}
-
-	eventLogs := make([]models.EventLog, len(eventLogPtrs))
-	for i, logPtr := range eventLogPtrs {
-		eventLogs[i] = *logPtr
-		eventLogs[i].Description = s.generateDescription(eventLogs[i])
-	}
-
-	return eventLogs, nil
 }

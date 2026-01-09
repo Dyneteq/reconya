@@ -20,7 +20,6 @@ import (
 	"reconya/internal/network"
 	"reconya/internal/nicidentifier"
 	"reconya/internal/scan"
-	"reconya/internal/sensor"
 	"reconya/internal/settings"
 	"reconya/internal/systemstatus"
 	"reconya/models"
@@ -54,7 +53,6 @@ type WebHandler struct {
 	scanManager           *scan.ScanManager
 	geolocationRepository *db.GeolocationRepository
 	settingsService       *settings.SettingsService
-	sensorService         *sensor.SensorService
 	nicIdentifierService  *nicidentifier.NicIdentifierService
 	templates             *template.Template
 	sessionStore          *sessions.CookieStore
@@ -104,7 +102,6 @@ func NewWebHandler(
 	scanManager *scan.ScanManager,
 	geolocationRepository *db.GeolocationRepository,
 	settingsService *settings.SettingsService,
-	sensorService *sensor.SensorService,
 	nicIdentifierService *nicidentifier.NicIdentifierService,
 	config *config.Config,
 	sessionSecret string,
@@ -427,7 +424,6 @@ func NewWebHandler(
 		scanManager:           scanManager,
 		geolocationRepository: geolocationRepository,
 		settingsService:       settingsService,
-		sensorService:         sensorService,
 		nicIdentifierService:  nicIdentifierService,
 		templates:             tmpl,
 		sessionStore:          store,
@@ -1002,5 +998,3 @@ func (h *WebHandler) getVersionFromPackageJSON() string {
 
 	return packageInfo.Version
 }
-
-// Sensor handlers are in handlers_sensors.go

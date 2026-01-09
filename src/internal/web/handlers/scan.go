@@ -234,29 +234,6 @@ func (h *WebHandler) APIScanSelectNetwork(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 }
 
-type sensorDashboardSummary struct {
-	Total   int `json:"total"`
-	Online  int `json:"online"`
-	Offline int `json:"offline"`
-	Pending int `json:"pending"`
-}
-
-type sensorDashboardResponse struct {
-	ID                  string                  `json:"id"`
-	Name                string                  `json:"name"`
-	Status              models.SensorStatus     `json:"status"`
-	ScanStatus          models.SensorScanStatus `json:"scanStatus"`
-	NetworkRange        string                  `json:"networkRange"`
-	DevicesFound        int                     `json:"devicesFound"`
-	DevicesOnline       int                     `json:"devicesOnline"`
-	DevicesIdle         int                     `json:"devicesIdle"`
-	PublicIP            string                  `json:"publicIP"`
-	Saturation          float64                 `json:"saturation"`
-	LastSeenAt          *time.Time              `json:"lastSeenAt,omitempty"`
-	LastScanStartedAt   *time.Time              `json:"lastScanStartedAt,omitempty"`
-	LastScanCompletedAt *time.Time              `json:"lastScanCompletedAt,omitempty"`
-}
-
 // APIDashboardMetrics returns JSON data for aggregated dashboard metrics
 func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
@@ -269,18 +246,6 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 	networks, err := h.networkService.FindAll()
 	if err != nil {
 		log.Printf("Failed to load networks: %v", err)
-	}
-
-	sensors, err := h.sensorService.GetAllSensors(r.Context())
-	if err != nil {
-		log.Printf("Failed to load sensors: %v", err)
-	}
-
-	sensorsOnline := 0
-	for _, sensor := range sensors {
-		if sensor.Status == models.SensorStatusOnline {
-			sensorsOnline++
-		}
 	}
 
 	devices, err := h.deviceService.FindAll()
@@ -326,7 +291,6 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 		"networks":      len(networks),
 		"devicesFound":  devicesFound,
 		"devicesOnline": devicesOnline,
-		"sensorsOnline": sensorsOnline,
 		"saturation":    avgSaturation,
 	}
 
@@ -339,54 +303,6 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 		log.Printf("Error encoding dashboard metrics response: %v", err)
 		http.Error(w, fmt.Sprintf("encoding error: %v", err), http.StatusInternalServerError)
 	}
-}
-
-func (h *WebHandler) buildSensorDashboard(sensor *models.Sensor) sensorDashboardResponse {
-	response := sensorDashboardResponse{
-		ID:                  sensor.ID,
-		Name:                sensor.Name,
-		Status:              sensor.Status,
-		ScanStatus:          sensor.ScanStatus,
-		NetworkRange:        "N/A",
-		PublicIP:            "N/A",
-		LastSeenAt:          sensor.LastSeenAt,
-		LastScanStartedAt:   sensor.LastScanStartedAt,
-		LastScanCompletedAt: sensor.LastScanCompletedAt,
-	}
-
-	if sensor.IP != nil && *sensor.IP != "" {
-		response.PublicIP = *sensor.IP
-	}
-
-	if sensor.NetworkCIDR != nil && *sensor.NetworkCIDR != "" {
-		response.NetworkRange = *sensor.NetworkCIDR
-
-		network, err := h.networkService.FindByCIDR(*sensor.NetworkCIDR)
-		if err != nil {
-			log.Printf("Failed to find network for CIDR %s: %v", *sensor.NetworkCIDR, err)
-		}
-
-		if network != nil {
-			devices, err := h.deviceService.FindByNetworkID(network.ID)
-			if err != nil {
-				log.Printf("Failed to load devices for network %s: %v", network.ID, err)
-			} else {
-				response.DevicesFound = len(devices)
-				for _, device := range devices {
-					switch device.Status {
-					case models.DeviceStatusOnline:
-						response.DevicesOnline++
-					case models.DeviceStatusIdle:
-						response.DevicesIdle++
-					}
-				}
-			}
-		}
-
-		response.Saturation = calculateSaturation(response.NetworkRange, response.DevicesFound)
-	}
-
-	return response
 }
 
 func calculateSaturation(cidr string, deviceCount int) float64 {

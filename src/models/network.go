@@ -23,7 +23,6 @@ type Network struct {
 	AddressFamily AddressFamily `bson:"address_family" json:"address_family"`
 	Description   string        `bson:"description" json:"description"`
 	Status        string        `bson:"status" json:"status"`
-	SensorID      *string       `bson:"sensor_id,omitempty" json:"sensor_id,omitempty"`
 	LastScannedAt *time.Time    `bson:"last_scanned_at" json:"last_scanned_at"`
 	DeviceCount   int           `bson:"device_count" json:"device_count"`
 	CreatedAt     time.Time     `bson:"created_at" json:"created_at"`

@@ -58,10 +58,11 @@ SQLITE_PATH=data/reconya.db
 
 ## How It Works
 
-1. **Host Discovery** — Parallel TCP probes to common ports (80, 443, 22, etc.)
-2. **MAC Resolution** — ARP table lookups for vendor identification
-3. **Port Scanning** — Concurrent TCP connect scans with 100 workers
-4. **Fingerprinting** — Device classification based on ports, vendors, hostnames
+- Every 30 seconds the agent sweeps the local network and finds live devices.
+- Each online device triggers a port scan. If the last port scan is older than 15 minutes, it runs again.
+- Every 2 minutes it runs mDNS discovery to resolve hostnames for new devices.
+- Every 15 minutes it refreshes the public IP and geolocation.
+- Device status updates run every 5 seconds, network detection every 30 seconds, and geolocation cache cleanup every 6 hours.
 
 ## Documentation
 

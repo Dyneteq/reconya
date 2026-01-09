@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="/static/js/modal.js"></script>
     <script src="/static/js/devices.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@tabler/icons@latest/tabler-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -32,6 +32,17 @@
         <!-- Main Content -->
         <main class="flex-1 py-6">
             <div class="max-w-7xl mx-auto px-4">
+                <!-- Network Setup (shown when no networks configured) -->
+                <div id="network-setup" class="terminal" style="display: none; margin-bottom: 20px;">
+                    <div class="terminal-header">
+                        <span class="blink">!</span> NETWORK_CONFIG_REQUIRED
+                    </div>
+                    <div class="network-setup-body">
+                        <p>NO NETWORKS CONFIGURED FOR SCANNING</p>
+                        <div id="detected-networks"></div>
+                    </div>
+                </div>
+
                 <div class="terminal">
                     <div class="terminal-header">
                         <span class="blink">&gt;</span> NETWORK_SCAN // LIVE_FEED
@@ -139,10 +150,13 @@
             color: #0f0;
             text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 40px #0f0;
             letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .logo i {
-            margin-right: 8px;
+            font-size: 2rem;
         }
 
         header {
@@ -291,6 +305,48 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             background: rgba(0, 255, 0, 0.05);
+        }
+
+        .network-setup-body {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .network-setup-body p {
+            margin-bottom: 16px;
+            color: #f80;
+        }
+
+        .detected-network {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px;
+            padding: 10px 16px;
+            border: 1px solid #0f03;
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        .detected-network span {
+            color: #0f0;
+            font-size: 14px;
+        }
+
+        .btn-add-network {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            font-size: 11px;
+        }
+
+        .btn-add-network:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 10px #0f0;
         }
 
         .loading {
@@ -491,9 +547,76 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            checkNetworks();
             loadDeviceTable();
             setInterval(loadDeviceTable, 10000);
         });
+
+        function checkNetworks() {
+            fetch('/api/networks', { credentials: 'include' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var networks = data.networks || [];
+                    if (networks.length === 0) {
+                        document.getElementById('network-setup').style.display = 'block';
+                        loadDetectedNetworks();
+                    } else {
+                        document.getElementById('network-setup').style.display = 'none';
+                    }
+                })
+                .catch(function(e) { console.error(e); });
+        }
+
+        function loadDetectedNetworks() {
+            fetch('/api/networks/detected', { credentials: 'include' })
+                .then(function(r) { return r.json(); })
+                .then(function(networks) {
+                    var container = document.getElementById('detected-networks');
+                    container.textContent = '';
+
+                    if (networks.length === 0) {
+                        container.textContent = 'No networks detected';
+                        return;
+                    }
+
+                    networks.forEach(function(net) {
+                        var div = document.createElement('div');
+                        div.className = 'detected-network';
+
+                        var span = document.createElement('span');
+                        span.textContent = net.cidr || net.CIDR;
+                        div.appendChild(span);
+
+                        var btn = document.createElement('button');
+                        btn.className = 'btn-add-network';
+                        btn.textContent = '[ADD]';
+                        btn.onclick = function() { addNetwork(net.cidr || net.CIDR); };
+                        div.appendChild(btn);
+
+                        container.appendChild(div);
+                    });
+                })
+                .catch(function(e) { console.error(e); });
+        }
+
+        function addNetwork(cidr) {
+            var formData = new FormData();
+            formData.append('cidr', cidr);
+
+            fetch('/api/networks/suggestion', {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    document.getElementById('network-setup').style.display = 'none';
+                    loadDeviceTable();
+                }
+            })
+            .catch(function(e) { console.error(e); });
+        }
 
         function loadDeviceTable() {
             var container = document.getElementById('results-table');
