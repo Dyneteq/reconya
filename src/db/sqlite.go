@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // ConnectToSQLite initializes and returns a SQLite connection
@@ -18,7 +18,7 @@ func ConnectToSQLite(dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to create directory for SQLite: %w", err)
 	}
 	dsn := fmt.Sprintf("%s?_journal=WAL&_timeout=30000&_busy_timeout=30000", dbPath)
-	db, err := sql.Open("sqlite3", dsn)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open SQLite database: %w", err)
 	}
