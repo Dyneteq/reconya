@@ -53,9 +53,7 @@ oui/
 **/oui.txt
 
 # Go binaries
-/reconya
 src/main
-src/reconya
 src/reconya-api
 
 # Coverage reports
