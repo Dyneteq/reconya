@@ -1,214 +1,131 @@
-// Device modal functionality
+// Device modal - cyberpunk style
 function loadDeviceModal(deviceId) {
     fetch('/api/devices/' + deviceId + '/modal', { credentials: 'include' })
-        .then(function(response) { return response.json(); })
+        .then(function(r) { return r.json(); })
         .then(function(data) {
-            var modalContent = document.getElementById('device-modal-content');
-            if (modalContent) {
-                modalContent.textContent = '';
-                renderDeviceModal(modalContent, data.device);
+            var content = document.getElementById('device-modal-content');
+            if (content) {
+                content.textContent = '';
+                renderDeviceModal(content, data.device);
                 showModal('deviceModal');
             }
         })
-        .catch(function(error) { console.error('Error loading device modal:', error); });
+        .catch(function(e) { console.error(e); });
 }
 
-function createSvgIcon(pathD) {
-    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('class', 'w-6 h-6');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
-    path.setAttribute('stroke-width', '2');
-    path.setAttribute('d', pathD);
-    svg.appendChild(path);
-    return svg;
-}
-
-function renderDeviceModal(container, device) {
-    var wrapper = document.createElement('div');
-    wrapper.className = 'p-6';
+function renderDeviceModal(container, d) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'padding: 20px; font-family: "Share Tech Mono", monospace; color: #0f0;';
 
     // Header
     var header = document.createElement('div');
-    header.className = 'flex justify-between items-center mb-4 pb-3';
-    header.style.borderBottom = '1px solid var(--border-color)';
+    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #0f03;';
 
-    var headerLeft = document.createElement('div');
-    headerLeft.className = 'flex items-center';
+    var title = document.createElement('div');
+    title.style.cssText = 'display: flex; align-items: center; gap: 12px;';
 
-    var statusDot = document.createElement('div');
-    statusDot.className = 'w-4 h-4 rounded-full mr-3 ' + (device.status === 'online' ? 'bg-green-500' : device.status === 'offline' ? 'bg-red-500' : 'bg-gray-500');
-    headerLeft.appendChild(statusDot);
+    var dot = document.createElement('span');
+    dot.style.cssText = 'width: 12px; height: 12px; border-radius: 50%; ' +
+        (d.status === 'online' ? 'background: #0f0; box-shadow: 0 0 10px #0f0;' : 'background: #f00; box-shadow: 0 0 10px #f00;');
+    title.appendChild(dot);
 
-    var ipText = document.createElement('h3');
-    ipText.className = 'text-xl font-mono font-bold';
-    ipText.style.color = 'var(--text-primary)';
-    ipText.textContent = device.ipv4;
-    headerLeft.appendChild(ipText);
+    var ip = document.createElement('span');
+    ip.style.cssText = 'font-size: 1.4rem; font-weight: bold; text-shadow: 0 0 10px #0f0;';
+    ip.textContent = d.ipv4;
+    title.appendChild(ip);
 
-    if (device.name || device.hostname) {
-        var nameText = document.createElement('span');
-        nameText.className = 'text-lg ml-3';
-        nameText.style.color = 'var(--text-secondary)';
-        nameText.textContent = '- ' + (device.name || device.hostname);
-        headerLeft.appendChild(nameText);
-    }
-
-    header.appendChild(headerLeft);
+    header.appendChild(title);
 
     var closeBtn = document.createElement('button');
-    closeBtn.className = 'text-xl transition-colors';
-    closeBtn.style.color = 'var(--text-muted)';
-    closeBtn.appendChild(createSvgIcon('M6 18L18 6M6 6l12 12'));
+    closeBtn.style.cssText = 'background: transparent; border: 1px solid #0f0; color: #0f0; padding: 6px 12px; cursor: pointer; font-family: inherit;';
+    closeBtn.textContent = '[X] CLOSE';
     closeBtn.onclick = function() { closeModal('deviceModal'); };
+    closeBtn.onmouseover = function() { this.style.background = '#0f0'; this.style.color = '#000'; };
+    closeBtn.onmouseout = function() { this.style.background = 'transparent'; this.style.color = '#0f0'; };
     header.appendChild(closeBtn);
 
-    wrapper.appendChild(header);
+    wrap.appendChild(header);
 
-    // Device info grid
+    // Info section
+    var info = document.createElement('div');
+    info.style.cssText = 'margin-bottom: 20px;';
+
+    var infoTitle = document.createElement('div');
+    infoTitle.style.cssText = 'font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; color: #0f0;';
+    infoTitle.textContent = '> TARGET_INFO';
+    info.appendChild(infoTitle);
+
     var grid = document.createElement('div');
-    grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-6 mb-6';
+    grid.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;';
 
-    // Left column - Device Info
-    var leftCol = document.createElement('div');
-    var leftTitle = document.createElement('h4');
-    leftTitle.className = 'text-green-500 font-semibold mb-3';
-    leftTitle.textContent = 'Device Info';
-    leftCol.appendChild(leftTitle);
-
-    var infoList = document.createElement('div');
-    infoList.className = 'space-y-2 text-sm';
-
-    function addInfoRow(label, value, valueClass) {
+    function addRow(label, value, color) {
         var row = document.createElement('div');
-        var labelSpan = document.createElement('span');
-        labelSpan.style.color = 'var(--text-muted)';
-        labelSpan.textContent = label + ': ';
-        row.appendChild(labelSpan);
-        var valueSpan = document.createElement('span');
-        valueSpan.className = valueClass || '';
-        valueSpan.style.color = valueClass ? '' : 'var(--text-primary)';
-        valueSpan.textContent = value;
-        row.appendChild(valueSpan);
-        infoList.appendChild(row);
+        var l = document.createElement('span');
+        l.style.color = '#060';
+        l.textContent = label + ': ';
+        row.appendChild(l);
+        var v = document.createElement('span');
+        v.style.color = color || '#0f0';
+        v.textContent = value || '-';
+        row.appendChild(v);
+        grid.appendChild(row);
     }
 
-    addInfoRow('IP Address', device.ipv4, 'font-mono');
-    if (device.mac) addInfoRow('MAC Address', device.mac, 'text-blue-400 font-mono');
-    if (device.hostname) addInfoRow('Hostname', device.hostname);
-    addInfoRow('Status', device.status);
-    if (device.LastSeenOnlineAt) addInfoRow('Last Seen', new Date(device.LastSeenOnlineAt).toLocaleString());
+    addRow('IP_ADDR', d.ipv4);
+    addRow('STATUS', d.status ? d.status.toUpperCase() : '-');
+    addRow('MAC_ADDR', d.mac);
+    addRow('VENDOR', d.vendor);
+    addRow('HOSTNAME', d.hostname || d.name);
+    if (d.os && d.os.name) addRow('OS', d.os.name);
+    if (d.LastSeenOnlineAt) addRow('LAST_SEEN', new Date(d.LastSeenOnlineAt).toLocaleString());
 
-    leftCol.appendChild(infoList);
-    grid.appendChild(leftCol);
+    info.appendChild(grid);
+    wrap.appendChild(info);
 
-    // Right column - OS Info
-    if (device.os && device.os.name) {
-        var rightCol = document.createElement('div');
-        var rightTitle = document.createElement('h4');
-        rightTitle.className = 'text-green-500 font-semibold mb-3';
-        rightTitle.textContent = 'Operating System';
-        rightCol.appendChild(rightTitle);
-
-        var osInfo = document.createElement('div');
-        osInfo.className = 'space-y-2 text-sm';
-
-        var osRow = document.createElement('div');
-        var osLabel = document.createElement('span');
-        osLabel.style.color = 'var(--text-muted)';
-        osLabel.textContent = 'OS: ';
-        osRow.appendChild(osLabel);
-        var osValue = document.createElement('span');
-        osValue.style.color = 'var(--text-primary)';
-        osValue.textContent = device.os.name;
-        osRow.appendChild(osValue);
-        osInfo.appendChild(osRow);
-
-        rightCol.appendChild(osInfo);
-        grid.appendChild(rightCol);
-    }
-
-    wrapper.appendChild(grid);
-
-    // Ports
-    if (device.ports && device.ports.length > 0) {
-        var openPorts = device.ports.filter(function(p) { return p.state === 'open' || p.state === 'filtered'; });
+    // Ports section
+    if (d.ports && d.ports.length > 0) {
+        var openPorts = d.ports.filter(function(p) { return p.state === 'open' || p.state === 'filtered'; });
         if (openPorts.length > 0) {
-            var portsSection = document.createElement('div');
-            portsSection.className = 'mb-6';
+            var ports = document.createElement('div');
 
-            var portsTitle = document.createElement('h4');
-            portsTitle.className = 'text-green-500 font-semibold mb-3';
-            portsTitle.textContent = 'Open Ports';
-            portsSection.appendChild(portsTitle);
+            var portsTitle = document.createElement('div');
+            portsTitle.style.cssText = 'font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; color: #f00;';
+            portsTitle.textContent = '> OPEN_PORTS [' + openPorts.length + ']';
+            ports.appendChild(portsTitle);
 
-            var portsBox = document.createElement('div');
-            portsBox.className = 'rounded p-3 max-h-32 overflow-y-auto';
-            portsBox.style.background = 'var(--bg-tertiary)';
-            portsBox.style.border = '1px solid var(--border-color)';
+            var portsList = document.createElement('div');
+            portsList.style.cssText = 'background: rgba(255,0,0,0.05); border: 1px solid #f003; padding: 12px; max-height: 150px; overflow-y: auto;';
 
-            openPorts.forEach(function(port) {
-                var portRow = document.createElement('div');
-                portRow.className = 'flex items-center justify-between text-xs py-1';
+            openPorts.forEach(function(p) {
+                var row = document.createElement('div');
+                row.style.cssText = 'display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px;';
 
-                var portInfo = document.createElement('div');
-                portInfo.className = 'flex items-center space-x-2';
+                var left = document.createElement('span');
+                left.style.color = '#f00';
+                left.textContent = (p.number || p.Port) + '/' + (p.protocol || p.Protocol) + ' ' + (p.service || p.Service || '');
+                row.appendChild(left);
 
-                var portNum = document.createElement('span');
-                portNum.className = 'text-green-400 font-medium';
-                portNum.textContent = (port.number || port.Port) + '/' + (port.protocol || port.Protocol);
-                portInfo.appendChild(portNum);
+                var right = document.createElement('span');
+                right.style.cssText = 'text-transform: uppercase; font-size: 10px; color: ' + (p.state === 'open' ? '#f00' : '#ff0');
+                right.textContent = p.state;
+                row.appendChild(right);
 
-                var portService = document.createElement('span');
-                portService.style.color = 'var(--text-secondary)';
-                portService.textContent = port.service || port.Service || 'unknown';
-                portInfo.appendChild(portService);
-
-                portRow.appendChild(portInfo);
-
-                var stateSpan = document.createElement('span');
-                stateSpan.className = 'text-xs font-bold uppercase ' + (port.state === 'open' ? 'text-red-500' : 'text-yellow-500');
-                stateSpan.textContent = port.state;
-                portRow.appendChild(stateSpan);
-
-                portsBox.appendChild(portRow);
+                portsList.appendChild(row);
             });
 
-            portsSection.appendChild(portsBox);
-            wrapper.appendChild(portsSection);
+            ports.appendChild(portsList);
+            wrap.appendChild(ports);
         }
     }
 
-    // Footer
-    var footer = document.createElement('div');
-    footer.className = 'flex justify-end pt-4';
-    footer.style.borderTop = '1px solid var(--border-color)';
-
-    var closeButton = document.createElement('button');
-    closeButton.className = 'px-4 py-2 rounded transition-colors';
-    closeButton.style.color = 'var(--text-muted)';
-    closeButton.style.border = '1px solid var(--border-color)';
-    closeButton.textContent = 'Close';
-    closeButton.onclick = function() { closeModal('deviceModal'); };
-    footer.appendChild(closeButton);
-
-    wrapper.appendChild(footer);
-    container.appendChild(wrapper);
+    container.appendChild(wrap);
 }
 
 function deleteDevice(deviceId, deviceIP) {
-    if (confirm('Delete device ' + deviceIP + '?')) {
+    if (confirm('DELETE TARGET ' + deviceIP + '?')) {
         fetch('/api/devices/' + deviceId, { method: 'DELETE', credentials: 'include' })
-            .then(function(response) {
-                if (response.ok && typeof loadDeviceTable === 'function') {
-                    loadDeviceTable();
-                }
-            })
-            .catch(function(error) { console.error('Error deleting device:', error); });
+            .then(function(r) { if (r.ok && typeof loadDeviceTable === 'function') loadDeviceTable(); })
+            .catch(function(e) { console.error(e); });
     }
 }
 

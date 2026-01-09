@@ -1,236 +1,633 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/static/js/theme.js"></script>
     <script src="/static/js/modal.js"></script>
     <script src="/static/js/devices.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@tabler/icons@latest/tabler-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800&family=Roboto+Condensed:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 </head>
-<body class="bg-gray-900 text-gray-200" style="font-family: 'Roboto Condensed', sans-serif; font-size: 0.875rem;">
+<body>
     <div class="min-h-screen flex flex-col">
         <!-- Header -->
-        <header class="bg-gray-800 border-b border-gray-700">
+        <header>
             <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-                <span class="text-2xl font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800;">
-                    <i class="ti ti-network mr-2"></i>reconYa
-                </span>
-                <div class="flex items-center gap-3">
-                    <span class="text-gray-400 text-sm"><span id="devices-count" class="text-green-500 font-bold">0</span> devices</span>
-                    <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 bg-gray-700 rounded transition-colors">
-                        <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                        <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                        </svg>
+                <div class="logo">
+                    <i class="ti ti-network"></i> reconYa
+                </div>
+                <div class="nav-right">
+                    <span class="status-text">
+                        <span class="blink">&gt;</span> <span id="devices-count">0</span> TARGETS ACQUIRED
+                    </span>
+                    <button type="button" class="btn-logout" onclick="showLogoutModal()" title="Logout">
+                        <i class="ti ti-logout"></i> EXIT
                     </button>
-                    <form action="/logout" method="POST">
-                        <button type="submit" class="p-2 text-gray-300 hover:text-green-500 bg-gray-700 rounded transition-colors" title="Logout">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
-                        </button>
-                    </form>
                 </div>
             </div>
         </header>
 
-        <!-- Results Table -->
+        <!-- Main Content -->
         <main class="flex-1 py-6">
             <div class="max-w-7xl mx-auto px-4">
-                <div class="bg-gray-800 rounded-lg overflow-hidden">
-                    <div id="results-table" class="overflow-x-auto">
-                        <div class="flex justify-center items-center py-12">
-                            <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                            <span class="ml-3 text-gray-400">Loading...</span>
+                <div class="terminal">
+                    <div class="terminal-header">
+                        <span class="blink">&gt;</span> NETWORK_SCAN // LIVE_FEED
+                    </div>
+                    <div id="results-table">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            SCANNING NETWORK...
                         </div>
                     </div>
                 </div>
             </div>
         </main>
+
+        <!-- Footer -->
+        <footer>
+            <div class="scanline"></div>
+        </footer>
     </div>
 
     <!-- Device Modal -->
     <div id="deviceModal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-container">
-            <div class="modal-content max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="modal-content">
                 <div id="device-modal-content"></div>
             </div>
         </div>
     </div>
 
+    <!-- Logout Modal -->
+    <div id="logoutModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-container">
+            <div class="modal-content logout-modal">
+                <div class="logout-modal-header">
+                    <span class="blink">!</span> CONFIRM_DISCONNECT
+                </div>
+                <div class="logout-modal-body">
+                    <p>TERMINATE SESSION?</p>
+                    <p class="logout-warning">ALL ACTIVE MONITORING WILL CEASE</p>
+                </div>
+                <div class="logout-modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal('logoutModal')">[CANCEL]</button>
+                    <form action="/logout" method="POST" class="logout-form-inline">
+                        <button type="submit" class="btn-confirm">[CONFIRM EXIT]</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
-        .modal.show { opacity: 1; visibility: visible; }
-        .modal-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); cursor: pointer; }
-        .modal-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
-        .modal-content { background: var(--bg-secondary); border-radius: 0.5rem; border: 1px solid var(--border-accent); max-width: 90vw; max-height: 90vh; overflow-y: auto; pointer-events: all; transform: scale(0.9); transition: transform 0.3s ease; }
-        .modal.show .modal-content { transform: scale(1); }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-        :root { --bg-primary: #111827; --bg-secondary: #1f2937; --bg-tertiary: #374151; --text-primary: #f9fafb; --text-secondary: #d1d5db; --text-muted: #9ca3af; --border-color: #4b5563; --border-accent: #10b981; }
-        [data-theme="light"] { --bg-primary: #f9fafb; --bg-secondary: #f3f4f6; --bg-tertiary: #e5e7eb; --text-primary: #111827; --text-secondary: #374151; --text-muted: #6b7280; --border-color: #d1d5db; --border-accent: #059669; }
-        body { background-color: var(--bg-primary); color: var(--text-primary); }
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            position: relative;
+            overflow-x: hidden;
+        }
 
-        html[data-theme="light"] body { background-color: #f9fafb !important; color: #111827 !important; }
-        html[data-theme="light"] .bg-gray-800, html[data-theme="light"] header { background-color: #ffffff !important; border-color: #e5e7eb !important; }
-        html[data-theme="light"] .bg-gray-700 { background-color: #f3f4f6 !important; }
-        html[data-theme="light"] .text-gray-200, html[data-theme="light"] .text-white { color: #111827 !important; }
-        html[data-theme="light"] .text-gray-300, html[data-theme="light"] .text-gray-400 { color: #6b7280 !important; }
-        html[data-theme="light"] .text-green-500 { color: #059669 !important; }
-        html[data-theme="light"] .border-gray-700 { border-color: #e5e7eb !important; }
-        html[data-theme="light"] table thead { background-color: #f3f4f6 !important; }
-        html[data-theme="light"] table tbody tr:hover { background-color: #f3f4f6 !important; }
+        /* CRT scanline effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Vignette effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 1.8rem;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 40px #0f0;
+            letter-spacing: 3px;
+        }
+
+        .logo i {
+            margin-right: 8px;
+        }
+
+        header {
+            border-bottom: 1px solid #0f03;
+            background: rgba(0, 20, 0, 0.8);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logout-form {
+            display: flex;
+            align-items: center;
+        }
+
+        .status-text {
+            color: #0f0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .btn {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 20px #0f0;
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid #f00;
+            color: #f00;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+
+        .btn-logout:hover {
+            background: #f00;
+            color: #000;
+            box-shadow: 0 0 20px #f00;
+        }
+
+        .logout-modal {
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logout-modal-header {
+            padding: 16px;
+            border-bottom: 1px solid #f003;
+            color: #f00;
+            font-size: 14px;
+            letter-spacing: 2px;
+            background: rgba(255, 0, 0, 0.05);
+        }
+
+        .logout-modal-body {
+            padding: 30px 20px;
+        }
+
+        .logout-modal-body p {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .logout-warning {
+            color: #f00;
+            font-size: 11px !important;
+            letter-spacing: 1px;
+        }
+
+        .logout-modal-actions {
+            display: flex;
+            gap: 12px;
+            padding: 20px;
+            border-top: 1px solid #0f03;
+            justify-content: center;
+        }
+
+        .logout-form-inline {
+            display: inline;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .btn-cancel:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 15px #0f0;
+        }
+
+        .btn-confirm {
+            background: transparent;
+            border: 1px solid #f00;
+            color: #f00;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .btn-confirm:hover {
+            background: #f00;
+            color: #000;
+            box-shadow: 0 0 15px #f00;
+        }
+
+        .terminal {
+            border: 1px solid #0f03;
+            background: rgba(0, 10, 0, 0.6);
+        }
+
+        .terminal-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #0f03;
+            color: #0f0;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: rgba(0, 255, 0, 0.05);
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            color: #0f0;
+            gap: 12px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #0f03;
+            border-top-color: #0f0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            color: #0f0;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 11px;
+            border-bottom: 1px solid #0f03;
+            background: rgba(0, 255, 0, 0.03);
+        }
+
+        td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #0f01;
+        }
+
+        tr {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        tr:hover {
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        tr:hover td {
+            color: #fff;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .ip {
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        .mac {
+            color: #0a0;
+            font-size: 12px;
+        }
+
+        .vendor {
+            color: #0a0;
+            font-size: 12px;
+        }
+
+        .hostname {
+            color: #080;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-online {
+            background: #0f0;
+            box-shadow: 0 0 10px #0f0;
+        }
+
+        .status-offline {
+            background: #f00;
+            box-shadow: 0 0 10px #f00;
+        }
+
+        .ports-badge {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #f00;
+            color: #f00;
+            padding: 2px 8px;
+            font-size: 11px;
+        }
+
+        .time {
+            color: #060;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #040;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        footer {
+            position: relative;
+            height: 2px;
+        }
+
+        .scanline {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #0f0, transparent);
+            animation: scanline 3s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .modal-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            pointer-events: none;
+        }
+
+        .modal-content {
+            background: #000;
+            border: 1px solid #0f0;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.3), inset 0 0 30px rgba(0, 255, 0, 0.05);
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            pointer-events: all;
+        }
     </style>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            if (typeof initTheme === 'function') initTheme();
             loadDeviceTable();
             setInterval(loadDeviceTable, 10000);
         });
 
         function loadDeviceTable() {
-            const container = document.getElementById('results-table');
+            var container = document.getElementById('results-table');
             if (!container) return;
 
             fetch('/api/devices', { credentials: 'include' })
-                .then(response => response.json())
-                .then(data => {
-                    const devices = data.devices || [];
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var devices = data.devices || [];
                     document.getElementById('devices-count').textContent = devices.length;
 
                     if (devices.length === 0) {
                         container.textContent = '';
-                        const emptyDiv = document.createElement('div');
-                        emptyDiv.className = 'text-center py-12 text-gray-400';
-                        emptyDiv.innerHTML = '<i class="ti ti-router-off text-4xl mb-3 block opacity-50"></i><p>No devices found</p>';
-                        container.appendChild(emptyDiv);
+                        var empty = document.createElement('div');
+                        empty.className = 'empty-state';
+                        var icon = document.createElement('i');
+                        icon.className = 'ti ti-radar-off';
+                        empty.appendChild(icon);
+                        var text = document.createElement('div');
+                        text.textContent = 'NO TARGETS DETECTED';
+                        empty.appendChild(text);
+                        container.appendChild(empty);
                         return;
                     }
-                    renderResultsTable(container, devices);
+                    renderTable(container, devices);
                 })
-                .catch(error => {
-                    console.error('Error:', error);
+                .catch(function(e) {
+                    console.error(e);
                     container.textContent = '';
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'text-red-400 p-4 text-center';
-                    errorDiv.textContent = 'Failed to load devices';
-                    container.appendChild(errorDiv);
+                    var err = document.createElement('div');
+                    err.className = 'empty-state';
+                    err.textContent = 'CONNECTION ERROR';
+                    container.appendChild(err);
                 });
         }
 
-        function renderResultsTable(container, devices) {
+        function renderTable(container, devices) {
             container.textContent = '';
-            const table = document.createElement('table');
-            table.className = 'w-full';
+            var table = document.createElement('table');
 
-            const thead = document.createElement('thead');
-            thead.className = 'bg-gray-700';
-            const headerRow = document.createElement('tr');
-            ['Status', 'IP Address', 'MAC Address', 'Hostname', 'Ports', 'Last Seen'].forEach(text => {
-                const th = document.createElement('th');
-                th.className = 'px-4 py-3 text-left text-green-500 font-semibold text-sm';
-                th.textContent = text;
+            var thead = document.createElement('thead');
+            var headerRow = document.createElement('tr');
+            ['Status', 'IP Address', 'MAC', 'Vendor', 'Hostname', 'Ports', 'Last Seen'].forEach(function(t) {
+                var th = document.createElement('th');
+                th.textContent = t;
                 headerRow.appendChild(th);
             });
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
-            const tbody = document.createElement('tbody');
-            tbody.className = 'divide-y divide-gray-700';
-
-            devices.forEach(device => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-700 transition-colors cursor-pointer';
-                row.onclick = function() { loadDeviceModal(device.id); };
-
-                const status = device.status || 'unknown';
-                const ip = device.ipv4 || device.ip || 'N/A';
-                const mac = device.mac || '-';
-                const hostname = device.hostname || device.name || '-';
-                const lastSeen = device.LastSeenOnlineAt || device.last_seen_online_at;
-                let openPorts = 0;
-                if (device.ports && Array.isArray(device.ports)) {
-                    openPorts = device.ports.filter(p => p.state === 'open').length;
-                }
+            var tbody = document.createElement('tbody');
+            devices.forEach(function(d) {
+                var row = document.createElement('tr');
+                row.onclick = function() { loadDeviceModal(d.id); };
 
                 // Status
-                const statusCell = document.createElement('td');
-                statusCell.className = 'px-4 py-3';
-                const statusDiv = document.createElement('div');
-                statusDiv.className = 'flex items-center';
-                const dot = document.createElement('div');
-                dot.className = 'w-3 h-3 rounded-full ' + (status === 'online' ? 'bg-green-500' : status === 'offline' ? 'bg-red-500' : 'bg-gray-500');
-                statusDiv.appendChild(dot);
-                statusCell.appendChild(statusDiv);
-                row.appendChild(statusCell);
+                var statusTd = document.createElement('td');
+                var dot = document.createElement('span');
+                dot.className = 'status-dot ' + (d.status === 'online' ? 'status-online' : 'status-offline');
+                statusTd.appendChild(dot);
+                row.appendChild(statusTd);
 
                 // IP
-                const ipCell = document.createElement('td');
-                ipCell.className = 'px-4 py-3 font-mono text-white';
-                ipCell.textContent = ip;
-                row.appendChild(ipCell);
+                var ipTd = document.createElement('td');
+                ipTd.className = 'ip';
+                ipTd.textContent = d.ipv4 || d.ip || '-';
+                row.appendChild(ipTd);
 
                 // MAC
-                const macCell = document.createElement('td');
-                macCell.className = 'px-4 py-3 font-mono text-sm text-blue-400';
-                macCell.textContent = mac;
-                row.appendChild(macCell);
+                var macTd = document.createElement('td');
+                macTd.className = 'mac';
+                macTd.textContent = d.mac || '-';
+                row.appendChild(macTd);
+
+                // Vendor
+                var vendorTd = document.createElement('td');
+                vendorTd.className = 'vendor';
+                vendorTd.textContent = d.vendor || '-';
+                row.appendChild(vendorTd);
 
                 // Hostname
-                const hostnameCell = document.createElement('td');
-                hostnameCell.className = 'px-4 py-3 text-gray-300';
-                hostnameCell.textContent = hostname;
-                row.appendChild(hostnameCell);
+                var hostTd = document.createElement('td');
+                hostTd.className = 'hostname';
+                hostTd.textContent = d.hostname || d.name || '-';
+                row.appendChild(hostTd);
 
                 // Ports
-                const portsCell = document.createElement('td');
-                portsCell.className = 'px-4 py-3';
-                if (openPorts > 0) {
-                    const span = document.createElement('span');
-                    span.className = 'px-2 py-1 bg-red-500 bg-opacity-20 text-red-400 text-xs rounded';
-                    span.textContent = openPorts + ' open';
-                    portsCell.appendChild(span);
-                } else {
-                    portsCell.textContent = '-';
-                    portsCell.className += ' text-gray-500';
+                var portsTd = document.createElement('td');
+                var openPorts = 0;
+                if (d.ports && Array.isArray(d.ports)) {
+                    openPorts = d.ports.filter(function(p) { return p.state === 'open'; }).length;
                 }
-                row.appendChild(portsCell);
+                if (openPorts > 0) {
+                    var badge = document.createElement('span');
+                    badge.className = 'ports-badge';
+                    badge.textContent = openPorts + ' OPEN';
+                    portsTd.appendChild(badge);
+                } else {
+                    portsTd.textContent = '-';
+                    portsTd.className = 'time';
+                }
+                row.appendChild(portsTd);
 
                 // Last seen
-                const lastSeenCell = document.createElement('td');
-                lastSeenCell.className = 'px-4 py-3 text-sm text-gray-400';
-                lastSeenCell.textContent = lastSeen ? formatTime(lastSeen) : '-';
-                row.appendChild(lastSeenCell);
+                var timeTd = document.createElement('td');
+                timeTd.className = 'time';
+                var lastSeen = d.LastSeenOnlineAt || d.last_seen_online_at;
+                timeTd.textContent = lastSeen ? formatTime(lastSeen) : '-';
+                row.appendChild(timeTd);
 
                 tbody.appendChild(row);
             });
-
             table.appendChild(tbody);
             container.appendChild(table);
         }
 
         function formatTime(dateString) {
-            if (!dateString) return '-';
             try {
-                const date = new Date(dateString);
-                const diffMs = Date.now() - date;
-                const mins = Math.floor(diffMs / 60000);
-                if (mins < 1) return 'now';
-                if (mins < 60) return mins + 'm';
-                const hrs = Math.floor(mins / 60);
-                if (hrs < 24) return hrs + 'h';
-                return Math.floor(hrs / 24) + 'd';
+                var date = new Date(dateString);
+                var mins = Math.floor((Date.now() - date) / 60000);
+                if (mins < 1) return 'NOW';
+                if (mins < 60) return mins + 'M AGO';
+                var hrs = Math.floor(mins / 60);
+                if (hrs < 24) return hrs + 'H AGO';
+                return Math.floor(hrs / 24) + 'D AGO';
             } catch (e) { return '-'; }
         }
 
+        function showLogoutModal() {
+            showModal('logoutModal');
+        }
+
         window.loadDeviceTable = loadDeviceTable;
+        window.showLogoutModal = showLogoutModal;
     </script>
 </body>
 </html>
