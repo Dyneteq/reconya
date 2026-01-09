@@ -5,1268 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Core functionality -->
     <script src="/static/js/theme.js"></script>
-    <script src="/static/js/sidebar.js"></script>
     <script src="/static/js/modal.js"></script>
-    
-    <!-- Feature modules -->
     <script src="/static/js/devices.js"></script>
-    <script src="/static/js/network-map.js"></script>
-    <script src="/static/js/network-list.js"></script>
-    <script src="/static/js/network-suggestions.js"></script>
-    <script src="/static/js/scan-control.js"></script>
-    <script src="/static/js/settings.js"></script>
-    <script src="/static/js/sensors.js"></script>
-    <script src="/static/js/dashboard.js"></script>
-    
-    <!-- Main initialization (load last) -->
-    <script src="/static/js/main.js"></script>
-    <!-- Tabler Icons - lightweight SVG icons that work great with Tailwind -->
     <link rel="stylesheet" href="https://unpkg.com/@tabler/icons@latest/tabler-icons.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Roboto+Condensed:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800&family=Roboto+Condensed:wght@400;500;600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-900 text-gray-200" style="font-family: 'Roboto Condensed', sans-serif; font-size: 0.875rem;">
-    <div class="flex min-h-screen">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="sidebar w-64 bg-gray-800 text-white fixed left-0 top-0 h-full overflow-y-auto transition-all duration-300 z-40">
-            <!-- Sidebar Header -->
-            <div class="sidebar-header bg-gray-800 p-4 border-b border-gray-700 flex items-center justify-center">
-                <div class="brand">
-                    <span class="brand-text text-lg font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.5px;">reconYa</span>
-                </div>
-            </div>
-            
-            <!-- Navigation Menu -->
-            <div class="sidebar-menu py-4">
-                <ul class="space-y-1">
-                    <li>
-                        <a href="/" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="home">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                            </svg>
-                            <span class="nav-text">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/devices" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="devices">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                            </svg>
-                            <span class="nav-text">Devices</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/networks" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="networks">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 919-9"></path>
-                            </svg>
-                            <span class="nav-text">Networks</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/sensors" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="sensors">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
-                            </svg>
-                            <span class="nav-text">Sensors</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/logs" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="logs">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-3-7h.01"></path>
-                            </svg>
-                            <span class="nav-text">Activity</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/settings" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="settings">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            <span class="nav-text">Settings</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <!-- Main Content -->
-        <div id="main-content" class="flex-1 ml-0 transition-all duration-300">
-            <!-- Top Bar -->
-            <header class="bg-gray-800 p-4 border-b border-gray-700">
-                <div class="flex items-center justify-between w-full">
-                    <!-- Sidebar Toggle Button -->
-                    <button id="sidebarToggle" class="p-2 text-gray-300 hover:text-white focus:outline-none bg-gray-700 rounded" title="Toggle Sidebar">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+                <span class="text-2xl font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800;">
+                    <i class="ti ti-network mr-2"></i>reconYa
+                </span>
+                <div class="flex items-center gap-3">
+                    <span class="text-gray-400 text-sm"><span id="devices-count" class="text-green-500 font-bold">0</span> devices</span>
+                    <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 bg-gray-700 rounded transition-colors">
+                        <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                         </svg>
                     </button>
-                    
-                    <!-- Theme Toggle and User Menu -->
-                    <div class="flex items-center gap-3">
-                        <!-- Theme Toggle Button -->
-                        <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 focus:outline-none bg-gray-700 rounded transition-colors">
-                            <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                            </svg>
-                            <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    <form action="/logout" method="POST">
+                        <button type="submit" class="p-2 text-gray-300 hover:text-green-500 bg-gray-700 rounded transition-colors" title="Logout">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                             </svg>
                         </button>
-                        
-                        <!-- User Menu -->
-                        <div class="relative">
-                            <button class="flex items-center px-3 py-2 text-gray-300 hover:text-green-500" id="dropdownMenuButton">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                                Welcome, human
-                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded shadow-lg hidden z-50" id="dropdownMenu">
-                            <a href="#" class="block px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700" onclick="loadAboutPage(); return false;">
-                                <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                About
-                            </a>
-                            <hr class="border-gray-600">
-                            <form action="/logout" method="POST" class="block">
-                                <button type="submit" class="w-full text-left px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700">
-                                    <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                                    </svg>
-                                    Logout
-                                </button>
-                            </form>
-                        </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Content Area -->
-            <main id="content" class="p-6">
-                {{if eq .Page "devices"}}
-                    <!-- Devices Page Content -->
-                    <div class="flex gap-4 p-4">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ DEVICES ]</h1>
-                                </div>
-
-                                <!-- Device List View -->
-                                <div id="device-list-container">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading devices...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "networks"}}
-                    <!-- Networks Page Content -->
-                    <div class="flex gap-4 p-4">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ NETWORKS ]</h1>
-                                    <button type="button" 
-                                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                                            onclick="loadNetworkModal()">
-                                        <i class="ti ti-plus mr-1"></i>Add Network
-                                    </button>
-                                </div>
-
-                                <!-- Networks List -->
-                                <div id="networks-container">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading networks...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "alerts"}}
-                    <!-- Alerts Page Content -->
-                    <div class="flex gap-4 p-4">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ ALERTS ]</h1>
-                                    <div class="flex gap-2">
-                                        <button type="button" 
-                                                class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" 
-                                                onclick="refreshAlerts()">
-                                            <i class="ti ti-refresh mr-1"></i>Refresh
-                                        </button>
-                                        <button type="button" 
-                                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm" 
-                                                onclick="markAllRead()">
-                                            <i class="ti ti-checks mr-1"></i>Mark All Read
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Alerts Content -->
-                                <div id="alerts-container">
-                                    <!-- No alerts message -->
-                                    <div class="bg-gray-800 rounded p-8 text-center">
-                                        <i class="ti ti-circle-check-filled text-green-500 text-6xl mb-4"></i>
-                                        <h4 class="text-green-500 text-xl font-bold mb-2">All Clear!</h4>
-                                        <p class="text-gray-400">No alerts at this time. Your network is operating normally.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "logs"}}
-                    <!-- Logs Page Content -->
-                    <div class="flex gap-4 p-4">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ ACTIVITY ]</h1>
-                                </div>
-                                <!-- Event Logs Content -->
-                                <div id="event-logs-container" class="bg-gray-800 rounded">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading activity logs...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "settings"}}
-                    <!-- Settings Page Content -->
-                    <div class="p-4">
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h1 class="text-sm font-bold text-green-500">[ SETTINGS ]</h1>
-                            </div>
-
-                            <!-- Settings Content -->
-                            <div id="settings-container" class="bg-gray-800 rounded">
-                                <div class="flex justify-center items-center h-32">
-                                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                    <span class="ml-3 text-gray-400">Loading settings...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "sensors"}}
-                    <!-- Sensors Page Content -->
-                    <div class="flex gap-4 p-4">
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ SENSORS ]</h1>
-                                    <button onclick="openCreateSensorModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
-                                        <i class="ti ti-plus mr-1"></i> Add Sensor
-                                    </button>
-                                </div>
-
-                                <div id="sensors-container" class="bg-gray-800 rounded">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading sensors...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else}}
-                    <!-- Dashboard Content (default) -->
-                    <div class="space-y-6">
-
-                    <!-- Dashboard Layout: Left/Right Split -->
-                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <!-- Left Side: Metrics + Network Map + Devices -->
-                        <div class="lg:col-span-3 space-y-6">
-                            <!-- Metrics Grid -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Networks</p>
-                                    <p class="text-xl font-bold text-green-500" id="network-count">0</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Devices Found</p>
-                                    <p class="text-xl font-bold text-green-500" id="devices-found">0</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Online</p>
-                                    <p class="text-xl font-bold text-green-500" id="devices-online">0</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Sensors</p>
-                                    <p class="text-xl font-bold text-green-500" id="sensors-online">0</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center relative">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Saturation</p>
-                                    <p class="text-xl font-bold text-green-500" id="network-saturation">0%</p>
-                                </div>
-                            </div>
-
-                            <!-- Network Suggestions -->
-                            <div id="network-suggestions" class="bg-blue-600 bg-opacity-10 border border-blue-500 rounded p-4" style="display: none;">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center flex-1">
-                                        <svg class="w-6 h-6 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        <div class="flex-1">
-                                            <p class="text-blue-400 font-medium">Network Detection</p>
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <p id="suggestion-text" class="text-gray-300 text-sm">Detecting networks...</p>
-                                                <div class="flex gap-2" id="network-action-buttons" style="display: none;">
-                                                    <button id="create-network-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors">
-                                                        Add Network
-                                                    </button>
-                                                    <button id="dismiss-suggestion-btn" class="border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 px-2 py-1 rounded text-xs transition-colors">
-                                                        Dismiss
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button id="close-suggestions-btn" class="text-gray-400 hover:text-white p-1 ml-3 flex-shrink-0" title="Close">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Network Map -->
-                            <div class="rounded">
-                                <h2 class="text-xs font-bold mb-4 text-green-500">[ NETWORK MAP ]</h2>
-                                <div id="network-map" class="min-h-48 rounded">
-                                    <div class="flex items-center justify-center h-32" id="network-map-loading">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading network map...</span>
-                                    </div>
-                                    <div id="network-map-content" class="hidden"></div>
-                                    <div id="network-map-empty" class="hidden flex items-center justify-center py-8 text-gray-400">
-                                        <div class="text-center">
-                                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            </svg>
-                                            <p class="text-sm">No devices discovered yet</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Network Devices -->
-                            <div class="rounded">
-                                <h2 class="text-xs font-bold mb-4 text-green-500">[ NETWORK DEVICES ]</h2>
-                                <div id="devices-container" class="min-h-32">
-                                    <div class="flex justify-center items-center py-8">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading devices...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Side: Scan Control & Events -->
-                        <div class="space-y-6">
-                            <!-- Public IP -->
-                            <div class="bg-gray-800 rounded p-4">
-                                <h3 class="text-xs font-bold text-green-500 mb-3">PUBLIC IP</h3>
-                                <div id="public-ip-container" class="flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                                        </svg>
-                                        <span id="public-ip-address" class="text-white font-mono">Loading...</span>
-                                    </div>
-                                    <span id="public-ip-location" class="text-xs text-gray-400"></span>
-                                </div>
-                            </div>
-
-                            <!-- Scan Control -->
-                            <div class="bg-gray-800 rounded p-6">
-                                <div id="scan-control-container">
-                                    <div class="flex items-center justify-center py-4" id="scan-control-loading">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading scan control...</span>
-                                    </div>
-                                    <div id="scan-control-content" class="hidden"></div>
-                                </div>
-                            </div>
-
-                            <!-- Events -->
-                            <div class="rounded">
-                                <h2 class="text-xs font-bold mb-4 text-green-500">[ ACTIVITY LOG ]</h2>
-                                <div class="bg-gray-800 rounded p-6">
-                                    <div id="activity-log" class="space-y-2 text-sm text-gray-400 max-h-64 overflow-y-auto">
-                                        <div class="flex items-center justify-center py-8">
-                                            <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
-                                            <span class="ml-3 text-gray-400">Loading events...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> <!-- End conditional content wrapper -->
-                {{end}}
-            </main>
-        </div>
-    </div>
-
-    <!-- Sidebar & Modal CSS -->
-    <style>
-        /* Sidebar Styles */
-        .sidebar {
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Ensure sidebar header matches navbar height exactly */
-        .sidebar-header,
-        #main-content header {
-            height: 73px; /* Exact height: 16px (p-4 top) + 40px (content) + 16px (p-4 bottom) + 1px (border) */
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-        }
-        
-        .sidebar.collapsed {
-            transform: translateX(-100%);
-        }
-        
-        /* Ensure nav items are clickable */
-        .nav-item {
-            pointer-events: auto;
-            z-index: 10;
-            position: relative;
-        }
-        
-        /* Active nav item */
-        .nav-item.active {
-            background-color: #374151; /* bg-gray-700 */
-            color: white;
-            border-left-color: #10b981; /* border-green-500 */
-        }
-        
-        /* Responsive behavior */
-        @media (max-width: 1024px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            
-            #main-content {
-                margin-left: 0 !important;
-            }
-        }
-        
-        /* Modal Styles */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        
-        .modal.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        
-        .modal-backdrop {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            cursor: pointer;
-        }
-        
-        .modal-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-            pointer-events: none;
-        }
-        
-        .modal-content {
-            background: var(--bg-secondary);
-            border-radius: 0.5rem;
-            border: 1px solid var(--border-accent);
-            max-width: 90vw;
-            max-height: 90vh;
-            overflow-y: auto;
-            pointer-events: all;
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-        }
-        
-        .modal.show .modal-content {
-            transform: scale(1);
-        }
-        
-        /* Theme System */
-        :root {
-            /* Dark theme variables (default) */
-            --bg-primary: #111827;
-            --bg-secondary: #1f2937;
-            --bg-tertiary: #374151;
-            --text-primary: #f9fafb;
-            --text-secondary: #d1d5db;
-            --text-muted: #9ca3af;
-            --text-accent: #10b981;
-            --border-color: #4b5563;
-            --border-accent: #10b981;
-        }
-        
-        [data-theme="light"] {
-            /* Light theme variables */
-            --bg-primary: #f9fafb;
-            --bg-secondary: #f3f4f6;
-            --bg-tertiary: #e5e7eb;
-            --text-primary: #111827;
-            --text-secondary: #374151;
-            --text-muted: #6b7280;
-            --text-accent: #059669;
-            --border-color: #d1d5db;
-            --border-accent: #059669;
-        }
-        
-        /* Apply theme variables */
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-        }
-        
-        /* Light theme - Very specific selectors */
-        html[data-theme="light"] body,
-        html[data-theme="light"] body.bg-gray-900 { 
-            background-color: #f9fafb !important; 
-            color: #111827 !important; 
-        }
-        
-        /* Sidebar light theme */
-        html[data-theme="light"] .bg-gray-900,
-        html[data-theme="light"] nav.bg-gray-800,
-        html[data-theme="light"] .sidebar.bg-gray-800,
-        html[data-theme="light"] .sidebar-header.bg-gray-800 { 
-            background-color: #ffffff !important; 
-            border-color: #e5e7eb !important;
-        }
-        
-        /* Header and main backgrounds */
-        html[data-theme="light"] .bg-gray-800,
-        html[data-theme="light"] header.bg-gray-800 { background-color: #f3f4f6 !important; }
-        
-        /* Navigation items */
-        html[data-theme="light"] .bg-gray-700,
-        html[data-theme="light"] .hover\\:bg-gray-700:hover { background-color: #f3f4f6 !important; }
-        html[data-theme="light"] .bg-gray-600 { background-color: #e5e7eb !important; }
-        
-        /* Text colors */
-        html[data-theme="light"] .text-white,
-        html[data-theme="light"] .text-gray-200,
-        html[data-theme="light"] nav .text-white { color: #111827 !important; }
-        html[data-theme="light"] .text-gray-300,
-        html[data-theme="light"] nav .text-gray-300 { color: #6b7280 !important; }
-        html[data-theme="light"] .text-gray-400,
-        html[data-theme="light"] .text-gray-500 { color: #9ca3af !important; }
-        html[data-theme="light"] .text-green-500 { color: #059669 !important; }
-        
-        /* Borders */
-        html[data-theme="light"] .border-gray-700,
-        html[data-theme="light"] .border-gray-600 { border-color: #e5e7eb !important; }
-        
-        /* Sidebar specific hover states */
-        html[data-theme="light"] .nav-item:hover {
-            background-color: #f3f4f6 !important;
-            color: #111827 !important;
-        }
-        html[data-theme="light"] .nav-item.active {
-            background-color: #f3f4f6 !important;
-            color: #111827 !important;
-        }
-        
-        /* Sidebar shadow in light mode */
-        html[data-theme="light"] .sidebar {
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1) !important;
-            border-right: 1px solid #e5e7eb !important;
-        }
-        
-        /* Sidebar toggle button light mode */
-        html[data-theme="light"] #sidebarToggle {
-            background-color: #e5e7eb !important;
-            color: #6b7280 !important;
-        }
-        html[data-theme="light"] #sidebarToggle:hover {
-            color: #111827 !important;
-        }
-        
-        /* Table hover states for light mode */
-        html[data-theme="light"] tr.hover\\:bg-gray-700:hover,
-        html[data-theme="light"] .hover\\:bg-gray-700:hover {
-            background-color: #f3f4f6 !important;
-        }
-        
-        /* Specific table row hover overrides */
-        html[data-theme="light"] table tbody tr:hover {
-            background-color: #f3f4f6 !important;
-        }
-        
-        /* Dark theme - Very specific selectors */
-        html[data-theme="dark"] body,
-        html[data-theme="dark"] body.bg-gray-900 { 
-            background-color: #111827 !important; 
-            color: #f9fafb !important; 
-        }
-        html[data-theme="dark"] .bg-gray-900 { background-color: #111827 !important; }
-        html[data-theme="dark"] .bg-gray-800,
-        html[data-theme="dark"] nav.bg-gray-800,
-        html[data-theme="dark"] .sidebar.bg-gray-800,
-        html[data-theme="dark"] header.bg-gray-800 { background-color: #1f2937 !important; }
-        html[data-theme="dark"] .bg-gray-700 { background-color: #374151 !important; }
-        html[data-theme="dark"] .bg-gray-600 { background-color: #374151 !important; }
-        html[data-theme="dark"] .text-white,
-        html[data-theme="dark"] .text-gray-200 { color: #f9fafb !important; }
-        html[data-theme="dark"] .text-gray-300 { color: #d1d5db !important; }
-        html[data-theme="dark"] .text-gray-400,
-        html[data-theme="dark"] .text-gray-500 { color: #9ca3af !important; }
-        html[data-theme="dark"] .text-green-500 { color: #10b981 !important; }
-        html[data-theme="dark"] .border-gray-700,
-        html[data-theme="dark"] .border-gray-600 { border-color: #374151 !important; }
-        
-        /* Hover state overrides */
-        html[data-theme="light"] .hover\\:bg-gray-700:hover { background-color: #d1d5db !important; }
-        html[data-theme="light"] .hover\\:text-white:hover { color: #111827 !important; }
-        html[data-theme="light"] .hover\\:text-green-500:hover { color: #059669 !important; }
-        html[data-theme="dark"] .hover\\:bg-gray-700:hover { background-color: #374151 !important; }
-        html[data-theme="dark"] .hover\\:text-white:hover { color: #f9fafb !important; }
-        html[data-theme="dark"] .hover\\:text-green-500:hover { color: #10b981 !important; }
-        
-        /* Additional border overrides */
-        html[data-theme="light"] .border-green-500,
-        html[data-theme="light"] .border-green-600 { border-color: #059669 !important; }
-        html[data-theme="dark"] .border-green-500,
-        html[data-theme="dark"] .border-green-600 { border-color: #10b981 !important; }
-        
-        /* Theme transition animation */
-        * {
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
-
-        /* Network Map light mode - lighter grey boxes */
-        html[data-theme="light"] .bg-gray-700.border-gray-600 {
-            background-color: #f3f4f6 !important; /* Very light grey */
-            border-color: #d1d5db !important; /* Light grey border */
-        }
-
-        /* Theme toggle button light mode - lighter colors */
-        html[data-theme="light"] #themeToggle {
-            background-color: #e5e7eb !important; /* Light grey background */
-            color: #6b7280 !important; /* Medium grey icon */
-        }
-        html[data-theme="light"] #themeToggle:hover {
-            background-color: #d1d5db !important; /* Slightly darker grey on hover */
-            color: #059669 !important; /* Green icon on hover */
-        }
-
-        /* Start scan button light mode - lighter colors */
-        html[data-theme="light"] .bg-green-600 {
-            background-color: #16a34a !important; /* Lighter green */
-        }
-        html[data-theme="light"] .hover\\:bg-green-700:hover {
-            background-color: #15803d !important; /* Lighter green hover */
-        }
-
-        /* Devices table light mode - lighter header and borders */
-        html[data-theme="light"] table thead.bg-gray-700 {
-            background-color: #f3f4f6 !important; /* Light grey header */
-        }
-        html[data-theme="light"] .divide-gray-600 > * + * {
-            border-top-color: #e5e7eb !important; /* Light grey borders */
-        }
-
-        /* Device IP styling to match master branch */
-        .device-ip {
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        @keyframes radar-ping {
-            0% {
-                transform: scale(0.8);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(2);
-                opacity: 0;
-            }
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% {
-                opacity: 1;
-                box-shadow: 0 0 5px #22c55e, 0 0 10px #22c55e;
-            }
-            50% {
-                opacity: 0.7;
-                box-shadow: 0 0 15px #22c55e, 0 0 25px #22c55e, 0 0 35px #22c55e;
-            }
-        }
-
-        @keyframes holo-scan {
-            0%, 100% {
-                text-shadow: 0 0 5px #22c55e, 0 0 10px #22c55e;
-                opacity: 1;
-            }
-            50% {
-                text-shadow: 0 0 15px #22c55e, 0 0 25px #22c55e, 0 0 35px #22c55e;
-                opacity: 0.8;
-            }
-        }
-
-        @keyframes scan-line {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-    </style>
-    
-    <script>   
-        // Dropdown functionality is handled by main.js
-        
-        // About page function
-        function loadAboutPage() {
-            if (typeof showAboutModal === 'function') {
-                showAboutModal();
-            } else {
-                loadContent('/about', 'content');
-            }
-        }
-        
-        // Make loadAboutPage available globally
-        window.loadAboutPage = loadAboutPage;
-        
-        // Content loading utility functions
-        function loadContent(url, targetId) {
-            fetch(url)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById(targetId).innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Failed to load content:', error);
-                    document.getElementById(targetId).innerHTML = '<div class="p-6"><p class="text-red-400">Error loading content. Please try again.</p></div>';
-                });
-        }
-        
-        // Page-specific content loading functions
-        function loadDevicesPage() {
-            const container = document.getElementById('device-list-container');
-            if (!container) return;
-            
-            fetch('/api/device-list')
-                .then(response => response.json())
-                .then(data => {
-                    container.innerHTML = renderDeviceTable(data.devices || []);
-                })
-                .catch(error => {
-                    console.error('Failed to load devices:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load devices</div>';
-                });
-        }
-        
-        function renderDeviceTable(devices) {
-            if (!devices || devices.length === 0) {
-                return '<div class="text-center text-gray-400 py-8">No devices found</div>';
-            }
-            
-            return `
-                <div class="overflow-x-auto">
-                    <table class="w-full bg-gray-800 rounded">
-                        <thead class="bg-gray-700">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Device</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">IP Address</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">MAC Address</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">OS</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Status</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-600">
-                            ${devices.map(device => {
-                                const hostname = device.hostname || device.name || 'Unknown';
-                                const ip = device.ipv4 || device.ip || 'N/A';
-                                const mac = device.mac || 'N/A';
-                                const osInfo = device.os ? (device.os.name || 'Unknown') : 'Unknown';
-                                const status = device.status || 'unknown';
-                                const deviceId = device.id;
-                                
-                                return `
-                                    <tr class="hover:bg-gray-700 transition-colors cursor-pointer" onclick="loadDeviceModal('${deviceId}')">
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center">
-                                                <div class="mr-2">${getDeviceIcon(status)}</div>
-                                                <span class="font-medium">${hostname}</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 font-mono text-sm">${ip}</td>
-                                        <td class="px-4 py-3 font-mono text-sm">${mac}</td>
-                                        <td class="px-4 py-3">${osInfo}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded text-xs ${getDeviceStatusColor(status)}">${status}</span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <button onclick="event.stopPropagation(); deleteDevice('${deviceId}', '${ip}')" 
-                                                    class="text-red-500 hover:text-red-400 p-1 rounded hover:bg-red-500 hover:bg-opacity-20 transition-colors"
-                                                    title="Delete Device">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                </svg>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        function getDeviceStatusColor(status) {
-            if (!status || typeof status !== 'string') return 'bg-gray-600 text-gray-300';
-            const statusLower = status.toLowerCase();
-            switch (statusLower) {
-                case 'online': return 'bg-green-600 text-green-100';
-                case 'offline': return 'bg-red-600 text-red-100';
-                case 'unknown': return 'bg-yellow-600 text-yellow-100';
-                default: return 'bg-gray-600 text-gray-300';
-            }
-        }
-        
-        function getDeviceIcon(status) {
-            if (!status || typeof status !== 'string') return getDeviceIconSVG('gray');
-            const statusLower = status.toLowerCase();
-            switch (statusLower) {
-                case 'online': return getDeviceIconSVG('green');
-                case 'offline': return getDeviceIconSVG('red');
-                case 'unknown': return getDeviceIconSVG('yellow');
-                default: return getDeviceIconSVG('gray');
-            }
-        }
-        
-        function getDeviceIconSVG(color) {
-            const colorClass = `text-${color}-500`;
-            return `<svg class="w-4 h-4 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                    </svg>`;
-        }
-        
-        function getStatusColor(status) {
-            if (!status || typeof status !== 'string') return 'bg-gray-400';
-            const statusLower = status.toLowerCase();
-            switch (statusLower) {
-                case 'online': return 'bg-green-500';
-                case 'offline': return 'bg-red-500';
-                case 'idle': return 'bg-yellow-500';
-                default: return 'bg-gray-400';
-            }
-        }
-        
-        function loadNetworksPage() {
-            const container = document.getElementById('networks-container');
-            if (!container) return;
-            
-            fetch('/api/networks')
-                .then(response => response.json())
-                .then(data => {
-                    container.innerHTML = renderNetworksTable(data.networks || []);
-                })
-                .catch(error => {
-                    console.error('Failed to load networks:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load networks</div>';
-                });
-        }
-        
-        function renderNetworksTable(networks) {
-            if (!networks || networks.length === 0) {
-                return `
-                    <div class="text-center py-8 text-gray-400">
-                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                        </svg>
-                        <p>No networks configured</p>
-                    </div>
-                `;
-            }
-            
-            return `
-                <div class="overflow-x-auto">
-                    <table class="w-full bg-gray-800 rounded">
-                        <thead class="bg-gray-700">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Name</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Network</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Description</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Status</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-600">
-                            ${networks.map(network => {
-                                const name = network.name || network.Name || 'Unnamed Network';
-                                const cidr = network.cidr || network.CIDR || 'N/A';
-                                const description = network.description || network.Description || 'No description';
-                                const status = network.status || network.Status || 'unknown';
-                                const networkId = network.id || network.ID;
-                                
-                                return `
-                                    <tr class="hover:bg-gray-700 transition-colors">
-                                        <td class="px-4 py-3">
-                                            <span class="font-medium text-gray-200">${name}</span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center">
-                                                <div class="mr-2">
-                                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                                                    </svg>
-                                                </div>
-                                                <code class="text-green-400 px-2 py-1 rounded text-sm bg-gray-900">${cidr}</code>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-300">${description}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded text-xs bg-green-600 text-green-100">Active</span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex gap-2">
-                                                <button onclick="editNetwork('${networkId}')" 
-                                                        class="text-green-500 hover:text-green-400 p-1 rounded hover:bg-green-500 hover:bg-opacity-20 transition-colors"
-                                                        title="Edit Network">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                    </svg>
-                                                </button>
-                                                <button onclick="deleteNetwork('${networkId}')" 
-                                                        class="text-red-500 hover:text-red-400 p-1 rounded hover:bg-red-500 hover:bg-opacity-20 transition-colors"
-                                                        title="Delete Network">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        
-        function loadSettingsPage() {
-            const container = document.getElementById('settings-container');
-            if (!container) return;
-            
-            fetch('/api/settings')
-                .then(response => response.json())
-                .then(data => {
-                    container.innerHTML = renderSettings(data.settings || {});
-                })
-                .catch(error => {
-                    console.error('Failed to load settings:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load settings</div>';
-                });
-        }
-        
-        function loadLogsPage() {
-            const container = document.getElementById('event-logs-container');
-            if (!container) return;
-            
-            fetch('/api/event-logs-table')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Event logs data:', data); // Debug log
-                    // Try multiple possible data structures
-                    const logs = data.logs || data.eventLogs || data.events || data || [];
-                    container.innerHTML = renderEventLogsTable(logs);
-                })
-                .catch(error => {
-                    console.error('Failed to load event logs:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load activity logs</div>';
-                });
-        }
-        
-        function renderEventLogsTable(logs) {
-            console.log('Rendering logs table with data:', logs); // Debug log
-            
-            if (!logs || logs.length === 0) {
-                return `
-                    <div class="text-center py-8 text-gray-400">
-                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                        </svg>
-                        <p>No activity logs found</p>
-                        <p class="text-xs text-gray-500 mt-2">Total logs received: ${Array.isArray(logs) ? logs.length : 'invalid data'}</p>
-                    </div>
-                `;
-            }
-            
-            return `
-                <div class="overflow-x-auto">
-                    <table class="w-full rounded">
-                        <thead class="bg-gray-700">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Time</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Type</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Event</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-600">
-                            ${logs.map((log, index) => {
-                                console.log(`Log ${index}:`, log); // Debug each log entry
-                                const createdAt = log.CreatedAt || log.created_at || log.timestamp || log.time;
-                                const type = log.Type || log.type || log.event_type || 'unknown';
-                                const message = log.Message || log.message || log.description || log.event || 'No description';
-                                const duration = log.DurationSeconds || log.duration_seconds || log.duration;
-                                
-                                return `
-                                    <tr class="hover:bg-gray-700 transition-colors">
-                                        <td class="px-4 py-3 font-mono text-sm text-gray-300">${formatLogTime(createdAt)}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded text-xs ${getLogTypeColor(type)}">${type}</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-300">${message}</td>
-                                        <td class="px-4 py-3 font-mono text-sm text-gray-400">${formatDuration(duration)}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        function getLogTypeColor(type) {
-            if (!type) return 'bg-gray-600 text-gray-300';
-            switch (type.toLowerCase()) {
-                case 'ping_sweep': return 'bg-blue-600 text-blue-100';
-                case 'port_scan': return 'bg-purple-600 text-purple-100';
-                case 'network_scan': return 'bg-green-600 text-green-100';
-                case 'error': return 'bg-red-600 text-red-100';
-                default: return 'bg-gray-600 text-gray-300';
-            }
-        }
-        
-        function formatDuration(seconds) {
-            if (!seconds) return '-';
-            if (seconds < 60) return `${seconds}s`;
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${minutes}m ${remainingSeconds}s`;
-        }
-        
-        function renderSettings(settings) {
-            return `
-                <div class="p-6">
-                    <form id="settings-form" class="space-y-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-green-500 mb-4">Network Scanning</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Scan Interval (seconds)</label>
-                                    <input type="number" 
-                                           name="scan_interval" 
-                                           value="${settings.scan_interval || 300}"
-                                           min="60" 
-                                           max="3600"
-                                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-green-500 focus:outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Concurrent Scans</label>
-                                    <input type="number" 
-                                           name="concurrent_scans" 
-                                           value="${settings.concurrent_scans || 50}"
-                                           min="1" 
-                                           max="200"
-                                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-green-500 focus:outline-none">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h3 class="text-lg font-semibold text-green-500 mb-4">Screenshot Capture</h3>
-                            <div class="flex items-center space-x-3">
-                                <input type="checkbox" 
-                                       id="screenshots_enabled" 
-                                       name="screenshots_enabled" 
-                                       ${settings.screenshots_enabled ? 'checked' : ''}
-                                       class="w-4 h-4 text-green-500 bg-gray-700 border-gray-600 rounded focus:ring-green-500">
-                                <label for="screenshots_enabled" class="text-sm font-medium text-gray-300">
-                                    Enable automatic screenshot capture for detected devices
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end">
-                            <button type="submit" 
-                                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-medium transition-colors">
-                                Save Settings
-                            </button>
-                        </div>
                     </form>
                 </div>
-            `;
-        }
-        
-        
-        function refreshAlerts() {
-            console.log('Refresh alerts');
-        }
-        
-        function markAllRead() {
-            console.log('Mark all alerts as read');
-        }
-        
-        // Initialize page content based on current page
-        function initPageContent() {
-            const currentPath = window.location.pathname;
-            
-            if (currentPath === '/devices') {
-                loadDevicesPage();
-                setInterval(loadDevicesPage, 10000);
-            } else if (currentPath === '/networks') {
-                loadNetworksPage();
-                setInterval(loadNetworksPage, 15000);
-            } else if (currentPath === '/logs') {
-                loadLogsPage();
-                setInterval(loadLogsPage, 10000);
-            } else if (currentPath === '/settings') {
-                loadSettingsPage();
-            } else if (currentPath === '/' || currentPath === '/home' || currentPath === '') {
-                // Initialize main dashboard widgets
-                if (typeof loadScanControl === 'function') {
-                    loadScanControl();
-                }
-                if (typeof loadRecentActivity === 'function') {
-                    loadRecentActivity();
-                }
-                if (typeof loadDashboardMetrics === 'function') {
-                    loadDashboardMetrics();
-                }
-                if (typeof startNetworkMapUpdates === 'function') {
-                    startNetworkMapUpdates();
-                }
-                if (typeof loadDevices === 'function') {
-                    loadDevices();
-                }
-                
-                // Set up periodic updates for dashboard
-                setInterval(() => {
-                    if (typeof loadDashboardMetrics === 'function') {
-                        loadDashboardMetrics();
-                    }
-                }, 15000);
-                setInterval(() => {
-                    if (typeof loadRecentActivity === 'function') {
-                        loadRecentActivity();
-                    }
-                }, 30000);
-                setInterval(() => {
-                    if (typeof loadDevices === 'function') {
-                        loadDevices(false); // false = no spinner on refresh
-                    }
-                }, 10000);
-            }
-        }
-        
-        // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', initPageContent);
+            </div>
+        </header>
 
-        // Make page-specific functions globally available (non-duplicated ones)
-        window.loadDevicesPage = loadDevicesPage;
-        window.loadNetworksPage = loadNetworksPage;
-        window.loadLogsPage = loadLogsPage;
-        window.loadSettingsPage = loadSettingsPage;
-        window.refreshAlerts = refreshAlerts;
-        window.markAllRead = markAllRead;
-        window.getDeviceStatusColor = getDeviceStatusColor;
-        window.getDeviceIcon = getDeviceIcon;
-        window.getDeviceIconSVG = getDeviceIconSVG;
-        window.getStatusColor = getStatusColor;
-        window.renderDeviceTable = renderDeviceTable;
-    </script>
-
-    <!-- Generic Modal (Sensors & shared content) -->
-    <div id="modal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-lg w-full">
-                <div id="modal-content">
-                    <!-- Dynamic content -->
+        <!-- Results Table -->
+        <main class="flex-1 py-6">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="bg-gray-800 rounded-lg overflow-hidden">
+                    <div id="results-table" class="overflow-x-auto">
+                        <div class="flex justify-center items-center py-12">
+                            <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
+                            <span class="ml-3 text-gray-400">Loading...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- Device Modal -->
@@ -1274,60 +60,177 @@
         <div class="modal-backdrop"></div>
         <div class="modal-container">
             <div class="modal-content max-w-3xl max-h-[90vh] overflow-y-auto">
-                <div id="device-modal-content" class="max-w-3xl mx-auto">
-                    <!-- Content will be loaded here -->
-                </div>
+                <div id="device-modal-content"></div>
             </div>
         </div>
     </div>
 
-    <!-- Network Modal -->
-    <div id="networkModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-md">
-                <div id="network-modal-content">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    <style>
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .modal.show { opacity: 1; visibility: visible; }
+        .modal-backdrop { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); cursor: pointer; }
+        .modal-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
+        .modal-content { background: var(--bg-secondary); border-radius: 0.5rem; border: 1px solid var(--border-accent); max-width: 90vw; max-height: 90vh; overflow-y: auto; pointer-events: all; transform: scale(0.9); transition: transform 0.3s ease; }
+        .modal.show .modal-content { transform: scale(1); }
 
-    <!-- Network Delete Modal -->
-    <div id="networkDeleteModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-md w-full">
-                <div id="network-delete-modal-content">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+        :root { --bg-primary: #111827; --bg-secondary: #1f2937; --bg-tertiary: #374151; --text-primary: #f9fafb; --text-secondary: #d1d5db; --text-muted: #9ca3af; --border-color: #4b5563; --border-accent: #10b981; }
+        [data-theme="light"] { --bg-primary: #f9fafb; --bg-secondary: #f3f4f6; --bg-tertiary: #e5e7eb; --text-primary: #111827; --text-secondary: #374151; --text-muted: #6b7280; --border-color: #d1d5db; --border-accent: #059669; }
+        body { background-color: var(--bg-primary); color: var(--text-primary); }
 
-    <!-- New Scan Modal -->
-    <div id="newScanModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-md w-full">
-                <div id="newScanModalContent">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+        html[data-theme="light"] body { background-color: #f9fafb !important; color: #111827 !important; }
+        html[data-theme="light"] .bg-gray-800, html[data-theme="light"] header { background-color: #ffffff !important; border-color: #e5e7eb !important; }
+        html[data-theme="light"] .bg-gray-700 { background-color: #f3f4f6 !important; }
+        html[data-theme="light"] .text-gray-200, html[data-theme="light"] .text-white { color: #111827 !important; }
+        html[data-theme="light"] .text-gray-300, html[data-theme="light"] .text-gray-400 { color: #6b7280 !important; }
+        html[data-theme="light"] .text-green-500 { color: #059669 !important; }
+        html[data-theme="light"] .border-gray-700 { border-color: #e5e7eb !important; }
+        html[data-theme="light"] table thead { background-color: #f3f4f6 !important; }
+        html[data-theme="light"] table tbody tr:hover { background-color: #f3f4f6 !important; }
+    </style>
 
-    <!-- About Modal -->
-    <div id="aboutModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div id="about-modal-content">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initTheme === 'function') initTheme();
+            loadDeviceTable();
+            setInterval(loadDeviceTable, 10000);
+        });
 
+        function loadDeviceTable() {
+            const container = document.getElementById('results-table');
+            if (!container) return;
+
+            fetch('/api/devices', { credentials: 'include' })
+                .then(response => response.json())
+                .then(data => {
+                    const devices = data.devices || [];
+                    document.getElementById('devices-count').textContent = devices.length;
+
+                    if (devices.length === 0) {
+                        container.textContent = '';
+                        const emptyDiv = document.createElement('div');
+                        emptyDiv.className = 'text-center py-12 text-gray-400';
+                        emptyDiv.innerHTML = '<i class="ti ti-router-off text-4xl mb-3 block opacity-50"></i><p>No devices found</p>';
+                        container.appendChild(emptyDiv);
+                        return;
+                    }
+                    renderResultsTable(container, devices);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    container.textContent = '';
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-red-400 p-4 text-center';
+                    errorDiv.textContent = 'Failed to load devices';
+                    container.appendChild(errorDiv);
+                });
+        }
+
+        function renderResultsTable(container, devices) {
+            container.textContent = '';
+            const table = document.createElement('table');
+            table.className = 'w-full';
+
+            const thead = document.createElement('thead');
+            thead.className = 'bg-gray-700';
+            const headerRow = document.createElement('tr');
+            ['Status', 'IP Address', 'MAC Address', 'Hostname', 'Ports', 'Last Seen'].forEach(text => {
+                const th = document.createElement('th');
+                th.className = 'px-4 py-3 text-left text-green-500 font-semibold text-sm';
+                th.textContent = text;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            tbody.className = 'divide-y divide-gray-700';
+
+            devices.forEach(device => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-700 transition-colors cursor-pointer';
+                row.onclick = function() { loadDeviceModal(device.id); };
+
+                const status = device.status || 'unknown';
+                const ip = device.ipv4 || device.ip || 'N/A';
+                const mac = device.mac || '-';
+                const hostname = device.hostname || device.name || '-';
+                const lastSeen = device.LastSeenOnlineAt || device.last_seen_online_at;
+                let openPorts = 0;
+                if (device.ports && Array.isArray(device.ports)) {
+                    openPorts = device.ports.filter(p => p.state === 'open').length;
+                }
+
+                // Status
+                const statusCell = document.createElement('td');
+                statusCell.className = 'px-4 py-3';
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'flex items-center';
+                const dot = document.createElement('div');
+                dot.className = 'w-3 h-3 rounded-full ' + (status === 'online' ? 'bg-green-500' : status === 'offline' ? 'bg-red-500' : 'bg-gray-500');
+                statusDiv.appendChild(dot);
+                statusCell.appendChild(statusDiv);
+                row.appendChild(statusCell);
+
+                // IP
+                const ipCell = document.createElement('td');
+                ipCell.className = 'px-4 py-3 font-mono text-white';
+                ipCell.textContent = ip;
+                row.appendChild(ipCell);
+
+                // MAC
+                const macCell = document.createElement('td');
+                macCell.className = 'px-4 py-3 font-mono text-sm text-blue-400';
+                macCell.textContent = mac;
+                row.appendChild(macCell);
+
+                // Hostname
+                const hostnameCell = document.createElement('td');
+                hostnameCell.className = 'px-4 py-3 text-gray-300';
+                hostnameCell.textContent = hostname;
+                row.appendChild(hostnameCell);
+
+                // Ports
+                const portsCell = document.createElement('td');
+                portsCell.className = 'px-4 py-3';
+                if (openPorts > 0) {
+                    const span = document.createElement('span');
+                    span.className = 'px-2 py-1 bg-red-500 bg-opacity-20 text-red-400 text-xs rounded';
+                    span.textContent = openPorts + ' open';
+                    portsCell.appendChild(span);
+                } else {
+                    portsCell.textContent = '-';
+                    portsCell.className += ' text-gray-500';
+                }
+                row.appendChild(portsCell);
+
+                // Last seen
+                const lastSeenCell = document.createElement('td');
+                lastSeenCell.className = 'px-4 py-3 text-sm text-gray-400';
+                lastSeenCell.textContent = lastSeen ? formatTime(lastSeen) : '-';
+                row.appendChild(lastSeenCell);
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                const diffMs = Date.now() - date;
+                const mins = Math.floor(diffMs / 60000);
+                if (mins < 1) return 'now';
+                if (mins < 60) return mins + 'm';
+                const hrs = Math.floor(mins / 60);
+                if (hrs < 24) return hrs + 'h';
+                return Math.floor(hrs / 24) + 'd';
+            } catch (e) { return '-'; }
+        }
+
+        window.loadDeviceTable = loadDeviceTable;
+    </script>
 </body>
 </html>
