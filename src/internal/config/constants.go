@@ -11,7 +11,6 @@ const (
 	AgentUIRefreshInterval     = 150 * time.Millisecond
 	AgentShutdownPause         = 100 * time.Millisecond
 	AgentOnlineThreshold       = 30 * time.Second
-	AgentOfflineHideAfter      = 2 * time.Minute
 	DeviceUpdateRetryDelay     = 1 * time.Second
 	PortScanCooldown           = 15 * time.Minute
 	MDNSDiscoveryInterval      = 2 * time.Minute

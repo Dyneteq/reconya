@@ -18,7 +18,10 @@
                 <div class="logo">
                     <i class="ti ti-network"></i> reconYa
                 </div>
-                <div class="nav-right">
+                <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+                    <i class="ti ti-menu-2"></i>
+                </button>
+                <div class="nav-right" id="nav-right">
                     <span class="status-text">
                         <span class="blink">&gt;</span> <span id="devices-count">0</span> TARGETS ACQUIRED
                     </span>
@@ -543,6 +546,80 @@
             overflow-y: auto;
             pointer-events: all;
         }
+
+        /* Mobile menu button */
+        .mobile-menu-btn {
+            display: none;
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .mobile-menu-btn:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 15px #0f0;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 640px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .nav-right {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: rgba(0, 20, 0, 0.95);
+                border-top: 1px solid #0f03;
+                border-bottom: 1px solid #0f03;
+                flex-direction: column;
+                padding: 16px;
+                gap: 12px;
+                z-index: 100;
+            }
+
+            .nav-right.show {
+                display: flex;
+            }
+
+            header > div {
+                position: relative;
+            }
+
+            .status-text {
+                text-align: center;
+            }
+
+            .btn-logout {
+                width: 100%;
+            }
+
+            .logo {
+                font-size: 1.4rem;
+            }
+
+            .logo i {
+                font-size: 1.6rem;
+            }
+
+            th, td {
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+
+            .terminal-header {
+                font-size: 10px;
+                padding: 10px 12px;
+            }
+        }
     </style>
 
     <script>
@@ -749,8 +826,14 @@
             showModal('logoutModal');
         }
 
+        function toggleMobileMenu() {
+            var nav = document.getElementById('nav-right');
+            nav.classList.toggle('show');
+        }
+
         window.loadDeviceTable = loadDeviceTable;
         window.showLogoutModal = showLogoutModal;
+        window.toggleMobileMenu = toggleMobileMenu;
     </script>
 </body>
 </html>

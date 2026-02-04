@@ -661,22 +661,17 @@ func displayScanResults(ifaceName, networkCIDR, localIP, localMAC string, stop c
 			}
 
 			onlineCount := 0
-			offlineCount := 0
 
 			for _, ip := range sortedIPs {
 				dev := scanDevices[ip]
 
 				isOnline := time.Since(dev.LastSeen) <= config.AgentOnlineThreshold
 
-				if !isOnline && time.Since(dev.LastSeen) > config.AgentOfflineHideAfter {
+				if !isOnline {
 					continue
 				}
 
-				if isOnline {
-					onlineCount++
-				} else {
-					offlineCount++
-				}
+				onlineCount++
 
 				mac := dev.MAC
 				if mac == "" {
@@ -718,14 +713,14 @@ func displayScanResults(ifaceName, networkCIDR, localIP, localMAC string, stop c
 			}
 			scanMutex.RUnlock()
 
-			if onlineCount == 0 && offlineCount == 0 {
+			if onlineCount == 0 {
 				fmt.Printf("%s  %s Scanning network...%s%s\n", dim, spinner, reset, clr)
 			}
 
 			fmt.Printf("%s  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%s%s\n", green, reset, clr)
 
-			fmt.Printf("%s  Devices: %d  |  Online: %d  |  Offline: %d%s%s\n",
-				green, onlineCount+offlineCount, onlineCount, offlineCount, reset, clr)
+			fmt.Printf("%s  Online Devices: %d%s%s\n",
+				green, onlineCount, reset, clr)
 			fmt.Printf("%s\n", clr)
 
 			fmt.Printf("%s  Activity:%s%s\n", brightGreen, reset, clr)
