@@ -20,10 +20,13 @@ function loadRecentActivity() {
         });
 }
 
+// Track previously seen log entries to detect new ones
+window._previousLogKeys = window._previousLogKeys || new Set();
+
 function renderRecentActivity(logs) {
     const activityContainer = document.getElementById('activity-log');
     if (!activityContainer) return;
-    
+
     if (!logs || logs.length === 0) {
         activityContainer.innerHTML = `
             <div class="text-center py-4 text-gray-500">
@@ -33,30 +36,41 @@ function renderRecentActivity(logs) {
         `;
         return;
     }
-    
+
+    const displayLogs = logs.slice(0, 10);
+    const newKeys = new Set();
+    const now = Date.now();
+
     let activityHTML = '<div class="space-y-1">';
-    
-    logs.slice(0, 10).forEach(log => { // Show only latest 10
-        // Handle both snake_case and camelCase field names for compatibility
+
+    displayLogs.forEach(log => {
         const logType = log.type || log.Type || 'unknown';
         const logDescription = log.description || log.Description || 'Unknown activity';
         const logCreatedAt = log.created_at || log.CreatedAt || new Date().toISOString();
-        
-        const activityIcon = getActivityIcon(logType);
+
+        const logKey = logCreatedAt + '|' + logDescription;
+        newKeys.add(logKey);
+
+        // Flash if: entry appeared since last render, OR entry is recent (< 60s) on first load
+        const isNewSinceLastRender = window._previousLogKeys.size > 0 && !window._previousLogKeys.has(logKey);
+        const isRecent = (now - new Date(logCreatedAt).getTime()) < 60000;
+        const shouldFlash = isNewSinceLastRender || (window._previousLogKeys.size === 0 && isRecent);
         const timeAgo = getTimeAgo(logCreatedAt);
-        
+
         activityHTML += `
-            <div class="flex items-center justify-between py-1">
+            <div class="flex items-center justify-between py-1 px-2 rounded${shouldFlash ? ' activity-flash' : ''}">
                 <div class="flex items-center">
                     <span class="text-xs">${logDescription}</span>
                 </div>
-                <span class="text-xs text-gray-500">${timeAgo}</span>
+                <span class="text-xs text-gray-500 whitespace-nowrap ml-2">${timeAgo}</span>
             </div>
         `;
     });
-    
+
     activityHTML += '</div>';
     activityContainer.innerHTML = activityHTML;
+
+    window._previousLogKeys = newKeys;
 }
 
 function getActivityIcon(type) {

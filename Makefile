@@ -1,4 +1,4 @@
-.PHONY: start start-dev stop status logs logs-follow logs-errors logs-clear build build-cgo deps clean help install setup-nmap bump-version
+.PHONY: start start-dev stop status logs logs-follow logs-errors logs-clear build build-cgo deps clean help install bump-version
 
 # Project paths
 PROJECT_ROOT := $(shell pwd)
@@ -169,20 +169,6 @@ install:
 	@echo "$(GREEN)[SUCCESS]$(NC) Installation complete!"
 	@echo "Run 'make start' to start reconYa"
 
-## Setup nmap permissions for MAC address detection
-setup-nmap:
-	@echo "Setting up nmap permissions..."
-	@NMAP_PATH=$$(which nmap) && \
-	if [ -n "$$NMAP_PATH" ]; then \
-		echo "$(BLUE)[INFO]$(NC) Found nmap at: $$NMAP_PATH"; \
-		sudo chown root:wheel "$$NMAP_PATH" && \
-		sudo chmod u+s "$$NMAP_PATH" && \
-		echo "$(GREEN)[SUCCESS]$(NC) nmap permissions configured"; \
-	else \
-		echo "$(RED)[ERROR]$(NC) nmap not found. Please install nmap first."; \
-		exit 1; \
-	fi
-
 ## Bump version
 bump-version:
 	@$(SCRIPTS_DIR)/bump-version.sh
@@ -217,5 +203,4 @@ help:
 	@echo ""
 	@echo "Setup targets:"
 	@echo "  install      Initial setup"
-	@echo "  setup-nmap   Configure nmap permissions"
 	@echo "  bump-version Bump project version"

@@ -60,7 +60,6 @@ echo ""
 log_info "Checking dependencies..."
 
 check_dependency "Go" "go" "version"
-check_dependency "nmap" "nmap" "--version"
 
 echo ""
 log_info "Checking backend service..."

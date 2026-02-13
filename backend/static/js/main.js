@@ -12,8 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     initDropdownMenu();
-
-    initPageContent();
 });
 
 function initPageContent() {
@@ -136,7 +134,7 @@ function displayAboutModal(version) {
                     <strong class="text-white">Key Features:</strong>
                 </p>
                 <ul class="space-y-1 text-sm">
-                    <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Real-time network scanning with nmap integration</li>
+                    <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Real-time network scanning with native Go implementation</li>
                     <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Device identification and vendor detection</li>
                     <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Port scanning and service detection</li>
                     <li class="flex items-center text-gray-300"><i class="ti ti-circle-check text-green-500 mr-2"></i>Web-based dashboard with live updates</li>

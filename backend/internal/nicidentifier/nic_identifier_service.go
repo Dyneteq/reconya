@@ -41,16 +41,17 @@ func (s *NicIdentifierService) Identify() {
 	log.Printf("Attempting network identification")
 	nic := s.getLocalNic()
 	fmt.Printf("NIC: %v\n", nic)
-	
+
 	// Check for new networks and suggest creation
 	s.CheckForNewNetworks()
-	
+
 	publicIP, err := s.getPublicIp()
 	if err != nil {
 		log.Printf("Failed to get public IP: %v", err)
-		return
+		// Continue - still create SystemStatus with available info
+	} else {
+		log.Printf("Public IP Address found: [%v]", publicIP)
 	}
-	log.Printf("Public IP Address found: [%v]", publicIP)
 
 	// Try to find an existing network for the primary NIC for system status
 	var networkEntity *models.Network
@@ -63,7 +64,7 @@ func (s *NicIdentifierService) Identify() {
 				// Calculate /24 network
 				cidr := fmt.Sprintf("%d.%d.%d.0/24", ip4[0], ip4[1], ip4[2])
 				log.Printf("Looking for existing network for primary NIC: %s", cidr)
-				
+
 				// Only look for existing network, don't create automatically
 				existing, err := s.NetworkService.FindByCIDR(cidr)
 				if err != nil {
@@ -78,26 +79,45 @@ func (s *NicIdentifierService) Identify() {
 		}
 	}
 
-	localDevice := models.Device{
-		Name:   nic.Name,
-		IPv4:   nic.IPv4,
-		Status: models.DeviceStatusOnline,
-	}
+	// Build SystemStatus with available info
+	systemStatus := models.SystemStatus{}
 
-	savedDevice, err := s.DeviceService.CreateOrUpdate(&localDevice)
-	if err != nil {
-		log.Printf("Failed to save or update local device: %v", err)
-		return
-	}
-
-	systemStatus := models.SystemStatus{
-		LocalDevice: *savedDevice,
-		PublicIP:    &publicIP,
+	if publicIP != "" {
+		systemStatus.PublicIP = &publicIP
 	}
 
 	// Set NetworkID if we have a valid network entity
 	if networkEntity != nil {
 		systemStatus.NetworkID = networkEntity.ID
+	}
+
+	// Try to save the local device (requires a network to exist)
+	var savedDevice *models.Device
+	if nic.IPv4 != "" {
+		localDevice := models.Device{
+			Name:   nic.Name,
+			IPv4:   nic.IPv4,
+			Status: models.DeviceStatusOnline,
+		}
+		if networkEntity != nil {
+			localDevice.NetworkID = networkEntity.ID
+		}
+
+		savedDevice, err = s.DeviceService.CreateOrUpdate(&localDevice)
+		if err != nil {
+			log.Printf("Could not save local device (network may not exist yet): %v", err)
+		}
+	}
+
+	if savedDevice != nil {
+		systemStatus.LocalDevice = *savedDevice
+	} else {
+		// Use NIC info directly for local device display
+		systemStatus.LocalDevice = models.Device{
+			Name:   nic.Name,
+			IPv4:   nic.IPv4,
+			Status: models.DeviceStatusOnline,
+		}
 	}
 
 	// Fetch geolocation for public IP
@@ -117,11 +137,13 @@ func (s *NicIdentifierService) Identify() {
 		return
 	}
 
-	device := savedDevice.ID
-	s.EventLogService.CreateOne(&models.EventLog{
-		Type:     models.LocalIPFound,
-		DeviceID: &device,
-	})
+	if savedDevice != nil {
+		device := savedDevice.ID
+		s.EventLogService.CreateOne(&models.EventLog{
+			Type:     models.LocalIPFound,
+			DeviceID: &device,
+		})
+	}
 
 	s.EventLogService.CreateOne(&models.EventLog{
 		Type: models.LocalNetworkFound,

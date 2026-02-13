@@ -10,7 +10,7 @@ Reconya discovers and monitors devices on your network with real-time updates. S
 
 ### Features
 
-- **IPv4 Network Scanning** - Comprehensive device discovery with nmap integration
+- **IPv4 Network Scanning** - Comprehensive device discovery with native Go implementation
 - **IPv6 Passive Monitoring** - Detects IPv6 devices through neighbor discovery and interface monitoring
 - **Device Identification** - MAC addresses, vendor detection, hostnames, and device types
 - **Dual-Stack Support** - Full IPv4 and IPv6 address display and management
@@ -41,7 +41,6 @@ Docker files have been moved to the `experimental/` directory for those who want
 Before installing reconYa, ensure you have the following installed on your system:
 
 - **Go 1.21 or later** - [Download Go](https://golang.org/dl/)
-- **nmap** - Network scanning tool (instructions below)
 - **make** - Build tool (pre-installed on most Unix systems)
 
 ## Local Installation (Recommended)
@@ -78,23 +77,6 @@ If you prefer to install manually:
 #### Prerequisites
 
 1. **Install Go** (1.21 or later): https://golang.org/dl/
-2. **Install nmap**:
-   ```bash
-   # macOS
-   brew install nmap
-
-   # Ubuntu/Debian
-   sudo apt-get install nmap
-
-   # RHEL/CentOS/Fedora
-   sudo yum install nmap  # or dnf install nmap
-   ```
-
-3. **Grant nmap privileges** (for MAC address detection):
-   ```bash
-   sudo chown root:admin $(which nmap)
-   sudo chmod u+s $(which nmap)
-   ```
 
 #### Setup & Run
 
@@ -186,17 +168,16 @@ IPV6_MULTICAST_MONITORING=false
 
 - **Backend**: Go API with HTMX templates and SQLite database (Port 3008)
 - **Web Interface**: HTML and vanilla JS
-- **Scanning**: Multi-strategy network discovery with nmap integration
+- **Scanning**: Multi-strategy network discovery with native Go implementation
 - **Database**: SQLite for device storage and event logging
 
 ## Scanning Algorithm
 
 ### Discovery Process
 
-Reconya uses a multi-layered scanning approach that combines nmap integration with native Go implementations:
+Reconya uses a multi-layered scanning approach built entirely with native Go:
 
 **1. Network Discovery (Every 30 seconds)**
-- Multiple nmap strategies with automatic fallback
 - ICMP ping sweeps (privileged mode)
 - TCP connect probes to common ports (fallback)
 - ARP table lookups for MAC address resolution
@@ -204,7 +185,6 @@ Reconya uses a multi-layered scanning approach that combines nmap integration wi
 **2. Device Identification**
 - IEEE OUI database for vendor identification
 - Multi-method hostname resolution (DNS, NetBIOS, mDNS)
-- Operating system fingerprinting via nmap
 - Device type classification based on ports and vendors
 
 **3. Port Scanning (Background workers)**
@@ -222,7 +202,7 @@ Reconya uses a multi-layered scanning approach that combines nmap integration wi
 ### Common Issues
 
 **No devices found**
-- Run `make status` to check if nmap is installed and configured
+- Run `make status` to check service status
 - Check that you're on the same network segment as target devices
 
 **Services won't start**
@@ -231,13 +211,8 @@ Reconya uses a multi-layered scanning approach that combines nmap integration wi
 - Ensure port 3008 is available
 
 **Missing MAC addresses**
-- Run `make status` to verify nmap permissions
 - MAC addresses only visible on same network segment
 - Some devices may not respond to ARP requests
-
-**Permission denied errors**
-- Run `make setup-nmap` to configure nmap permissions
-- Or manually run: `sudo chmod u+s $(which nmap)`
 
 **Services keep crashing**
 - Verify your `.env` configuration is correct

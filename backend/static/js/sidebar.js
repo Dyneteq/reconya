@@ -12,6 +12,9 @@ function initSidebar() {
         mainContent.style.marginLeft = '16rem';
     }
 
+    const collapseIcon = document.getElementById('sidebarCollapseIcon');
+    const expandIcon = document.getElementById('sidebarExpandIcon');
+
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -19,9 +22,13 @@ function initSidebar() {
             if (sidebar.classList.contains('collapsed')) {
                 sidebar.classList.remove('collapsed');
                 if (mainContent) mainContent.style.marginLeft = '16rem';
+                if (collapseIcon) collapseIcon.classList.remove('hidden');
+                if (expandIcon) expandIcon.classList.add('hidden');
             } else {
                 sidebar.classList.add('collapsed');
                 if (mainContent) mainContent.style.marginLeft = '0';
+                if (collapseIcon) collapseIcon.classList.add('hidden');
+                if (expandIcon) expandIcon.classList.remove('hidden');
             }
         });
     }

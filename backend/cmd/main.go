@@ -213,7 +213,7 @@ func main() {
 	infoLogger.Println("Initializing OUI service...")
 	if err := ouiService.Initialize(); err != nil {
 		infoLogger.Printf("Warning: Failed to initialize OUI service: %v", err)
-		infoLogger.Println("Continuing without OUI service - vendor lookup will rely on Nmap only")
+		infoLogger.Println("Continuing without OUI service - vendor lookup will be limited")
 		ouiService = nil
 	} else {
 		stats := ouiService.GetStatistics()

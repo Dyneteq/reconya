@@ -29,16 +29,72 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Roboto+Condensed:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-900 text-gray-200" style="font-family: 'Roboto Condensed', sans-serif; font-size: 0.875rem;">
-    <div class="flex min-h-screen">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="sidebar w-64 bg-gray-800 text-white fixed left-0 top-0 h-full overflow-y-auto transition-all duration-300 z-40">
-            <!-- Sidebar Header -->
-            <div class="sidebar-header bg-gray-800 p-4 border-b border-gray-700 flex items-center justify-center">
-                <div class="brand">
-                    <span class="brand-text text-lg font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.5px;">reconYa</span>
+    <!-- Fixed Top Bar -->
+    <header id="top-bar" class="fixed top-0 left-0 right-0 bg-gray-800 p-4 border-b border-gray-700 z-50">
+        <div class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center justify-center" style="width: 14rem; flex-shrink: 0;">
+                    <span class="text-lg font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.5px;">reconYa</span>
+                </div>
+                <!-- Sidebar Toggle Button -->
+                <button id="sidebarToggle" class="p-2 text-gray-300 hover:text-white focus:outline-none bg-gray-700 rounded" title="Toggle Sidebar">
+                    <svg id="sidebarCollapseIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                    </svg>
+                    <svg id="sidebarExpandIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Theme Toggle and User Menu -->
+            <div class="flex items-center gap-3">
+                <!-- Theme Toggle Button -->
+                <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 focus:outline-none bg-gray-700 rounded transition-colors">
+                    <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+
+                <!-- User Menu -->
+                <div class="relative">
+                    <button class="flex items-center px-3 py-2 text-gray-300 hover:text-green-500" id="dropdownMenuButton">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        Welcome, human
+                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded shadow-lg hidden z-50" id="dropdownMenu">
+                    <a href="#" class="block px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700" onclick="loadAboutPage(); return false;">
+                        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        About
+                    </a>
+                    <hr class="border-gray-600">
+                    <form action="/logout" method="POST" class="block">
+                        <button type="submit" class="w-full text-left px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700">
+                            <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Logout
+                        </button>
+                    </form>
+                </div>
                 </div>
             </div>
-            
+        </div>
+    </header>
+
+    <div class="flex min-h-screen" style="padding-top: 73px;">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar w-64 bg-gray-800 text-white fixed left-0 h-full overflow-y-auto transition-all duration-300 z-40" style="top: 73px;">
             <!-- Navigation Menu -->
             <div class="sidebar-menu py-4">
                 <ul class="space-y-1">
@@ -89,61 +145,6 @@
 
         <!-- Main Content -->
         <div id="main-content" class="flex-1 ml-0 transition-all duration-300">
-            <!-- Top Bar -->
-            <header class="bg-gray-800 p-4 border-b border-gray-700">
-                <div class="flex items-center justify-between w-full">
-                    <!-- Sidebar Toggle Button -->
-                    <button id="sidebarToggle" class="p-2 text-gray-300 hover:text-white focus:outline-none bg-gray-700 rounded" title="Toggle Sidebar">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-                    
-                    <!-- Theme Toggle and User Menu -->
-                    <div class="flex items-center gap-3">
-                        <!-- Theme Toggle Button -->
-                        <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 focus:outline-none bg-gray-700 rounded transition-colors">
-                            <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                            </svg>
-                            <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                            </svg>
-                        </button>
-                        
-                        <!-- User Menu -->
-                        <div class="relative">
-                            <button class="flex items-center px-3 py-2 text-gray-300 hover:text-green-500" id="dropdownMenuButton">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                                Welcome, human
-                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-                            <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded shadow-lg hidden z-50" id="dropdownMenu">
-                            <a href="#" class="block px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700" onclick="loadAboutPage(); return false;">
-                                <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                About
-                            </a>
-                            <hr class="border-gray-600">
-                            <form action="/logout" method="POST" class="block">
-                                <button type="submit" class="w-full text-left px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700">
-                                    <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                                    </svg>
-                                    Logout
-                                </button>
-                            </form>
-                        </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
             <!-- Content Area -->
             <main id="content" class="p-6">
                 {{if eq .Page "devices"}}
@@ -288,7 +289,32 @@
                 {{else}}
                     <!-- Dashboard Content (default) -->
                     <div class="space-y-6">
-                    
+
+                    <!-- Prominent No-Networks Alert (shown when 0 networks configured and networks detected) -->
+                    <div id="no-networks-alert" class="hidden">
+                        <div class="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border-2 border-blue-500 rounded-lg p-6">
+                            <div class="flex items-start gap-4">
+                                <div class="flex-shrink-0 bg-blue-500/20 rounded-full p-3">
+                                    <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.858 15.355-5.858 21.213 0"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-white mb-1">Network Detected</h3>
+                                    <p id="no-networks-alert-text" class="text-gray-300 mb-4">A network has been detected. Add it to start scanning for devices.</p>
+                                    <div class="flex items-center gap-3">
+                                        <button id="no-networks-add-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                                            Add Network
+                                        </button>
+                                        <button id="no-networks-dismiss-btn" class="border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 px-4 py-2 rounded-lg text-sm transition-colors">
+                                            Dismiss
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Dashboard Layout: Left/Right Split -->
                     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                         <!-- Left Side: Metrics + Network Map + Devices -->
@@ -334,35 +360,6 @@
                                     </svg>
                                     <p class="text-gray-400 text-sm mb-1">Saturation</p>
                                     <p class="text-xl font-bold text-green-500" id="network-saturation">0%</p>
-                                </div>
-                            </div>
-                            <!-- Network Suggestions -->
-                            <div id="network-suggestions" class="bg-blue-600 bg-opacity-10 border border-blue-500 rounded p-4" style="display: none;">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center flex-1">
-                                        <svg class="w-6 h-6 text-blue-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        <div class="flex-1">
-                                            <p class="text-blue-400 font-medium">Network Detection</p>
-                                            <div class="flex items-center gap-2 mt-1">
-                                                <p id="suggestion-text" class="text-gray-300 text-sm">Detecting networks...</p>
-                                                <div class="flex gap-2" id="network-action-buttons" style="display: none;">
-                                                    <button id="create-network-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors">
-                                                        Add Network
-                                                    </button>
-                                                    <button id="dismiss-suggestion-btn" class="border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 px-2 py-1 rounded text-xs transition-colors">
-                                                        Dismiss
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button id="close-suggestions-btn" class="text-gray-400 hover:text-white p-1 ml-3 flex-shrink-0" title="Close">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
                                 </div>
                             </div>
 
@@ -434,15 +431,24 @@
 
     <!-- Sidebar & Modal CSS -->
     <style>
+        /* Activity log flash animation for new entries */
+        @keyframes flash-green-text {
+            0% { color: #10b981; }
+            80% { color: #10b981; }
+            100% { color: inherit; }
+        }
+        .activity-flash .text-xs {
+            animation: flash-green-text 5s ease-out forwards;
+        }
+
         /* Sidebar Styles */
         .sidebar {
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         }
         
-        /* Ensure sidebar header matches navbar height exactly */
-        .sidebar-header,
-        #main-content header {
-            height: 73px; /* Exact height: 16px (p-4 top) + 40px (content) + 16px (p-4 bottom) + 1px (border) */
+        /* Fixed top bar height */
+        #top-bar {
+            height: 73px;
             box-sizing: border-box;
             display: flex;
             align-items: center;
@@ -580,8 +586,7 @@
         /* Sidebar light theme */
         html[data-theme="light"] .bg-gray-900,
         html[data-theme="light"] nav.bg-gray-800,
-        html[data-theme="light"] .sidebar.bg-gray-800,
-        html[data-theme="light"] .sidebar-header.bg-gray-800 { 
+        html[data-theme="light"] .sidebar.bg-gray-800 {
             background-color: #ffffff !important; 
             border-color: #e5e7eb !important;
         }

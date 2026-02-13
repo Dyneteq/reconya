@@ -8,20 +8,23 @@ function renderScanControlFromData(data) {
     // Priority order for selecting network:
     // 1. Current network (if scanning)
     // 2. Selected network (if not scanning)
-    // 3. First detected network (if none selected)
+    // 3. Only one network available - auto-select it
+    // 4. First detected network (if none selected)
     let selectedNetwork = null;
 
     if (scanState.current_network) {
         selectedNetwork = scanState.current_network;
     } else if (scanState.selected_network) {
         selectedNetwork = scanState.selected_network;
+    } else if (networks.length === 1) {
+        selectedNetwork = networks[0].id;
+        selectNetwork(networks[0].id);
     } else if (window.detectedNetworks && window.detectedNetworks.length > 0) {
         // Auto-select the first detected network if none is selected
         const detectedCidr = window.detectedNetworks[0].cidr;
         const matchingNetwork = networks.find(n => n.cidr === detectedCidr);
         if (matchingNetwork) {
             selectedNetwork = matchingNetwork.id;
-            // Automatically select this network on the server side
             selectNetwork(matchingNetwork.id);
         }
     }
