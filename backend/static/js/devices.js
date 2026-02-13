@@ -121,8 +121,8 @@ function renderDeviceGrid(devices) {
     }
 
     console.log('Rendering', onlineDevices.length, 'online devices');
-    
-    let gridHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">';
+
+    let gridHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">';
 
     onlineDevices.forEach(device => {
         // Count ports
@@ -134,51 +134,100 @@ function renderDeviceGrid(devices) {
                 else if (port.state === 'filtered') filteredPorts++;
             });
         }
-        
+
         // Check if device is currently being port scanned
-        // Try both snake_case and PascalCase field names
         const portScanStarted = device.port_scan_started_at || device.PortScanStartedAt;
         const portScanEnded = device.port_scan_ended_at || device.PortScanEndedAt;
         const isPortScanning = portScanStarted && !portScanEnded;
 
-        // Debug log for first device to see field names
-        if (devices.indexOf(device) === 0) {
-            console.log('Device fields check:', {
-                ip: device.ipv4,
-                port_scan_started_at: device.port_scan_started_at,
-                PortScanStartedAt: device.PortScanStartedAt,
-                port_scan_ended_at: device.port_scan_ended_at,
-                PortScanEndedAt: device.PortScanEndedAt,
-                isPortScanning: isPortScanning
-            });
-        }
+        // Device icon based on type or OS
+        const deviceIcon = getDeviceIcon(device);
+
+        // Status
+        const isOnline = device.status === 'online';
+        const statusColor = isOnline ? '#10b981' : (device.status === 'idle' ? '#eab308' : '#6b7280');
+        const statusLabel = device.status || 'unknown';
+
+        // Vendor / hostname / name
+        const vendor = device.vendor || '';
+        const hostname = device.hostname || device.name || '';
+        const mac = device.mac || '';
+
+        // Last seen
+        const lastSeen = device.last_seen_online_at || device.LastSeenOnlineAt;
+        const lastSeenText = lastSeen ? getTimeAgo(lastSeen) : '';
+
+        // Port summary parts
+        const portParts = [];
+        if (openPorts > 0) portParts.push(`<span class="text-red-400">${openPorts} open</span>`);
+        if (filteredPorts > 0) portParts.push(`<span class="text-yellow-500">${filteredPorts} filtered</span>`);
 
         gridHTML += `
-            <div class="rounded p-4 transition-colors cursor-pointer relative min-h-[150px] flex flex-col"
-                 style="background: var(--bg-secondary);"
-                 onmouseover="this.style.background='var(--bg-tertiary)'"
-                 onmouseout="this.style.background='var(--bg-secondary)'"
+            <div class="rounded-lg cursor-pointer transition-all duration-150 flex flex-col overflow-hidden"
+                 style="background: var(--bg-secondary); border: 1px solid transparent;"
+                 onmouseover="this.style.background='var(--bg-tertiary)'; this.style.borderColor='rgba(16,185,129,0.3)'"
+                 onmouseout="this.style.background='var(--bg-secondary)'; this.style.borderColor='transparent'"
                  onclick="loadDeviceModal('${device.id}')">
-                ${openPorts > 0 ? `<div class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" title="${openPorts} open ports"></div>` : ''}
-                ${filteredPorts > 0 ? `<div class="absolute top-2 right-${openPorts > 0 ? '5' : '2'} w-2 h-2 bg-yellow-500 rounded-full" title="${filteredPorts} filtered ports"></div>` : ''}
 
-                ${isPortScanning ? `
-                    <div class="absolute top-2 left-2">
-                        <i class="ti ti-scan text-blue-400 text-lg animate-pulse" title="Port scanning in progress"></i>
+                <div class="px-4 pt-3 pb-2">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-gray-400 text-lg flex-shrink-0" title="${statusLabel}">${deviceIcon}</span>
+                            <span class="font-mono font-semibold text-white text-sm truncate">${device.ipv4}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                            ${isPortScanning ? '<i class="ti ti-scan text-blue-400 text-sm animate-pulse" title="Port scanning..."></i>' : ''}
+                            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${statusColor}" title="${statusLabel}"></span>
+                        </div>
                     </div>
-                ` : ''}
+                    ${hostname ? `<div class="text-xs text-gray-400 truncate mb-0.5" title="${hostname}">${hostname}</div>` : ''}
+                    ${vendor ? `<div class="text-xs text-gray-500 truncate" title="${vendor}">${vendor}</div>` : ''}
+                </div>
 
-                <div class="text-white font-semibold text-xl mb-1 break-all">${device.ipv4}</div>
-                ${device.mac ? `<div class="text-gray-600 text-xs mb-4">${device.mac}</div>` : '<div class="mb-4"></div>'}
-                <div class="flex-1 flex items-end justify-between">
-                    <div class="text-gray-600 text-xs truncate opacity-60">${(device.hostname || device.name) ? (device.hostname || device.name) : ''}</div>
+                <div class="mt-auto px-4 pb-3 pt-1" style="border-top: 1px solid rgba(75,85,99,0.3);">
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs">
+                            ${portParts.length > 0 ? portParts.join('<span class="text-gray-600 mx-1">&middot;</span>') : (mac ? `<span class="text-gray-600">${mac}</span>` : '<span class="text-gray-600">No ports scanned</span>')}
+                        </div>
+                        ${lastSeenText ? `<span class="text-xs text-gray-600 whitespace-nowrap ml-2">${lastSeenText}</span>` : ''}
+                    </div>
                 </div>
             </div>
         `;
     });
-    
+
     gridHTML += '</div>';
     devicesContainer.innerHTML = gridHTML;
+}
+
+function getDeviceIcon(device) {
+    // By device type
+    const dt = (device.device_type || device.DeviceType || '').toLowerCase();
+    if (dt === 'router') return '<i class="ti ti-router"></i>';
+    if (dt === 'switch') return '<i class="ti ti-network"></i>';
+    if (dt === 'access_point') return '<i class="ti ti-access-point"></i>';
+    if (dt === 'printer') return '<i class="ti ti-printer"></i>';
+    if (dt === 'camera') return '<i class="ti ti-camera"></i>';
+    if (dt === 'nas' || dt === 'server') return '<i class="ti ti-server"></i>';
+    if (dt === 'firewall') return '<i class="ti ti-shield"></i>';
+    if (dt === 'mobile') return '<i class="ti ti-device-mobile"></i>';
+    if (dt === 'laptop') return '<i class="ti ti-device-laptop"></i>';
+    if (dt === 'workstation') return '<i class="ti ti-device-desktop"></i>';
+    if (dt === 'iot') return '<i class="ti ti-cpu"></i>';
+
+    // By OS
+    const os = device.os || device.OS;
+    if (os && os.name) {
+        const osName = os.name.toLowerCase();
+        if (osName.includes('windows')) return '<i class="ti ti-brand-windows"></i>';
+        if (osName.includes('linux') || osName.includes('ubuntu') || osName.includes('debian')) return '<i class="ti ti-brand-ubuntu"></i>';
+        if (osName.includes('macos') || osName.includes('mac os') || osName.includes('apple')) return '<i class="ti ti-brand-apple"></i>';
+        if (osName.includes('android')) return '<i class="ti ti-brand-android"></i>';
+        if (osName.includes('ios')) return '<i class="ti ti-device-mobile"></i>';
+    }
+
+    // Fallback
+    return '<i class="ti ti-device-desktop-analytics"></i>';
 }
 
 function loadDeviceModal(deviceId) {
