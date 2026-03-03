@@ -1098,8 +1098,7 @@ func (h *WebHandler) getUserFromSession(session *sessions.Session) *models.User 
 }
 
 func (h *WebHandler) authenticate(username, password string) bool {
-	// Simple authentication - replace with your logic
-	return username == "admin" && password == "password"
+	return username == h.config.Username && password == h.config.Password
 }
 
 func (h *WebHandler) buildNetworkMap(devices []*models.Device) *NetworkMapData {
