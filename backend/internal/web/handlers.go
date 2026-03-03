@@ -581,7 +581,7 @@ func (h *WebHandler) About(w http.ResponseWriter, r *http.Request) {
 	}{
 		Page:    "about",
 		User:    user,
-		Version: h.getVersionFromPackageJSON(),
+		Version: h.getVersion(),
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "components/about.html", data); err != nil {
@@ -2250,8 +2250,8 @@ func (h *WebHandler) APIAbout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read version from package.json
-	version := h.getVersionFromPackageJSON()
+	// Read version from VERSION file
+	version := h.getVersion()
 
 	response := map[string]interface{}{
 		"version": version,
@@ -2444,31 +2444,19 @@ func (h *WebHandler) APINetworksDebug(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getVersionFromPackageJSON reads the version from package.json
-func (h *WebHandler) getVersionFromPackageJSON() string {
-	// Try to read package.json from the project root
-	packageJSONPath := filepath.Join("..", "package.json")
+func (h *WebHandler) getVersion() string {
+	versionPath := filepath.Join("..", "VERSION")
 
-	// If that doesn't work, try relative to the binary location
-	if _, err := os.Stat(packageJSONPath); os.IsNotExist(err) {
-		packageJSONPath = "package.json"
+	if _, err := os.Stat(versionPath); os.IsNotExist(err) {
+		versionPath = "VERSION"
 	}
 
-	data, err := os.ReadFile(packageJSONPath)
+	data, err := os.ReadFile(versionPath)
 	if err != nil {
-		log.Printf("Error reading package.json: %v", err)
+		log.Printf("Error reading VERSION file: %v", err)
 		return "unknown"
 	}
 
-	var packageInfo struct {
-		Version string `json:"version"`
-	}
-
-	if err := json.Unmarshal(data, &packageInfo); err != nil {
-		log.Printf("Error parsing package.json: %v", err)
-		return "unknown"
-	}
-
-	return packageInfo.Version
+	return strings.TrimSpace(string(data))
 }
 
