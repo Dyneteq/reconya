@@ -239,6 +239,16 @@ func (sm *ScanManager) StopScan() error {
 	return nil
 }
 
+// isStopping checks if a stop signal has been received
+func (sm *ScanManager) isStopping() bool {
+	select {
+	case <-sm.stopChannel:
+		return true
+	default:
+		return false
+	}
+}
+
 // runScanLoop runs the continuous scanning loop
 func (sm *ScanManager) runScanLoop() {
 	defer close(sm.done)
@@ -273,7 +283,13 @@ func (sm *ScanManager) runSingleScan() {
 	}
 
 	log.Printf("Running scan on network: %s", network.CIDR)
-	
+
+	// Check for stop signal before starting sweep
+	if sm.isStopping() {
+		log.Println("Scan stopped before sweep execution")
+		return
+	}
+
 	// Log ping sweep started event
 	err := sm.pingSweepService.EventLogService.CreateOne(&models.EventLog{
 		Type: models.PingSweep,
@@ -281,7 +297,7 @@ func (sm *ScanManager) runSingleScan() {
 	if err != nil {
 		log.Printf("Error creating ping sweep started event log: %v", err)
 	}
-	
+
 	// Execute the ping sweep with the current network
 	devices, err := sm.pingSweepService.ExecuteSweepScanCommand(network.CIDR)
 	if err != nil {
@@ -289,15 +305,27 @@ func (sm *ScanManager) runSingleScan() {
 		return
 	}
 
+	// Check for stop signal after sweep completes
+	if sm.isStopping() {
+		log.Println("Scan stopped after sweep, skipping device processing")
+		return
+	}
+
 	log.Printf("Ping sweep found %d devices from scan", len(devices))
 
 	// Process the devices (similar to the original Run method)
 	for i, device := range devices {
+		// Check for stop signal between device processing
+		if sm.isStopping() {
+			log.Printf("Scan stopped during device processing (%d/%d processed)", i, len(devices))
+			return
+		}
+
 		log.Printf("Processing device %d/%d: %s", i+1, len(devices), device.IPv4)
-		
+
 		// Set the network ID for the device
 		device.NetworkID = network.ID
-		
+
 		// Update device in database
 		updatedDevice, err := sm.pingSweepService.DeviceService.CreateOrUpdate(&device)
 		if err != nil {

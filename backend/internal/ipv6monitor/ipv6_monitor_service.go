@@ -413,7 +413,7 @@ func (s *IPv6MonitorService) processIPv6Device(ipv6Device IPv6Device) {
 	if ipv6Device.MAC != "" {
 		existingDevice, err = s.deviceService.FindDeviceByMAC(ipv6Device.MAC)
 		if err != nil {
-			s.logger.Printf("Error finding device by MAC: %v", err)
+			log.Printf("Device not yet discovered for MAC %s, will try IPv6 lookup", ipv6Device.MAC)
 		}
 	}
 	
