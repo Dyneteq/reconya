@@ -36,14 +36,33 @@ The fundamental limitation is Docker's network architecture. Even with comprehen
 
 Docker files have been moved to the `experimental/` directory for those who want to experiment with containerized deployment, but local installation is the recommended approach.
 
-## Prerequisites
+## Quick Install (Pre-built Binary)
 
-Before installing reconYa, ensure you have the following installed on your system:
+Download and set up reconYa with a single command:
+
+```bash
+curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh
+```
+
+This auto-detects your OS and architecture, downloads the correct binary, and sets up the config.
+
+**Available platforms:** Linux (x86_64, ARM64), macOS (Intel, Apple Silicon)
+
+After installing, start reconYa:
+
+```bash
+cd reconya && sudo ./reconya-*
+```
+
+Then open your browser to: `http://localhost:3008`
+Default login: `admin` / `password`
+
+## Build from Source
+
+If you prefer to build from source, you'll need:
 
 - **Go 1.21 or later** - [Download Go](https://golang.org/dl/)
 - **make** - Build tool (pre-installed on most Unix systems)
-
-## Local Installation (Recommended)
 
 ### One-Command Installation
 

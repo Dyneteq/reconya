@@ -393,56 +393,121 @@
 
         <!-- Installation Section -->
         <section id="installation" class="section bg-darker">
+            <style>
+                .install-command-wrapper {
+                    position: relative;
+                    background-color: #1a1a1a;
+                    border-radius: 8px;
+                    border: 1px solid rgba(15, 127, 0, 0.3);
+                    padding: 1.25rem 3.5rem 1.25rem 1.25rem;
+                    margin: 1.5rem 0;
+                    overflow-x: auto;
+                }
+                .install-command-wrapper code {
+                    font-family: 'Roboto Mono', monospace;
+                    font-size: 0.85rem;
+                    color: var(--primary-color);
+                    word-break: break-all;
+                    white-space: pre-wrap;
+                }
+                .copy-btn {
+                    position: absolute;
+                    top: 0.75rem;
+                    right: 0.75rem;
+                    background: rgba(15, 127, 0, 0.2);
+                    border: 1px solid rgba(15, 127, 0, 0.4);
+                    color: var(--primary-color);
+                    border-radius: 6px;
+                    padding: 0.35rem 0.6rem;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-size: 1rem;
+                }
+                .copy-btn:hover {
+                    background: rgba(15, 127, 0, 0.4);
+                    border-color: var(--primary-color);
+                }
+                .copy-btn.copied {
+                    background: rgba(15, 127, 0, 0.5);
+                    color: white;
+                }
+                .install-tabs {
+                    display: flex;
+                    gap: 0;
+                    margin-bottom: 0;
+                }
+                .install-tab {
+                    padding: 0.5rem 1.25rem;
+                    background: transparent;
+                    border: 1px solid rgba(15, 127, 0, 0.2);
+                    border-bottom: none;
+                    color: var(--muted-text);
+                    cursor: pointer;
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 0.75rem;
+                    letter-spacing: 1px;
+                    transition: all 0.2s ease;
+                    border-radius: 6px 6px 0 0;
+                }
+                .install-tab:hover {
+                    color: var(--primary-color);
+                }
+                .install-tab.active {
+                    background: #1a1a1a;
+                    color: var(--primary-color);
+                    border-color: rgba(15, 127, 0, 0.3);
+                }
+                .install-tab-content {
+                    display: none;
+                }
+                .install-tab-content.active {
+                    display: block;
+                }
+            </style>
             <div class="container">
                 <h2 class="section-title">Installation</h2>
                 <div class="row g-4">
-                    <div class="col-lg-6">
-                        <h3 class="h4 fw-bold mb-3">Prerequisites</h3>
-                        <ul class="list-group mb-4">
-                            <li class="list-group-item bg-dark text-light border-dark">
-                                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                Go 1.21+
-                            </li>
-                            <li class="list-group-item bg-dark text-light border-dark">
-                                <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                make (pre-installed on most systems)
-                            </li>
-                        </ul>
-                        <h3 class="h4 fw-bold mb-3">Quick Start</h3>
-                        <div class="code-block">
-                            <code>
-                                $ git clone https://github.com/Dyneteq/reconya.git<br>
-                                $ cd reconya<br>
-                                $ make install<br>
-                                $ make start
-                            </code>
+                    <div class="col-lg-7">
+                        <div class="install-tabs">
+                            <button class="install-tab active" onclick="switchInstallTab('binary')">Binary</button>
+                            <button class="install-tab" onclick="switchInstallTab('source')">From Source</button>
                         </div>
-                        <p>Access the application at <code>http://localhost:3008</code></p>
+
+                        <div id="install-binary" class="install-tab-content active">
+                            <div class="install-command-wrapper" style="border-radius: 0 8px 8px 8px;">
+                                <button class="copy-btn" onclick="copyBinaryCommand(this)" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                                <code>curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh</code>
+                            </div>
+                            <p style="color: var(--muted-text);">Auto-detects your OS and architecture. Available for <strong class="text-light">Linux</strong> (x86_64, ARM64) and <strong class="text-light">macOS</strong> (Intel, Apple Silicon).</p>
+                        </div>
+
+                        <div id="install-source" class="install-tab-content">
+                            <div class="install-command-wrapper" style="border-radius: 0 8px 8px 8px;">
+                                <button class="copy-btn" onclick="copySourceCommand(this)" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                                <code>git clone https://github.com/Dyneteq/reconya.git && cd reconya && make install && make start</code>
+                            </div>
+                            <p style="color: var(--muted-text);">Requires <strong class="text-light">Go 1.21+</strong> and <strong class="text-light">make</strong>.</p>
+                        </div>
+
+                        <p class="mt-3">Access the dashboard at <code>http://localhost:3008</code><br>
+                        <span style="color: var(--muted-text);">Default login: <code>admin</code> / <code>password</code></span></p>
                     </div>
-                    <div class="col-lg-6">
+                    <div class="col-lg-5">
                         <div class="card h-100 p-4">
-                            <h3 class="h4 fw-bold mb-3">Available Commands</h3>
-                            <p>After installation, use these commands to manage reconYa:</p>
-                            <ol class="text-light">
-                                <li class="mb-2">Start reconYa:
-                                    <div class="code-block my-2">
-                                        <code>$ make start</code>
-                                    </div>
-                                </li>
-                                <li class="mb-2">Check service status:
-                                    <div class="code-block my-2">
-                                        <code>$ make status</code>
-                                    </div>
-                                </li>
-                                <li class="mb-2">Stop the service:
-                                    <div class="code-block my-2">
-                                        <code>$ make stop</code>
-                                    </div>
-                                </li>
-                                <li>Access the application at <code>http://localhost:3008</code></li>
+                            <h3 class="h4 fw-bold mb-3">After Installing</h3>
+                            <ol class="text-light mb-4">
+                                <li class="mb-2">Open <code>http://localhost:3008</code></li>
+                                <li class="mb-2">Log in with default credentials</li>
+                                <li class="mb-2">Set up a network to scan</li>
+                                <li>Devices appear as they're discovered</li>
                             </ol>
-                            <a href="https://github.com/Dyneteq/reconya#local-installation-recommended" class="btn btn-primary mt-auto" target="_blank">
-                                Detailed Guide <i class="bi bi-arrow-right"></i>
+                            <p style="color: var(--muted-text); font-size: 0.85rem;">Network scanning requires root/sudo for ARP and ICMP access.</p>
+                            <a href="https://github.com/Dyneteq/reconya#quick-install-pre-built-binary" class="btn btn-primary mt-auto" target="_blank">
+                                Full Documentation <i class="bi bi-arrow-right"></i>
                             </a>
                         </div>
                     </div>
@@ -702,6 +767,37 @@
                 behavior: 'smooth'
             });
         });
+
+        // Install command copy and tab switching
+        function showCopied(btn) {
+            var icon = btn.querySelector('i');
+            icon.className = 'bi bi-check-lg';
+            btn.classList.add('copied');
+            setTimeout(function() {
+                icon.className = 'bi bi-clipboard';
+                btn.classList.remove('copied');
+            }, 2000);
+        }
+
+        function copyCommand(btn, cmd) {
+            navigator.clipboard.writeText(cmd).then(function() { showCopied(btn); });
+        }
+
+        function copyBinaryCommand(btn) {
+            copyCommand(btn, 'curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh');
+        }
+
+        function copySourceCommand(btn) {
+            copyCommand(btn, 'git clone https://github.com/Dyneteq/reconya.git && cd reconya && make install && make start');
+        }
+
+        function switchInstallTab(tab) {
+            var mainTabs = document.getElementById('install-binary').previousElementSibling;
+            mainTabs.querySelectorAll('.install-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.install-tab-content').forEach(function(c) { c.classList.remove('active'); });
+            document.getElementById('install-' + tab).classList.add('active');
+            event.target.classList.add('active');
+        }
 
         // Smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
