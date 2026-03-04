@@ -11,23 +11,29 @@ permissions:
 jobs:
   build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
 
     strategy:
       matrix:
         include:
           - goos: linux
             goarch: amd64
+            runner: ubuntu-latest
+            cross: true
             zig_target: x86_64-linux-musl
           - goos: linux
             goarch: arm64
+            runner: ubuntu-latest
+            cross: true
             zig_target: aarch64-linux-musl
           - goos: darwin
             goarch: amd64
-            zig_target: x86_64-macos
+            runner: macos-13
+            cross: false
           - goos: darwin
             goarch: arm64
-            zig_target: aarch64-macos
+            runner: macos-latest
+            cross: false
 
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +42,9 @@ jobs:
         with:
           go-version-file: backend/go.mod
 
-      - uses: goto-bus-stop/setup-zig@v2
+      - name: Install Zig (Linux cross-compilation only)
+        if: matrix.cross
+        uses: goto-bus-stop/setup-zig@v2
         with:
           version: 0.13.0
 
@@ -44,7 +52,8 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
-      - name: Create zig cc wrapper
+      - name: Create zig cc wrapper (Linux cross-compilation only)
+        if: matrix.cross
         env:
           ZIG_TARGET: ${{ matrix.zig_target }}
         run: |
@@ -53,7 +62,8 @@ jobs:
           printf '#!/bin/sh\nexec zig c++ -target %s "$@"\n' "$ZIG_TARGET" > /tmp/zigcc/zxx
           chmod +x /tmp/zigcc/zcc /tmp/zigcc/zxx
 
-      - name: Build binary
+      - name: Build binary (cross-compiled with Zig)
+        if: matrix.cross
         working-directory: backend
         env:
           GOOS: ${{ matrix.goos }}
@@ -61,6 +71,20 @@ jobs:
           CGO_ENABLED: "1"
           CC: /tmp/zigcc/zcc
           CXX: /tmp/zigcc/zxx
+          BUILD_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          go build -trimpath \
+            -ldflags="-s -w -X reconya/assets.Version=${BUILD_VERSION}" \
+            -o "reconya-${GOOS}-${GOARCH}" \
+            ./cmd
+
+      - name: Build binary (native)
+        if: "!matrix.cross"
+        working-directory: backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
           BUILD_VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
           go build -trimpath \
@@ -79,7 +103,7 @@ jobs:
           cd dist
           tar -czf "reconya-${GOOS}-${GOARCH}.tar.gz" \
             "reconya-${GOOS}-${GOARCH}" .env.example
-          sha256sum "reconya-${GOOS}-${GOARCH}.tar.gz" \
+          shasum -a 256 "reconya-${GOOS}-${GOARCH}.tar.gz" \
             > "reconya-${GOOS}-${GOARCH}.tar.gz.sha256"
 
       - uses: actions/upload-artifact@v4
