@@ -1,4 +1,4 @@
-.PHONY: start start-dev stop status logs logs-follow logs-errors logs-clear build build-cgo deps clean help install bump-version
+.PHONY: start start-dev stop status logs logs-follow logs-errors logs-clear build deps clean help install release
 
 # Project paths
 PROJECT_ROOT := $(shell pwd)
@@ -167,9 +167,13 @@ install:
 	@echo "$(GREEN)[SUCCESS]$(NC) Installation complete!"
 	@echo "Run 'make start' to start reconYa"
 
-## Bump version
-bump-version:
-	@$(SCRIPTS_DIR)/bump-version.sh
+## Bump version, tag, and show push instructions. Usage: make release V=0.25.0
+release:
+	@if [ -z "$(V)" ]; then \
+		echo "$(RED)[ERROR]$(NC) Version required. Usage: make release V=0.25.0"; \
+		exit 1; \
+	fi
+	@$(SCRIPTS_DIR)/bump-version.sh $(V)
 
 #-----------------------------------------------------------------------
 # Help
@@ -195,10 +199,11 @@ help:
 	@echo ""
 	@echo "Build targets:"
 	@echo "  build        Build the backend binary"
-	@echo "  build-cgo    Build with CGO (for SQLite)"
 	@echo "  deps         Download dependencies"
 	@echo "  clean        Clean build artifacts"
 	@echo ""
 	@echo "Setup targets:"
 	@echo "  install      Initial setup"
-	@echo "  bump-version Bump project version"
+	@echo ""
+	@echo "Release targets:"
+	@echo "  release V=x.y.z  Bump version, commit, tag (then git push origin vx.y.z)"
