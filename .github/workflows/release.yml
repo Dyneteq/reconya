@@ -28,7 +28,7 @@ jobs:
             zig_target: aarch64-linux-musl
           - goos: darwin
             goarch: amd64
-            runner: macos-13
+            runner: macos-latest
             cross: false
           - goos: darwin
             goarch: arm64
