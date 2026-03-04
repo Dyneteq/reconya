@@ -766,12 +766,12 @@ func (r *SQLiteEventLogRepository) Create(ctx context.Context, eventLog *models.
 		eventLog.UpdatedAt = &now
 	}
 
-	query := `INSERT INTO event_logs (type, description, device_id, created_at, updated_at)
-			  VALUES (?, ?, ?, ?, ?)`
+	query := `INSERT INTO event_logs (type, description, device_id, duration_seconds, created_at, updated_at)
+			  VALUES (?, ?, ?, ?, ?, ?)`
 
 	_, err := r.db.ExecContext(ctx, query,
 		eventLog.Type, eventLog.Description, nullableString(eventLog.DeviceID),
-		eventLog.CreatedAt, eventLog.UpdatedAt,
+		eventLog.DurationSeconds, eventLog.CreatedAt, eventLog.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("error inserting event log: %w", err)
@@ -782,7 +782,7 @@ func (r *SQLiteEventLogRepository) Create(ctx context.Context, eventLog *models.
 
 // FindLatest finds the latest event logs
 func (r *SQLiteEventLogRepository) FindLatest(ctx context.Context, limit int) ([]*models.EventLog, error) {
-	query := `SELECT type, description, device_id, created_at, updated_at
+	query := `SELECT type, description, device_id, duration_seconds, created_at, updated_at
 			  FROM event_logs ORDER BY created_at DESC LIMIT ?`
 
 	rows, err := r.db.QueryContext(ctx, query, limit)
@@ -795,15 +795,19 @@ func (r *SQLiteEventLogRepository) FindLatest(ctx context.Context, limit int) ([
 	for rows.Next() {
 		var log models.EventLog
 		var deviceID sql.NullString
+		var durationSeconds sql.NullFloat64
 		var createdAt, updatedAt sql.NullTime
 
-		err := rows.Scan(&log.Type, &log.Description, &deviceID, &createdAt, &updatedAt)
+		err := rows.Scan(&log.Type, &log.Description, &deviceID, &durationSeconds, &createdAt, &updatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning event log: %w", err)
 		}
 
 		if deviceID.Valid {
 			log.DeviceID = &deviceID.String
+		}
+		if durationSeconds.Valid {
+			log.DurationSeconds = &durationSeconds.Float64
 		}
 		if createdAt.Valid {
 			log.CreatedAt = &createdAt.Time

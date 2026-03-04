@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            zig_target: x86_64-linux-musl
+          - goos: linux
+            goarch: arm64
+            zig_target: aarch64-linux-musl
+          - goos: darwin
+            goarch: amd64
+            zig_target: x86_64-macos
+          - goos: darwin
+            goarch: arm64
+            zig_target: aarch64-macos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.13.0
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create zig cc wrapper
+        env:
+          ZIG_TARGET: ${{ matrix.zig_target }}
+        run: |
+          mkdir -p /tmp/zigcc
+          printf '#!/bin/sh\nexec zig cc -target %s "$@"\n' "$ZIG_TARGET" > /tmp/zigcc/zcc
+          printf '#!/bin/sh\nexec zig c++ -target %s "$@"\n' "$ZIG_TARGET" > /tmp/zigcc/zxx
+          chmod +x /tmp/zigcc/zcc /tmp/zigcc/zxx
+
+      - name: Build binary
+        working-directory: backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
+          CC: /tmp/zigcc/zcc
+          CXX: /tmp/zigcc/zxx
+          BUILD_VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          go build -trimpath \
+            -ldflags="-s -w -X reconya/assets.Version=${BUILD_VERSION}" \
+            -o "reconya-${GOOS}-${GOARCH}" \
+            ./cmd
+
+      - name: Package binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          mkdir -p dist
+          cp "backend/reconya-${GOOS}-${GOARCH}" dist/
+          cp backend/.env.example dist/.env.example
+          cd dist
+          tar -czf "reconya-${GOOS}-${GOARCH}.tar.gz" \
+            "reconya-${GOOS}-${GOARCH}" .env.example
+          sha256sum "reconya-${GOOS}-${GOARCH}.tar.gz" \
+            > "reconya-${GOOS}-${GOARCH}.tar.gz.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reconya-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dist/reconya-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            dist/reconya-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz.sha256
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -name "*.tar.gz" -exec cp {} release/ \;
+          cd release
+          sha256sum *.tar.gz > SHA256SUMS
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: reconya v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Downloads
+
+            | Platform | Architecture | Download |
+            |----------|-------------|----------|
+            | Linux | x86_64 | `reconya-linux-amd64.tar.gz` |
+            | Linux | ARM64 (Raspberry Pi) | `reconya-linux-arm64.tar.gz` |
+            | macOS | Intel | `reconya-darwin-amd64.tar.gz` |
+            | macOS | Apple Silicon | `reconya-darwin-arm64.tar.gz` |
+
+            ## Quick Start
+
+            ```bash
+            # Download and extract (example: Linux x86_64)
+            tar -xzf reconya-linux-amd64.tar.gz
+
+            # Configure
+            cp .env.example .env
+            nano .env
+
+            # Run (requires root for network scanning)
+            sudo ./reconya-linux-amd64
+            ```
+
+            ## Verify Download
+
+            ```bash
+            sha256sum -c SHA256SUMS
+            ```
+          files: release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

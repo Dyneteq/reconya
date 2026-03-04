@@ -3,10 +3,16 @@ set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 <version>" >&2
+  echo "Example: $0 0.25.0" >&2
+  echo "Example: $0 0.24.1-rc.1" >&2
   exit 1
 fi
 
 VERSION=$1
+
+# Strip leading 'v' if provided — VERSION file stores bare version, git tag uses v prefix
+VERSION="${VERSION#v}"
+TAG="v${VERSION}"
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "Error: This script must be run inside a git repository." >&2
@@ -23,8 +29,8 @@ if [[ ! -f "$VERSION_FILE" ]]; then
   exit 1
 fi
 
-if git show-ref --tags --verify --quiet "refs/tags/$VERSION"; then
-  echo "Error: Tag $VERSION already exists." >&2
+if git show-ref --tags --verify --quiet "refs/tags/$TAG"; then
+  echo "Error: Tag $TAG already exists." >&2
   exit 1
 fi
 
@@ -49,11 +55,18 @@ if git diff --cached --quiet; then
   exit 1
 fi
 
-COMMIT_MESSAGE="release: $VERSION"
+COMMIT_MESSAGE="release: v${VERSION}"
 git commit -m "$COMMIT_MESSAGE"
 
-git tag -a "$VERSION" -m "Release $VERSION"
+git tag -a "$TAG" -m "Release ${VERSION}"
 
+echo ""
 echo "Version updated to $VERSION."
 echo "Created commit: $COMMIT_MESSAGE"
-echo "Created annotated tag: $VERSION"
+echo "Created annotated tag: $TAG"
+echo ""
+echo "To trigger the release workflow, push the tag:"
+echo "  git push origin main --tags"
+echo ""
+echo "Or push just the tag:"
+echo "  git push origin $TAG"

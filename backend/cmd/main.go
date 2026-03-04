@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -11,9 +12,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
+	"reconya/assets"
 	"reconya/db"
 	"reconya/internal/config"
 	"reconya/internal/device"
@@ -245,8 +248,20 @@ func main() {
 
 	go runGeolocationCacheCleanup(geolocationRepo, done)
 
+	// Prepare embedded filesystems for the web handler
+	templateFS, err := fs.Sub(assets.TemplateFS, "templates")
+	if err != nil {
+		log.Fatalf("Failed to create template sub-filesystem: %v", err)
+	}
+	staticFS, err := fs.Sub(assets.StaticFS, "static")
+	if err != nil {
+		log.Fatalf("Failed to create static sub-filesystem: %v", err)
+	}
+
+	version := strings.TrimSpace(assets.Version)
+
 	sessionSecret := "your-secret-key-here-replace-in-production"
-	webHandler := web.NewWebHandler(deviceService, eventLogService, networkService, systemStatusService, scanManager, geolocationRepo, settingsService, nicService, cfg, sessionSecret)
+	webHandler := web.NewWebHandler(deviceService, eventLogService, networkService, systemStatusService, scanManager, geolocationRepo, settingsService, nicService, cfg, sessionSecret, templateFS, staticFS, version)
 	router := webHandler.SetupRoutes()
 	loggedRouter := middleware.LoggingMiddleware(router)
 

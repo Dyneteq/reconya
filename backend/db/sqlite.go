@@ -133,6 +133,7 @@ func InitializeSchema(db *sql.DB) error {
 		type TEXT NOT NULL,
 		description TEXT NOT NULL,
 		device_id TEXT,
+		duration_seconds REAL,
 		created_at TIMESTAMP NOT NULL,
 		updated_at TIMESTAMP NOT NULL
 	)`)
@@ -269,6 +270,11 @@ func InitializeSchema(db *sql.DB) error {
 	_, err = db.Exec(`ALTER TABLE networks ADD COLUMN address_family TEXT DEFAULT 'ipv4'`)
 	if err != nil {
 		log.Printf("Note: networks.address_family column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`ALTER TABLE event_logs ADD COLUMN duration_seconds REAL`)
+	if err != nil {
+		log.Printf("Note: event_logs.duration_seconds column might already exist: %v", err)
 	}
 
 	// Create web_services table

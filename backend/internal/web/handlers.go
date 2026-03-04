@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"math"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,9 +27,6 @@ import (
 	"github.com/gorilla/sessions"
 )
 
-// Templates will be loaded from filesystem for now
-// TODO: Embed templates in production build
-
 type WebHandler struct {
 	deviceService         *device.DeviceService
 	eventLogService       *eventlog.EventLogService
@@ -41,6 +37,9 @@ type WebHandler struct {
 	settingsService       *settings.SettingsService
 	nicIdentifierService  *nicidentifier.NicIdentifierService
 	templates             *template.Template
+	templateFS            fs.FS
+	staticFS              fs.FS
+	version               string
 	sessionStore          *sessions.CookieStore
 	config                *config.Config
 }
@@ -91,6 +90,9 @@ func NewWebHandler(
 	nicIdentifierService *nicidentifier.NicIdentifierService,
 	config *config.Config,
 	sessionSecret string,
+	templateFS fs.FS,
+	staticFS fs.FS,
+	version string,
 ) *WebHandler {
 	// Initialize template functions
 	funcMap := template.FuncMap{
@@ -348,46 +350,36 @@ func NewWebHandler(
 		},
 	}
 
-	// Parse templates from filesystem
+	// Parse templates from embedded filesystem
 	tmpl := template.New("").Funcs(funcMap)
 
-	// Parse templates with unique names to avoid conflicts
-	baseFiles, err := filepath.Glob("templates/layouts/*.html")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to glob base templates: %v", err))
-	}
-
-	componentFiles, err := filepath.Glob("templates/components/*.html")
+	componentFiles, err := fs.Glob(templateFS, "components/*.html")
 	if err != nil {
 		panic(fmt.Sprintf("Failed to glob component templates: %v", err))
 	}
 
-	indexFile := "templates/index.html"
+	allFiles := []string{"index.html"}
+	allFiles = append(allFiles, componentFiles...)
 
-	files := append(baseFiles, componentFiles...)
-	files = append(files, indexFile)
-	log.Printf("Found template files: %v", files)
-
-	if len(files) == 0 {
-		panic("No template files found")
-	}
-
-	tmpl, err = tmpl.ParseFiles(files...)
+	standaloneFiles, err := fs.Glob(templateFS, "standalone/*.html")
 	if err != nil {
-		panic(fmt.Sprintf("Failed to parse templates: %v", err))
+		panic(fmt.Sprintf("Failed to glob standalone templates: %v", err))
+	}
+	allFiles = append(allFiles, standaloneFiles...)
+
+	log.Printf("Found embedded template files: %v", allFiles)
+
+	if len(allFiles) == 0 {
+		panic("No embedded template files found")
 	}
 
-	// Log template names for debugging
+	tmpl, err = tmpl.ParseFS(templateFS, allFiles...)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to parse embedded templates: %v", err))
+	}
+
 	for _, t := range tmpl.Templates() {
 		log.Printf("Loaded template: %s", t.Name())
-	}
-
-	// Debug: Try to find login.html specifically
-	loginTmpl := tmpl.Lookup("login.html")
-	if loginTmpl != nil {
-		log.Printf("Found login.html template: %s", loginTmpl.Name())
-	} else {
-		log.Printf("ERROR: login.html template not found!")
 	}
 
 	store := sessions.NewCookieStore([]byte(sessionSecret))
@@ -409,6 +401,9 @@ func NewWebHandler(
 		settingsService:       settingsService,
 		nicIdentifierService:  nicIdentifierService,
 		templates:             tmpl,
+		templateFS:            templateFS,
+		staticFS:              staticFS,
+		version:               version,
 		sessionStore:          store,
 		config:                config,
 	}
@@ -613,7 +608,7 @@ func (h *WebHandler) Settings(w http.ResponseWriter, r *http.Request) {
 func (h *WebHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		// Use standalone login template to avoid conflicts
-		loginTmpl, err := template.ParseFiles("templates/standalone/login.html")
+		loginTmpl, err := template.ParseFS(h.templateFS, "standalone/login.html")
 		if err != nil {
 			log.Printf("Failed to parse standalone login template: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -2445,18 +2440,6 @@ func (h *WebHandler) APINetworksDebug(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *WebHandler) getVersion() string {
-	versionPath := filepath.Join("..", "VERSION")
-
-	if _, err := os.Stat(versionPath); os.IsNotExist(err) {
-		versionPath = "VERSION"
-	}
-
-	data, err := os.ReadFile(versionPath)
-	if err != nil {
-		log.Printf("Error reading VERSION file: %v", err)
-		return "unknown"
-	}
-
-	return strings.TrimSpace(string(data))
+	return h.version
 }
 

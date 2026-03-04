@@ -18,30 +18,26 @@ function renderScanControlFromData(data) {
         selectedNetwork = scanState.selected_network;
     } else if (networks.length === 1) {
         selectedNetwork = networks[0].id;
-        selectNetwork(networks[0].id);
     } else if (window.detectedNetworks && window.detectedNetworks.length > 0) {
         // Auto-select the first detected network if none is selected
         const detectedCidr = window.detectedNetworks[0].cidr;
         const matchingNetwork = networks.find(n => n.cidr === detectedCidr);
         if (matchingNetwork) {
             selectedNetwork = matchingNetwork.id;
-            selectNetwork(matchingNetwork.id);
         }
     }
     
+    // Normalize selectedNetwork to always be an ID string
+    if (selectedNetwork && typeof selectedNetwork === 'object' && selectedNetwork.id) {
+        selectedNetwork = selectedNetwork.id;
+    }
+
     // Find selected network info
     let selectedNetworkName = 'Target Network';
     let selectedNetworkCidr = '';
-    
+
     if (selectedNetwork) {
-        let network;
-        // Handle both cases: selectedNetwork as object or as ID
-    if (typeof selectedNetwork === 'object' && selectedNetwork.id) {
-            network = selectedNetwork;
-        } else {
-            network = networks.find(n => n.id === selectedNetwork);
-        }
-        
+        const network = networks.find(n => n.id === selectedNetwork);
         if (network) {
             selectedNetworkName = network.name;
             selectedNetworkCidr = network.cidr;
@@ -576,6 +572,12 @@ function loadScanControl(showSpinner = true) {
             if (typeof data === 'object') {
                 const html = renderScanControlFromData(data);
                 scanControlContainer.innerHTML = html;
+                // Auto-persist single network selection server-side
+                const networks = data.networks || [];
+                const scanState = data.scanState || {};
+                if (!scanState.selected_network && !scanState.current_network && networks.length === 1) {
+                    selectNetwork(networks[0].id);
+                }
             } else {
                 scanControlContainer.innerHTML = data;
             }
