@@ -1,0 +1,438 @@
+(function () {
+    'use strict';
+
+    var canvas, ctx;
+    var lw = 0, lh = 380;
+    var nodes = [];
+    var gateway = { x: 0, y: 0, pulse: 0, sweep: 0, rot: 0 };
+    var packets = [];
+    var hitIdx = null;
+    var rafId = null;
+    var prevTs = 0;
+    var MAX_NODES = 50;
+    var ENTRY_MS  = 1200;
+
+    var BG    = '#070d17';
+    var GREEN = '#10b981';
+
+    function sc(s) {
+        switch ((s || '').toLowerCase()) {
+            case 'online':  return GREEN;
+            case 'idle':    return '#eab308';
+            case 'offline': return '#374151';
+            default:        return '#4b5563';
+        }
+    }
+
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+    function hexPath(cx, cy, r, rot) {
+        ctx.beginPath();
+        for (var i = 0; i < 6; i++) {
+            var a = i / 6 * Math.PI * 2 + (rot || 0);
+            if (i === 0) ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+            else         ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        }
+        ctx.closePath();
+    }
+
+    function initNetworkViz() {
+        canvas = document.getElementById('network-viz-canvas');
+        if (!canvas) return;
+        ctx = canvas.getContext('2d');
+        var wrap = document.getElementById('network-viz-wrap');
+        if (!wrap) return;
+
+        function resize() {
+            var dpr = window.devicePixelRatio || 1;
+            lw = wrap.clientWidth || 600;
+            lh = 380;
+            canvas.style.width  = lw + 'px';
+            canvas.style.height = lh + 'px';
+            canvas.width  = Math.round(lw * dpr);
+            canvas.height = Math.round(lh * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            gateway.x = lw / 2;
+            gateway.y = lh / 2;
+            positionNodes();
+        }
+        resize();
+
+        if (window.ResizeObserver) {
+            new ResizeObserver(resize).observe(wrap);
+        } else {
+            window.addEventListener('resize', resize);
+        }
+
+        canvas.addEventListener('mousemove', onMove);
+        canvas.addEventListener('mouseleave', onLeave);
+        canvas.addEventListener('click', onClick);
+
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(tick);
+
+        fetchData();
+        setInterval(fetchData, 15000);
+    }
+
+    function fetchData() {
+        fetch('/api/device-list', { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { setDevices(d.devices || [], d.networks || {}); })
+            .catch(function () {});
+    }
+
+    function positionNodes() {
+        if (!lw) return;
+        var cx = lw / 2, cy = lh / 2;
+        var maxR = Math.min(cx * 0.88, cy * 0.88);
+        var inner = maxR * 0.50, outer = maxR * 0.88;
+
+        var active   = nodes.filter(function (n) { return n.status === 'online' || n.status === 'idle'; });
+        var inactive = nodes.filter(function (n) { return n.status !== 'online' && n.status !== 'idle'; });
+
+        function place(arr, r) {
+            arr.forEach(function (n, i) {
+                var a = (arr.length > 1 ? i / arr.length : 0.25) * Math.PI * 2 - Math.PI / 2;
+                n.tx = cx + Math.cos(a) * r;
+                n.ty = cy + Math.sin(a) * r;
+            });
+        }
+        place(active, inner);
+        place(inactive, outer);
+    }
+
+    function setDevices(devices) {
+        var cap = devices.slice(0, MAX_NODES);
+        var byId = {};
+        nodes.forEach(function (n) { byId[n.id] = n; });
+
+        var cx = gateway.x || lw / 2 || 300;
+        var cy = gateway.y || lh / 2 || 190;
+
+        nodes = cap.map(function (d) {
+            var status = d.status || 'unknown';
+            var open   = (d.ports || []).filter(function (p) { return p.state === 'open'; }).length;
+            var ex = byId[d.id];
+            if (ex) {
+                ex.status = status;
+                ex.ip     = d.ipv4  || '';
+                ex.label  = d.name  || d.hostname || '';
+                ex.mac    = d.mac   || '';
+                ex.open   = open;
+                ex.color  = sc(status);
+                return ex;
+            }
+            return {
+                id: d.id, ip: d.ipv4 || '',
+                label: d.name || d.hostname || '',
+                mac: d.mac || '', status: status,
+                open: open, color: sc(status),
+                x: cx, y: cy, tx: cx, ty: cy,
+                initTs: null, isNew: true
+            };
+        });
+        positionNodes();
+    }
+
+    function tick(ts) {
+        var dt = Math.min(ts - (prevTs || ts), 50);
+        prevTs = ts;
+
+        gateway.pulse += dt * 0.003;
+        gateway.sweep += dt * 0.00055;
+        gateway.rot   += dt * 0.00035;
+
+        nodes.forEach(function (n) {
+            if (n.isNew) {
+                if (!n.initTs) n.initTs = ts;
+                var ep = easeOutCubic(Math.min(1, (ts - n.initTs) / ENTRY_MS));
+                n.x = gateway.x + (n.tx - gateway.x) * ep;
+                n.y = gateway.y + (n.ty - gateway.y) * ep;
+                if (ep >= 1) { n.isNew = false; n.x = n.tx; n.y = n.ty; }
+            } else {
+                n.x += (n.tx - n.x) * 0.06;
+                n.y += (n.ty - n.y) * 0.06;
+            }
+        });
+
+        if (Math.random() < 0.22) {
+            var live = nodes.filter(function (n) { return n.status === 'online' && !n.isNew; });
+            if (live.length) {
+                var t = live[Math.floor(Math.random() * live.length)];
+                packets.push({ id: t.id, t: 0, spd: 0.006 + Math.random() * 0.006 });
+            }
+        }
+        packets = packets.filter(function (p) { p.t += p.spd; return p.t < 1; });
+
+        render();
+        rafId = requestAnimationFrame(tick);
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, lw, lh);
+        drawBg();
+        drawOrbitRings();
+        drawSweep();
+        if (nodes.length > 0) { drawEdges(); drawPackets(); }
+        drawGatewayNode();
+        if (nodes.length > 0) drawDevices();
+        drawBrackets();
+        drawStats();
+    }
+
+    function drawBg() {
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, lw, lh);
+
+        var s = 28;
+        ctx.fillStyle = 'rgba(16,185,129,0.09)';
+        for (var x = s; x < lw; x += s)
+            for (var y = s; y < lh; y += s) {
+                ctx.beginPath(); ctx.arc(x, y, 0.6, 0, Math.PI * 2); ctx.fill();
+            }
+
+        var vg = ctx.createRadialGradient(lw / 2, lh / 2, lh * 0.15, lw / 2, lh / 2, Math.max(lw, lh) * 0.72);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+        ctx.fillStyle = vg; ctx.fillRect(0, 0, lw, lh);
+    }
+
+    function drawOrbitRings() {
+        var cx = gateway.x, cy = gateway.y;
+        var mr = Math.min(cx * 0.88, cy * 0.88);
+        [mr * 0.50, mr * 0.88].forEach(function (r, i) {
+            ctx.setLineDash([3, 9]);
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = i === 0 ? 'rgba(16,185,129,0.13)' : 'rgba(16,185,129,0.07)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.setLineDash([]);
+        });
+    }
+
+    function drawSweep() {
+        var cx = gateway.x, cy = gateway.y;
+        var maxR = Math.max(lw, lh);
+        var sweepW = 0.65, steps = 24;
+        for (var i = 0; i < steps; i++) {
+            var a0 = gateway.sweep - sweepW * (i / steps);
+            var a1 = gateway.sweep - sweepW * ((i + 1) / steps);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, maxR, a0, a1, true);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(16,185,129,' + ((1 - i / steps) * 0.13) + ')';
+            ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + Math.cos(gateway.sweep) * maxR, cy + Math.sin(gateway.sweep) * maxR);
+        ctx.strokeStyle = 'rgba(16,185,129,0.32)';
+        ctx.lineWidth = 1; ctx.stroke();
+    }
+
+    function drawEdges() {
+        nodes.forEach(function (n) {
+            var active = n.status === 'online';
+            ctx.beginPath();
+            ctx.moveTo(gateway.x, gateway.y);
+            ctx.lineTo(n.x, n.y);
+            ctx.strokeStyle = active ? 'rgba(16,185,129,0.28)' : 'rgba(75,85,99,0.15)';
+            ctx.lineWidth = active ? 1 : 0.5;
+            ctx.setLineDash(active ? [] : [3, 7]);
+            ctx.stroke();
+        });
+        ctx.setLineDash([]);
+    }
+
+    function drawPackets() {
+        packets.forEach(function (p) {
+            var node = null;
+            for (var i = 0; i < nodes.length; i++) { if (nodes[i].id === p.id) { node = nodes[i]; break; } }
+            if (!node) return;
+            var fade = Math.sin(p.t * Math.PI);
+            for (var j = 0; j < 4; j++) {
+                var pt = Math.max(0, p.t - j * 0.035);
+                ctx.beginPath();
+                ctx.arc(
+                    gateway.x + (node.x - gateway.x) * pt,
+                    gateway.y + (node.y - gateway.y) * pt,
+                    2.2 - j * 0.4, 0, Math.PI * 2
+                );
+                ctx.fillStyle = 'rgba(110,231,183,' + (fade * (1 - j / 4) * 0.9) + ')';
+                ctx.fill();
+            }
+        });
+    }
+
+    function drawGatewayNode() {
+        var cx = gateway.x, cy = gateway.y;
+
+        for (var i = 0; i < 3; i++) {
+            var rp = (gateway.pulse * 0.38 + i / 3) % 1;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 15 + rp * 36, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(16,185,129,' + ((1 - rp) * 0.48) + ')';
+            ctx.lineWidth = 1.5; ctx.stroke();
+        }
+
+        var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 32);
+        glow.addColorStop(0,   'rgba(16,185,129,0.55)');
+        glow.addColorStop(0.4, 'rgba(16,185,129,0.14)');
+        glow.addColorStop(1,   'rgba(16,185,129,0)');
+        ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+        ctx.fillStyle = glow; ctx.fill();
+
+        hexPath(cx, cy, 21, gateway.rot);
+        ctx.strokeStyle = 'rgba(16,185,129,0.52)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+        hexPath(cx, cy, 14, gateway.rot + Math.PI / 6);
+        ctx.fillStyle = BG; ctx.fill();
+        ctx.strokeStyle = GREEN; ctx.lineWidth = 2; ctx.stroke();
+
+        ctx.fillStyle = GREEN;
+        ctx.font = 'bold 8px "Roboto Mono", monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('GW', cx, cy);
+
+        ctx.fillStyle = 'rgba(16,185,129,0.55)';
+        ctx.font = '7px "Orbitron", monospace';
+        ctx.fillText('GATEWAY', cx, cy + 33);
+    }
+
+    function drawDevices() {
+        nodes.forEach(function (n, idx) {
+            var hov = (hitIdx === idx);
+            var r   = hov ? 14 : 9;
+
+            if (n.status === 'online') {
+                var g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3.5);
+                g.addColorStop(0, 'rgba(16,185,129,0.20)');
+                g.addColorStop(1, 'rgba(16,185,129,0)');
+                ctx.beginPath(); ctx.arc(n.x, n.y, r * 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = g; ctx.fill();
+            }
+
+            hexPath(n.x, n.y, r, Math.PI / 6);
+            ctx.fillStyle = BG; ctx.fill();
+            ctx.strokeStyle = n.color; ctx.lineWidth = hov ? 2 : 1.5; ctx.stroke();
+
+            if (n.status === 'online') {
+                ctx.beginPath(); ctx.arc(n.x, n.y, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = n.color; ctx.fill();
+            } else {
+                ctx.strokeStyle = n.color; ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(n.x - 2.5, n.y - 2.5); ctx.lineTo(n.x + 2.5, n.y + 2.5);
+                ctx.moveTo(n.x + 2.5, n.y - 2.5); ctx.lineTo(n.x - 2.5, n.y + 2.5);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = n.status === 'online' ? 'rgba(16,185,129,0.85)' : 'rgba(107,114,128,0.55)';
+            ctx.font = '8px "Roboto Mono", monospace';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            ctx.fillText(n.ip, n.x, n.y + r + 4);
+        });
+    }
+
+    function drawBrackets() {
+        var p = 8, s = 18;
+        ctx.strokeStyle = 'rgba(16,185,129,0.22)'; ctx.lineWidth = 1.5;
+        [[p, p, 1, 1], [lw - p, p, -1, 1], [p, lh - p, 1, -1], [lw - p, lh - p, -1, -1]]
+            .forEach(function (b) {
+                ctx.beginPath();
+                ctx.moveTo(b[0] + b[2] * s, b[1]);
+                ctx.lineTo(b[0], b[1]);
+                ctx.lineTo(b[0], b[1] + b[3] * s);
+                ctx.stroke();
+            });
+    }
+
+    function drawStats() {
+        var on  = nodes.filter(function (n) { return n.status === 'online'; }).length;
+        var off = nodes.filter(function (n) { return n.status === 'offline'; }).length;
+        var tot = nodes.length;
+
+        if (tot === 0) {
+            ctx.fillStyle = 'rgba(107,114,128,0.4)';
+            ctx.font = '9px "Roboto Mono", monospace';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('RUN A SCAN TO POPULATE TOPOLOGY', lw / 2, lh - 22);
+            return;
+        }
+
+        var x = 26, y = 20;
+        ctx.font = '8px "Orbitron", monospace';
+        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(16,185,129,0.45)';  ctx.fillText('TOTAL:   ' + tot, x, y);
+        ctx.fillStyle = GREEN;                      ctx.fillText('ONLINE:  ' + on,  x, y + 13);
+        ctx.fillStyle = 'rgba(107,114,128,0.65)';  ctx.fillText('OFFLINE: ' + off, x, y + 26);
+    }
+
+    function hitTest(mx, my) {
+        for (var i = nodes.length - 1; i >= 0; i--) {
+            var n = nodes[i], dx = n.x - mx, dy = n.y - my;
+            if (dx * dx + dy * dy < 20 * 20) return i;
+        }
+        return -1;
+    }
+
+    function makeEl(tag, styles, text) {
+        var el = document.createElement(tag);
+        Object.keys(styles).forEach(function (k) { el.style[k] = styles[k]; });
+        if (text !== undefined) el.textContent = text;
+        return el;
+    }
+
+    function onMove(e) {
+        var rect = canvas.getBoundingClientRect();
+        var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        var i = hitTest(mx, my);
+        hitIdx = i >= 0 ? i : null;
+        canvas.style.cursor = i >= 0 ? 'pointer' : 'default';
+
+        var tip = document.getElementById('network-viz-tip');
+        if (!tip) return;
+        if (i < 0) { tip.style.display = 'none'; return; }
+
+        var n = nodes[i];
+        var pl = (mx + 14 + 190 > lw) ? mx - 200 : mx + 14;
+        tip.style.cssText = 'display:block;position:absolute;pointer-events:none;' +
+            'left:' + pl + 'px;top:' + (my - 12) + 'px;' +
+            'background:rgba(7,13,23,0.97);border:1px solid rgba(16,185,129,0.3);' +
+            'border-radius:4px;padding:8px 10px;z-index:100;max-width:190px;line-height:1.5;';
+
+        tip.textContent = '';
+
+        tip.appendChild(makeEl('div', { font: 'bold 10px Orbitron,monospace', color: '#10b981' }, n.ip));
+        if (n.label) tip.appendChild(makeEl('div', { font: "11px 'Roboto Condensed',sans-serif", color: '#d1d5db', marginTop: '2px' }, n.label));
+        if (n.mac)   tip.appendChild(makeEl('div', { font: "9px 'Roboto Mono',monospace",        color: '#6b7280', marginTop: '1px' }, n.mac));
+
+        var meta = makeEl('div', { font: "9px 'Roboto Mono',monospace", marginTop: '5px' });
+        var statusSpan = makeEl('span', { color: n.color }, n.status || 'unknown');
+        var sep = document.createTextNode(' · ');
+        var portsText = n.open > 0 ? n.open + ' open port' + (n.open > 1 ? 's' : '') : 'no open ports';
+        meta.appendChild(statusSpan);
+        meta.appendChild(sep);
+        meta.appendChild(document.createTextNode(portsText));
+        tip.appendChild(meta);
+    }
+
+    function onLeave() {
+        hitIdx = null;
+        canvas.style.cursor = 'default';
+        var tip = document.getElementById('network-viz-tip');
+        if (tip) tip.style.display = 'none';
+    }
+
+    function onClick(e) {
+        var rect = canvas.getBoundingClientRect();
+        var i = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+        if (i >= 0 && typeof loadDeviceModal === 'function') loadDeviceModal(nodes[i].id);
+    }
+
+    window.initNetworkViz  = initNetworkViz;
+    window.updateNetworkViz = function (devices) { setDevices(devices); };
+})();

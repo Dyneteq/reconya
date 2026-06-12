@@ -59,6 +59,7 @@ start-dev:
 	@echo "$(BLUE)[INFO]$(NC) reconYa backend will run on: http://localhost:$(PORT)"
 	@echo "$(BLUE)[INFO]$(NC) Press Ctrl+C to stop the service"
 	@echo ""
+	@(until curl -s http://localhost:$(PORT) > /dev/null 2>&1; do sleep 0.5; done; open http://localhost:$(PORT)) &
 	@cd $(BACKEND_DIR) && go run $(LDFLAGS) ./cmd
 
 ## Stop reconYa backend

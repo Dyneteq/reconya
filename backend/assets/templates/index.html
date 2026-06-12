@@ -20,6 +20,7 @@
     <script src="/static/js/settings.js"></script>
     <script src="/static/js/dashboard.js"></script>
     
+    <script src="/static/js/network-viz.js"></script>
     <!-- Main initialization (load last) -->
     <script src="/static/js/main.js"></script>
     <!-- Tabler Icons - lightweight SVG icons that work great with Tailwind -->
@@ -378,6 +379,15 @@
                                 </div>
                             </div>
 
+                            <!-- Network Topology Visualization -->
+                            <div class="rounded">
+                                <h2 class="text-xs font-bold mb-4 text-green-500">[ TOPOLOGY ]</h2>
+                                <div id="network-viz-wrap" class="relative rounded overflow-hidden" style="border: 1px solid rgba(16,185,129,0.12);">
+                                    <canvas id="network-viz-canvas" style="display:block;"></canvas>
+                                    <div id="network-viz-tip" style="display:none;"></div>
+                                </div>
+                            </div>
+
                             <!-- Network Map -->
                             <div class="rounded">
                                 <h2 class="text-xs font-bold mb-4 text-green-500">[ NETWORK MAP ]</h2>
@@ -398,7 +408,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Network Devices -->
                             <div class="rounded">
                                 <h2 class="text-xs font-bold mb-4 text-green-500">[ NETWORK DEVICES ]</h2>
@@ -1191,6 +1201,9 @@
                 loadSettingsPage();
             } else if (currentPath === '/' || currentPath === '/home' || currentPath === '') {
                 // Initialize main dashboard widgets
+                if (typeof initNetworkViz === 'function') {
+                    initNetworkViz();
+                }
                 if (typeof loadScanControl === 'function') {
                     loadScanControl();
                 }

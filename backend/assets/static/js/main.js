@@ -25,6 +25,9 @@ function initPageContent() {
     switch (currentPath) {
         case '/':
         case '/home':
+            if (typeof initNetworkViz === 'function') {
+                initNetworkViz();
+            }
             if (typeof loadDevices === 'function') {
                 loadDevices();
             }
