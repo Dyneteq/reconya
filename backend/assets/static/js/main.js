@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initPageContent() {
+    // Start navbar scan indicator polling on all pages
+    if (typeof startNavbarScanPolling === 'function') {
+        startNavbarScanPolling();
+    }
+
     const currentPath = window.location.pathname;
 
     switch (currentPath) {

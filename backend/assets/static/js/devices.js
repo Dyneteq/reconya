@@ -443,79 +443,79 @@ function deleteDevice(deviceId, deviceIP) {
 }
 
 function loadDeviceList() {
-    const targetEl = document.getElementById('device-list-container');
+    var targetEl = document.getElementById('device-list-container');
     if (targetEl) {
-        targetEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div><span class="ml-3 text-gray-400">Loading devices...</span></div>';
-        
+        targetEl.textContent = '';
+        var spinner = document.createElement('div');
+        spinner.className = 'flex items-center justify-center py-8';
+        spinner.textContent = 'Loading devices...';
+        targetEl.appendChild(spinner);
+
         fetch('/api/device-list', { credentials: 'include' })
-            .then(response => response.json())
-            .then(data => {
-                targetEl.innerHTML = renderDeviceTable(data.devices || []);
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                targetEl.textContent = '';
+                var wrapper = document.createElement('div');
+                wrapper.innerHTML = renderDeviceTable(data.devices || [], data.networks || {});
+                while (wrapper.firstChild) targetEl.appendChild(wrapper.firstChild);
             })
-            .catch(error => {
+            .catch(function(error) {
                 console.error('Error loading device list:', error);
-                targetEl.innerHTML = '<div class="text-red-400">Failed to load devices</div>';
+                targetEl.textContent = 'Failed to load devices';
             });
     }
 }
 
-function renderDeviceTable(devices) {
+function renderDeviceTable(devices, networkMap) {
+    networkMap = networkMap || {};
+
     if (!devices || devices.length === 0) {
         return '<div class="text-center text-gray-400 py-8">No devices found</div>';
     }
-    
-    return `
-        <div class="rounded overflow-hidden" style="background: var(--bg-secondary);">
-            <table class="w-full">
-                <thead style="background: var(--bg-primary);">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-green-500">IP Address</th>
-                        <th class="px-4 py-3 text-left text-green-500">Name</th>
-                        <th class="px-4 py-3 text-left text-green-500">Network Info</th>
-                        <th class="px-4 py-3 text-left text-green-500">Status</th>
-                        <th class="px-4 py-3 text-left text-green-500">Ports</th>
-                        <th class="px-4 py-3 text-left text-green-500">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${devices.map(device => `
-                        <tr class="cursor-pointer" style="transition: background 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='';" onclick="loadDeviceModal('${device.id}')">
-                            <td class="px-4 py-3">
-                                <div class="flex items-center">
-                                    <div class="w-3 h-3 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
-                                    <div class="device-ip" style="font-size: 1.1rem;">${device.ipv4}</div>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3">
-                                ${device.name || device.hostname ? `<div class="text-gray-300">${device.name || device.hostname}</div>` : '<span class="text-gray-500">-</span>'}
-                            </td>
-                            <td class="px-4 py-3">
-                                ${device.mac ? `<div class="text-blue-400 text-sm">${device.mac}</div>` : ''}
-                            </td>
-                            <td class="px-4 py-3">
-                                <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span>
-                            </td>
-                            <td class="px-4 py-3">
-                                ${device.ports && device.ports.length > 0 ? 
-                                    `<div class="text-sm text-gray-400">${device.ports.filter(p => p.state === 'open').length} open</div>` 
-                                    : '<span class="text-gray-500">-</span>'
-                                }
-                            </td>
-                            <td class="px-4 py-3">
-                                <button class="px-2 py-1 text-red-400 rounded text-sm hover:bg-red-400 hover:text-white transition-colors" 
-                                        onclick="event.stopPropagation(); deleteDevice('${device.id}', '${device.ipv4}')"
-                                        title="Delete">
-                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                    </svg>
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
+
+    var rows = devices.map(function(device) {
+        var networkCidr = (device.network_id && networkMap[device.network_id]) ? networkMap[device.network_id] : '';
+        var openPorts = (device.ports && device.ports.length > 0)
+            ? device.ports.filter(function(p) { return p.state === 'open'; }).length
+            : 0;
+
+        var nameCell = (device.name || device.hostname)
+            ? '<div class="text-gray-300">' + (device.name || device.hostname) + '</div>'
+            : '<span class="text-gray-500">-</span>';
+
+        var macCell = device.mac
+            ? '<div class="text-blue-400 text-sm">' + device.mac + '</div>'
+            : '';
+
+        var portsCell = (device.ports && device.ports.length > 0)
+            ? '<div class="text-sm text-gray-400">' + openPorts + ' open</div>'
+            : '<span class="text-gray-500">-</span>';
+
+        return '<tr class="cursor-pointer" style="transition: background 0.2s;" onmouseover="this.style.background=\'var(--bg-tertiary)\'" onmouseout="this.style.background=\'\';" onclick="loadDeviceModal(\'' + device.id + '\')">'
+            + '<td class="px-4 py-3"><div class="flex items-center"><div class="w-3 h-3 rounded-full mr-3 ' + getStatusColor(device.status) + '"></div><div class="device-ip" style="font-size: 1.1rem;">' + device.ipv4 + '</div></div></td>'
+            + '<td class="px-4 py-3">' + nameCell + '</td>'
+            + '<td class="px-4 py-3">' + macCell + '</td>'
+            + '<td class="px-4 py-3"><span class="text-gray-400 text-sm">' + networkCidr + '</span></td>'
+            + '<td class="px-4 py-3">' + portsCell + '</td>'
+            + '<td class="px-4 py-3 text-right"><button class="px-2 py-1 text-gray-400 rounded text-sm hover:bg-gray-600 hover:text-white transition-colors" onclick="event.stopPropagation(); deleteDevice(\'' + device.id + '\', \'' + device.ipv4 + '\')" title="Delete"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></td>'
+            + '</tr>';
+    }).join('');
+
+    return '<div class="rounded overflow-hidden" style="background: var(--bg-secondary);">'
+        + '<table class="w-full">'
+        + '<thead style="background: var(--bg-primary);">'
+        + '<tr>'
+        + '<th class="px-4 py-3 text-left text-green-500">IP Address</th>'
+        + '<th class="px-4 py-3 text-left text-green-500">Name</th>'
+        + '<th class="px-4 py-3 text-left text-green-500">Network Info</th>'
+        + '<th class="px-4 py-3 text-left text-green-500">Network</th>'
+        + '<th class="px-4 py-3 text-left text-green-500">Ports</th>'
+        + '<th class="px-4 py-3"></th>'
+        + '</tr>'
+        + '</thead>'
+        + '<tbody>' + rows + '</tbody>'
+        + '</table>'
+        + '</div>';
 }
 
 // Make functions available globally

@@ -1,9 +1,44 @@
 // Scan control functionality
+
+function updateNavbarScanIndicator(isScanning, isStopping) {
+    const indicator = document.getElementById('navbar-scan-indicator');
+    if (!indicator) return;
+
+    if (isScanning || isStopping) {
+        var color = isStopping ? 'yellow' : 'green';
+        var text = isStopping ? 'Stopping' : 'Scanning';
+        indicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded '
+            + 'bg-' + color + '-900/40 border border-' + color + '-500/30';
+
+        var dotContainer = document.createElement('span');
+        dotContainer.className = 'relative flex h-2.5 w-2.5';
+
+        var ping = document.createElement('span');
+        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-' + color + '-400 opacity-75';
+        dotContainer.appendChild(ping);
+
+        var dot = document.createElement('span');
+        dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-' + color + '-500';
+        dotContainer.appendChild(dot);
+
+        var label = document.createElement('span');
+        label.className = 'text-' + color + '-400 text-sm font-medium';
+        label.style.fontFamily = "'Orbitron', monospace";
+        label.textContent = text;
+
+        indicator.replaceChildren(dotContainer, label);
+    } else {
+        indicator.className = 'hidden';
+    }
+}
+
 function renderScanControlFromData(data) {
     const networks = data.networks || [];
     const scanState = data.scanState || {};
     const isScanning = scanState.is_running && !scanState.is_stopping;
     const isStopping = scanState.is_stopping;
+
+    updateNavbarScanIndicator(isScanning, isStopping);
 
     // Priority order for selecting network:
     // 1. Current network (if scanning)
@@ -988,6 +1023,29 @@ function setupScanControlEventListeners() {
     manageScanRuntime();
 }
 
+// Navbar scan indicator polling (works on all pages)
+var navbarScanPollInterval = null;
+
+function startNavbarScanPolling() {
+    // Update immediately
+    refreshNavbarScanIndicator();
+    // Poll every 5 seconds
+    if (!navbarScanPollInterval) {
+        navbarScanPollInterval = setInterval(refreshNavbarScanIndicator, 5000);
+    }
+}
+
+function refreshNavbarScanIndicator() {
+    fetch('/api/scan/status', { credentials: 'include' })
+        .then(function(response) { return response.json(); })
+        .then(function(scanState) {
+            var isScanning = scanState.is_running && !scanState.is_stopping;
+            var isStopping = scanState.is_stopping;
+            updateNavbarScanIndicator(isScanning, isStopping);
+        })
+        .catch(function() {});
+}
+
 // Make functions available globally
 window.renderScanControlFromData = renderScanControlFromData;
 window.formatScanTime = formatScanTime;
@@ -1000,3 +1058,4 @@ window.stopScan = stopScan;
 window.pollForScanStop = pollForScanStop;
 window.manageScanRuntime = manageScanRuntime;
 window.updateScanRuntime = updateScanRuntime;
+window.startNavbarScanPolling = startNavbarScanPolling;

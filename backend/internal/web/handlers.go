@@ -1311,11 +1311,20 @@ func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
 	// Get user's screenshot setting
 	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
 
+	// Build network ID to CIDR map for display
+	networkMap := map[string]string{}
+	if networks, err := h.networkService.FindAll(); err == nil {
+		for _, n := range networks {
+			networkMap[n.ID] = n.CIDR
+		}
+	}
+
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
 		"devices":            devices,
 		"screenshotsEnabled": screenshotsEnabled,
+		"networks":           networkMap,
 		"success":           true,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {

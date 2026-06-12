@@ -49,6 +49,14 @@
 
             <!-- Theme Toggle and User Menu -->
             <div class="flex items-center gap-3">
+                <!-- Scan Indicator -->
+                <div id="navbar-scan-indicator" class="hidden flex items-center gap-2 px-3 py-1.5 rounded bg-green-900/40 border border-green-500/30">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                    </span>
+                    <span class="text-green-400 text-sm font-medium" style="font-family: 'Orbitron', monospace;">Scanning</span>
+                </div>
                 <!-- Theme Toggle Button -->
                 <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 focus:outline-none bg-gray-700 rounded transition-colors">
                     <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,6 +163,13 @@
                             <div class="mb-6">
                                 <div class="flex justify-between items-center mb-4">
                                     <h1 class="text-sm font-bold text-green-500">[ DEVICES ]</h1>
+                                </div>
+
+                                <!-- Search Bar -->
+                                <div class="mb-4">
+                                    <input type="text" id="device-search" placeholder="Search by IP, name, MAC, vendor..."
+                                           class="w-full px-4 py-2 rounded focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 text-sm"
+                                           style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
                                 </div>
 
                                 <!-- Device List View -->
@@ -761,78 +776,98 @@
         }
         
         // Page-specific content loading functions
+        var _devicePageData = { devices: [], networks: {} };
+
         function loadDevicesPage() {
-            const container = document.getElementById('device-list-container');
+            var container = document.getElementById('device-list-container');
             if (!container) return;
-            
-            fetch('/api/device-list')
-                .then(response => response.json())
-                .then(data => {
-                    container.innerHTML = renderDeviceTable(data.devices || []);
+
+            fetch('/api/device-list', { credentials: 'include' })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    _devicePageData.devices = data.devices || [];
+                    _devicePageData.networks = data.networks || {};
+                    filterAndRenderDevices();
+
+                    var searchInput = document.getElementById('device-search');
+                    if (searchInput && !searchInput._bound) {
+                        searchInput._bound = true;
+                        searchInput.addEventListener('input', filterAndRenderDevices);
+                    }
                 })
-                .catch(error => {
+                .catch(function(error) {
                     console.error('Failed to load devices:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load devices</div>';
+                    if (container) container.textContent = 'Failed to load devices';
                 });
         }
-        
-        function renderDeviceTable(devices) {
+
+        function filterAndRenderDevices() {
+            var container = document.getElementById('device-list-container');
+            if (!container) return;
+            var searchInput = document.getElementById('device-search');
+            var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+            var devices = _devicePageData.devices;
+            var networks = _devicePageData.networks;
+
+            if (query) {
+                devices = devices.filter(function(d) {
+                    var ip = (d.ipv4 || '').toLowerCase();
+                    var name = (d.name || d.hostname || '').toLowerCase();
+                    var mac = (d.mac || '').toLowerCase();
+                    var vendor = (d.vendor || '').toLowerCase();
+                    var net = (d.network_id && networks[d.network_id]) ? networks[d.network_id].toLowerCase() : '';
+                    return ip.indexOf(query) !== -1 || name.indexOf(query) !== -1 || mac.indexOf(query) !== -1 || vendor.indexOf(query) !== -1 || net.indexOf(query) !== -1;
+                });
+            }
+
+            // Use wrapper to safely set content from renderDeviceTable
+            var html = renderDeviceTable(devices, networks);
+            container.textContent = '';
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = html;
+            while (wrapper.firstChild) container.appendChild(wrapper.firstChild);
+        }
+
+        function renderDeviceTable(devices, networks) {
+            networks = networks || {};
             if (!devices || devices.length === 0) {
                 return '<div class="text-center text-gray-400 py-8">No devices found</div>';
             }
-            
-            return `
-                <div class="overflow-x-auto">
-                    <table class="w-full bg-gray-800 rounded">
-                        <thead class="bg-gray-700">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Device</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">IP Address</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">MAC Address</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">OS</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Status</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-600">
-                            ${devices.map(device => {
-                                const hostname = device.hostname || device.name || 'Unknown';
-                                const ip = device.ipv4 || device.ip || 'N/A';
-                                const mac = device.mac || 'N/A';
-                                const osInfo = device.os ? (device.os.name || 'Unknown') : 'Unknown';
-                                const status = device.status || 'unknown';
-                                const deviceId = device.id;
-                                
-                                return `
-                                    <tr class="hover:bg-gray-700 transition-colors cursor-pointer" onclick="loadDeviceModal('${deviceId}')">
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center">
-                                                <div class="mr-2">${getDeviceIcon(status)}</div>
-                                                <span class="font-medium">${hostname}</span>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 font-mono text-sm">${ip}</td>
-                                        <td class="px-4 py-3 font-mono text-sm">${mac}</td>
-                                        <td class="px-4 py-3">${osInfo}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded text-xs ${getDeviceStatusColor(status)}">${status}</span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <button onclick="event.stopPropagation(); deleteDevice('${deviceId}', '${ip}')" 
-                                                    class="text-red-500 hover:text-red-400 p-1 rounded hover:bg-red-500 hover:bg-opacity-20 transition-colors"
-                                                    title="Delete Device">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                </svg>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+
+            var rows = devices.map(function(device) {
+                var hostname = device.hostname || device.name || 'Unknown';
+                var ip = device.ipv4 || device.ip || 'N/A';
+                var mac = device.mac || 'N/A';
+                var osInfo = device.os ? (device.os.name || 'Unknown') : 'Unknown';
+                var status = device.status || 'unknown';
+                var deviceId = device.id;
+                var networkCidr = (device.network_id && networks[device.network_id]) ? networks[device.network_id] : '-';
+
+                return '<tr class="hover:bg-gray-700 transition-colors cursor-pointer" onclick="loadDeviceModal(\'' + deviceId + '\')">'
+                    + '<td class="px-4 py-3"><div class="flex items-center"><div class="mr-2">' + getDeviceIcon(status) + '</div><span class="font-medium">' + hostname + '</span></div></td>'
+                    + '<td class="px-4 py-3 font-mono text-sm">' + ip + '</td>'
+                    + '<td class="px-4 py-3 font-mono text-sm">' + mac + '</td>'
+                    + '<td class="px-4 py-3">' + osInfo + '</td>'
+                    + '<td class="px-4 py-3"><span class="text-gray-400 text-sm">' + networkCidr + '</span></td>'
+                    + '<td class="px-4 py-3 text-right"><button onclick="event.stopPropagation(); deleteDevice(\'' + deviceId + '\', \'' + ip + '\')" class="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-600 transition-colors" title="Delete Device"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>'
+                    + '</tr>';
+            }).join('');
+
+            return '<div class="overflow-x-auto">'
+                + '<table class="w-full bg-gray-800 rounded">'
+                + '<thead class="bg-gray-700">'
+                + '<tr>'
+                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">Device</th>'
+                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">IP Address</th>'
+                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">MAC Address</th>'
+                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">OS</th>'
+                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">Network</th>'
+                + '<th class="px-4 py-3"></th>'
+                + '</tr>'
+                + '</thead>'
+                + '<tbody class="divide-y divide-gray-600">' + rows + '</tbody>'
+                + '</table>'
+                + '</div>';
         }
         
         function getDeviceStatusColor(status) {
@@ -1136,8 +1171,13 @@
         
         // Initialize page content based on current page
         function initPageContent() {
+            // Start navbar scan indicator polling on all pages
+            if (typeof startNavbarScanPolling === 'function') {
+                startNavbarScanPolling();
+            }
+
             const currentPath = window.location.pathname;
-            
+
             if (currentPath === '/devices') {
                 loadDevicesPage();
                 setInterval(loadDevicesPage, 10000);
