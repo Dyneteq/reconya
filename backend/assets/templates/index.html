@@ -311,152 +311,80 @@
                         </div>
                     </div>
                 {{else}}
-                    <!-- Dashboard Content (default) -->
-                    <div class="space-y-6">
+                    <!-- Full-page topology dashboard -->
+                    <script>document.body.style.overflow = 'hidden';</script>
 
-                    <!-- Prominent No-Networks Alert (shown when 0 networks configured and networks detected) -->
-                    <div id="no-networks-alert" class="hidden">
-                        <div class="bg-gradient-to-r from-blue-900/40 to-blue-800/20 border-2 border-blue-500 rounded-lg p-6">
-                            <div class="flex items-start gap-4">
-                                <div class="flex-shrink-0 bg-blue-500/20 rounded-full p-3">
-                                    <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.858 15.355-5.858 21.213 0"></path>
-                                    </svg>
-                                </div>
+                    <!-- Topology canvas (fixed, fills viewport below navbar) -->
+                    <div id="network-viz-wrap" style="position:fixed;top:73px;left:0;right:0;bottom:0;z-index:1;">
+                        <canvas id="network-viz-canvas" style="display:block;"></canvas>
+                        <div id="network-viz-tip" style="display:none;"></div>
+                    </div>
+
+                    <!-- HUD: Network stats (top-left) -->
+                    <div class="hud-panel" style="position:fixed;top:89px;left:16px;z-index:20;">
+                        <div class="hud-label">Network Status</div>
+                        <div style="display:flex;gap:20px;align-items:flex-end;">
+                            <div>
+                                <div class="hud-sublabel">Range</div>
+                                <div id="network-range" class="hud-value" style="font-size:12px;">N/A</div>
+                            </div>
+                            <div>
+                                <div class="hud-sublabel">Found</div>
+                                <div id="devices-found" class="hud-value">0</div>
+                            </div>
+                            <div>
+                                <div class="hud-sublabel">Online</div>
+                                <div id="devices-online" class="hud-value" style="color:#10b981;">0</div>
+                            </div>
+                            <div>
+                                <div class="hud-sublabel">Public IP</div>
+                                <div id="public-ip" class="hud-value" style="font-size:12px;">—</div>
+                            </div>
+                            <div>
+                                <div class="hud-sublabel">Saturation</div>
+                                <div id="network-saturation" class="hud-value">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HUD: Scan control (top-right) -->
+                    <div class="hud-panel" style="position:fixed;top:89px;right:16px;z-index:20;width:260px;">
+                        <div id="scan-control-container">
+                            <div class="flex items-center justify-center py-4" id="scan-control-loading">
+                                <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
+                            </div>
+                            <div id="scan-control-content" class="hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- HUD: Activity log (bottom-right) -->
+                    <div class="hud-panel" style="position:fixed;bottom:16px;right:16px;z-index:20;width:300px;">
+                        <div class="hud-label">Activity</div>
+                        <div id="activity-log" style="max-height:200px;overflow-y:auto;font-size:11px;"></div>
+                    </div>
+
+                    <!-- No-networks alert (overlay, top-center) -->
+                    <div id="no-networks-alert" class="hidden" style="position:fixed;top:89px;left:50%;transform:translateX(-50%);z-index:30;max-width:460px;width:calc(100% - 32px);">
+                        <div class="hud-panel" style="border-color:rgba(59,130,246,0.35);padding:16px 20px;">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.858 15.355-5.858 21.213 0"></path>
+                                </svg>
                                 <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-white mb-1">Network Detected</h3>
-                                    <p id="no-networks-alert-text" class="text-gray-300 mb-4">A network has been detected. Add it to start scanning for devices.</p>
-                                    <div class="flex items-center gap-3">
-                                        <button id="no-networks-add-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                                            Add Network
-                                        </button>
-                                        <button id="no-networks-dismiss-btn" class="border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 px-4 py-2 rounded-lg text-sm transition-colors">
-                                            Dismiss
-                                        </button>
+                                    <div style="font-size:13px;font-weight:600;color:#93c5fd;margin-bottom:4px;">Network Detected</div>
+                                    <p id="no-networks-alert-text" style="font-size:12px;color:#94a3b8;margin-bottom:10px;">A network has been detected. Add it to start scanning.</p>
+                                    <div class="flex gap-2">
+                                        <button id="no-networks-add-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors">Add Network</button>
+                                        <button id="no-networks-dismiss-btn" style="border:1px solid rgba(75,85,99,0.6);color:#94a3b8;padding:6px 12px;border-radius:4px;font-size:11px;cursor:pointer;background:transparent;">Dismiss</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Dashboard Layout: Left/Right Split -->
-                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                        <!-- Left Side: Metrics + Network Map + Devices -->
-                        <div class="lg:col-span-3 space-y-6">
-                            <!-- Metrics Grid -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Network Range</p>
-                                    <p class="text-xl font-bold text-green-500" id="network-range">Loading...</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Devices Found</p>
-                                    <p class="text-xl font-bold text-green-500" id="devices-found">0</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Online</p>
-                                    <p class="text-xl font-bold text-green-500" id="devices-online">0</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Public IP</p>
-                                    <p class="text-xl font-bold text-green-500" id="public-ip">Loading...</p>
-                                </div>
-
-                                <div class="bg-gray-800 p-4 rounded text-center relative">
-                                    <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path>
-                                    </svg>
-                                    <p class="text-gray-400 text-sm mb-1">Saturation</p>
-                                    <p class="text-xl font-bold text-green-500" id="network-saturation">0%</p>
-                                </div>
-                            </div>
-
-                            <!-- Network Topology Visualization -->
-                            <div class="rounded">
-                                <h2 class="text-xs font-bold mb-4 text-green-500">[ TOPOLOGY ]</h2>
-                                <div id="network-viz-wrap" class="relative rounded overflow-hidden" style="border: 1px solid rgba(16,185,129,0.12);">
-                                    <canvas id="network-viz-canvas" style="display:block;"></canvas>
-                                    <div id="network-viz-tip" style="display:none;"></div>
-                                </div>
-                            </div>
-
-                            <!-- Network Map -->
-                            <div class="rounded">
-                                <h2 class="text-xs font-bold mb-4 text-green-500">[ NETWORK MAP ]</h2>
-                                <div id="network-map" class="min-h-48 rounded">
-                                    <div class="flex items-center justify-center h-32" id="network-map-loading">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading network map...</span>
-                                    </div>
-                                    <div id="network-map-content" class="hidden"></div>
-                                    <div id="network-map-empty" class="hidden flex items-center justify-center py-8 text-gray-400">
-                                        <div class="text-center">
-                                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            </svg>
-                                            <p class="text-sm">Select a network to view the network map</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Network Devices -->
-                            <div class="rounded">
-                                <h2 class="text-xs font-bold mb-4 text-green-500">[ NETWORK DEVICES ]</h2>
-                                <div id="devices-container" class="min-h-32">
-                                    <div class="flex justify-center items-center py-8">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading devices...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Right Side: Scan Control & Events -->
-                        <div class="space-y-6">
-                            <!-- Scan Control -->
-                            <div class="bg-gray-800 rounded p-6">
-                                <div id="scan-control-container">
-                                    <div class="flex items-center justify-center py-4" id="scan-control-loading">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading scan control...</span>
-                                    </div>
-                                    <div id="scan-control-content" class="hidden"></div>
-                                </div>
-                            </div>
-
-                            <!-- Events -->
-                            <div class="rounded">
-                                <h2 class="text-xs font-bold mb-4 text-green-500">[ ACTIVITY LOG ]</h2>
-                                <div class="bg-gray-800 rounded p-6">
-                                    <div id="activity-log" class="space-y-2 text-sm text-gray-400 max-h-64 overflow-y-auto">
-                                        <div class="flex items-center justify-center py-8">
-                                            <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
-                                            <span class="ml-3 text-gray-400">Loading events...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div> <!-- End conditional content wrapper -->
+                    <!-- Hidden stubs for JS that checks these containers -->
+                    <div id="network-map-content" style="display:none;"></div>
+                    <div id="devices-container" style="display:none;"></div>
                 {{end}}
             </main>
         </div>
@@ -763,6 +691,46 @@
             font-weight: 600;
             color: #fff;
         }
+
+        /* Full-page topology HUD panels */
+        .hud-panel {
+            background: rgba(7, 13, 23, 0.82);
+            border: 1px solid rgba(16, 185, 129, 0.18);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 6px;
+            padding: 12px 16px;
+        }
+        html[data-theme="light"] .hud-panel {
+            background: rgba(242, 250, 246, 0.90);
+            border-color: rgba(5, 150, 105, 0.22);
+        }
+        .hud-label {
+            font-family: 'Orbitron', monospace;
+            font-size: 8px;
+            letter-spacing: 0.12em;
+            color: rgba(16, 185, 129, 0.55);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        html[data-theme="light"] .hud-label { color: rgba(5, 150, 105, 0.60); }
+        .hud-sublabel {
+            font-family: 'Orbitron', monospace;
+            font-size: 7px;
+            letter-spacing: 0.08em;
+            color: rgba(16, 185, 129, 0.40);
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+        html[data-theme="light"] .hud-sublabel { color: rgba(5, 150, 105, 0.50); }
+        .hud-value {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+            font-weight: 500;
+            color: #10b981;
+            line-height: 1;
+        }
+        html[data-theme="light"] .hud-value { color: #059669; }
     </style>
     
     <script>   
