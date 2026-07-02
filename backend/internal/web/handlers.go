@@ -979,6 +979,21 @@ func (h *WebHandler) APISystemStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *WebHandler) APIPingInternet(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	if user := h.getUserFromSession(session); user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	conn, err := net.DialTimeout("tcp", "1.1.1.1:80", 2*time.Second)
+	up := err == nil
+	if up {
+		conn.Close()
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"up": up})
+}
+
 func (h *WebHandler) APIEventLogs(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	user := h.getUserFromSession(session)

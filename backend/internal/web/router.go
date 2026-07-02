@@ -36,6 +36,7 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/test-ipv6", h.APITestIPv6).Methods("POST")
 	api.HandleFunc("/targets", h.APITargets).Methods("GET")
 	api.HandleFunc("/system-status", h.APISystemStatus).Methods("GET")
+	api.HandleFunc("/ping-internet", h.APIPingInternet).Methods("GET")
 	api.HandleFunc("/dashboard-metrics", h.APIDashboardMetrics).Methods("GET")
 	api.HandleFunc("/event-logs", h.APIEventLogs).Methods("GET")
 	api.HandleFunc("/event-logs-table", h.APIEventLogsTable).Methods("GET")

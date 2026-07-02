@@ -50,6 +50,14 @@
 
             <!-- Theme Toggle and User Menu -->
             <div class="flex items-center gap-3">
+                <!-- Internet Down Warning -->
+                <div id="internet-down-warning" class="hidden flex items-center gap-2 px-3 py-1.5 rounded" style="background: rgba(127,29,29,0.4); border: 1px solid rgba(239,68,68,0.45);">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background-color: #ef4444;"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5" style="background-color: #ef4444;"></span>
+                    </span>
+                    <span style="font-family: 'Orbitron', monospace; font-size: 0.68rem; color: #f87171; letter-spacing: 0.06em;">INTERNET DOWN</span>
+                </div>
                 <!-- Scan Indicator -->
                 <div id="navbar-scan-indicator" class="hidden flex items-center gap-2 px-3 py-1.5 rounded bg-green-900/40 border border-green-500/30">
                     <span class="relative flex h-2.5 w-2.5">
