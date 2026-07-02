@@ -19,8 +19,8 @@
 
     var currentTs = 0;
     var ipackets = [];
-    // y=95: node circle (r=20) starts at y=75, just clear of the 73px glass navbar
-    var internet = { x: 0, y: 95, connected: null, ip: '', prevConnected: null, lostAt: 0 };
+    // y=118: node circle (r=20) starts at y=98, comfortably below the 73px glass navbar
+    var internet = { x: 0, y: 118, connected: null, ip: '', prevConnected: null, lostAt: 0 };
 
     var activityEvents = [];
 
@@ -206,8 +206,8 @@
         if (activityEvents.length === 0) return;
         var lineH   = 14;
         var maxDesc = 44;
-        var x       = 28;
-        var yBase   = lh - 28; // bottom bracket clearance
+        var x       = 30;
+        var yBase   = lh - 36; // bottom bracket clearance
 
         ctx.textBaseline = 'bottom';
         ctx.textAlign    = 'left';
@@ -248,11 +248,11 @@
     function positionNodes() {
         if (!lw) return;
         var cx = lw / 2, cy = lh / 2;
-        var maxR = Math.min(cx * 0.92, cy * 0.88);
+        var maxR = Math.min(cx * 0.82, cy * 0.78);
         // Tighter rings leave clear vertical space between internet node and device cloud
         var inner = maxR * 0.40, outer = maxR * 0.68;
         internet.x = cx;
-        internet.y = 95;
+        internet.y = 118;
 
         var active   = nodes.filter(function (n) { return n.status === 'online' || n.status === 'idle'; });
         var inactive = nodes.filter(function (n) { return n.status !== 'online' && n.status !== 'idle'; });
@@ -489,7 +489,7 @@
 
     function drawOrbitRings() {
         var cx = gateway.x, cy = gateway.y;
-        var mr = Math.min(cx * 0.92, cy * 0.88);
+        var mr = Math.min(cx * 0.82, cy * 0.78);
         [mr * 0.40, mr * 0.68].forEach(function (r, i) {
             ctx.setLineDash([4, 8]);
             ctx.beginPath();
@@ -632,16 +632,22 @@
     }
 
     function drawBrackets() {
-        var p = 8, s = 18;
+        var px = 18, s = 22;
+        var yTop = 84;          // below the 73px glass navbar
+        var yBot = lh - 18;
         ctx.strokeStyle = C.bracket; ctx.lineWidth = 1.5;
-        [[p, p, 1, 1], [lw - p, p, -1, 1], [p, lh - p, 1, -1], [lw - p, lh - p, -1, -1]]
-            .forEach(function (b) {
-                ctx.beginPath();
-                ctx.moveTo(b[0] + b[2] * s, b[1]);
-                ctx.lineTo(b[0], b[1]);
-                ctx.lineTo(b[0], b[1] + b[3] * s);
-                ctx.stroke();
-            });
+        [
+            [px,      yTop,  1,  1],
+            [lw - px, yTop, -1,  1],
+            [px,      yBot,  1, -1],
+            [lw - px, yBot, -1, -1]
+        ].forEach(function (b) {
+            ctx.beginPath();
+            ctx.moveTo(b[0] + b[2] * s, b[1]);
+            ctx.lineTo(b[0], b[1]);
+            ctx.lineTo(b[0], b[1] + b[3] * s);
+            ctx.stroke();
+        });
     }
 
     function drawStats() {
@@ -653,11 +659,12 @@
             ctx.fillStyle = C.emptyText;
             ctx.font = '9px "Roboto Mono", monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('RUN A SCAN TO POPULATE TOPOLOGY', lw / 2, lh - 22);
+            ctx.fillText('RUN A SCAN TO POPULATE TOPOLOGY', lw / 2, lh - 32);
             return;
         }
 
-        var x = 28, y = 22;
+        // x/y positioned below the glass navbar (73px) and inside the bracket inset
+        var x = 30, y = 90;
         ctx.font = '9px "Orbitron", monospace';
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.fillStyle = C.statTotal; ctx.fillText('TOTAL:   ' + tot, x, y);
