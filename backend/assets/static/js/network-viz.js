@@ -19,8 +19,8 @@
 
     var currentTs = 0;
     var ipackets = [];
-    // y=115 keeps the internet node below the glass navbar (73px) with breathing room
-    var internet = { x: 0, y: 115, connected: null, ip: '', prevConnected: null, lostAt: 0 };
+    // y=95: node circle (r=20) starts at y=75, just clear of the 73px glass navbar
+    var internet = { x: 0, y: 95, connected: null, ip: '', prevConnected: null, lostAt: 0 };
 
     var activityEvents = [];
 
@@ -249,9 +249,10 @@
         if (!lw) return;
         var cx = lw / 2, cy = lh / 2;
         var maxR = Math.min(cx * 0.92, cy * 0.88);
-        var inner = maxR * 0.46, outer = maxR * 0.86;
+        // Tighter rings leave clear vertical space between internet node and device cloud
+        var inner = maxR * 0.40, outer = maxR * 0.68;
         internet.x = cx;
-        internet.y = 115;
+        internet.y = 95;
 
         var active   = nodes.filter(function (n) { return n.status === 'online' || n.status === 'idle'; });
         var inactive = nodes.filter(function (n) { return n.status !== 'online' && n.status !== 'idle'; });
@@ -387,8 +388,8 @@
         ctx.moveTo(gateway.x, gateway.y);
         ctx.lineTo(internet.x, internet.y);
         ctx.strokeStyle = conn ? C.edgeActive : C.warnRedEdge;
-        ctx.lineWidth = conn ? 1.5 : 1.2;
-        ctx.setLineDash(conn ? [] : [4, 7]);
+        ctx.lineWidth = conn ? 2.0 : 1.5;
+        ctx.setLineDash(conn ? [] : [5, 9]);
         ctx.stroke();
         ctx.setLineDash([]);
     }
@@ -489,7 +490,7 @@
     function drawOrbitRings() {
         var cx = gateway.x, cy = gateway.y;
         var mr = Math.min(cx * 0.92, cy * 0.88);
-        [mr * 0.46, mr * 0.86].forEach(function (r, i) {
+        [mr * 0.40, mr * 0.68].forEach(function (r, i) {
             ctx.setLineDash([4, 8]);
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);

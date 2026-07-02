@@ -745,6 +745,26 @@
             color: #059669 !important;
             border-left-color: #059669 !important;
         }
+        /* Sidebar toggle button matches topology palette */
+        body.topology-fullscreen #sidebarToggle {
+            background: rgba(16, 185, 129, 0.08) !important;
+            border: 1px solid rgba(16, 185, 129, 0.22) !important;
+            color: rgba(16, 185, 129, 0.60) !important;
+        }
+        body.topology-fullscreen #sidebarToggle:hover {
+            background: rgba(16, 185, 129, 0.16) !important;
+            border-color: rgba(16, 185, 129, 0.40) !important;
+            color: #10b981 !important;
+        }
+        html[data-theme="light"] body.topology-fullscreen #sidebarToggle {
+            background: rgba(5, 150, 105, 0.07) !important;
+            border-color: rgba(5, 150, 105, 0.22) !important;
+            color: rgba(5, 150, 105, 0.65) !important;
+        }
+        html[data-theme="light"] body.topology-fullscreen #sidebarToggle:hover {
+            background: rgba(5, 150, 105, 0.14) !important;
+            color: #059669 !important;
+        }
 
         /* Full-page topology HUD panels */
         .hud-panel {
