@@ -5,15 +5,22 @@ function initSidebar() {
     const mainContent = document.getElementById('main-content');
     const navItems = document.querySelectorAll('.nav-item');
 
-    if (sidebar) {
-        sidebar.classList.remove('collapsed');
-    }
-    if (mainContent) {
-        mainContent.style.marginLeft = '16rem';
-    }
-
     const collapseIcon = document.getElementById('sidebarCollapseIcon');
     const expandIcon = document.getElementById('sidebarExpandIcon');
+
+    const isDashboard = window.location.pathname === '/' || window.location.pathname === '';
+    if (sidebar) {
+        if (isDashboard) {
+            sidebar.classList.add('collapsed');
+        } else {
+            sidebar.classList.remove('collapsed');
+        }
+    }
+    if (mainContent) {
+        mainContent.style.marginLeft = isDashboard ? '0' : '16rem';
+    }
+    if (collapseIcon) collapseIcon.classList.toggle('hidden', isDashboard);
+    if (expandIcon)   expandIcon.classList.toggle('hidden', !isDashboard);
 
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', function(e) {

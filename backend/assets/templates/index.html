@@ -703,6 +703,28 @@
             -webkit-backdrop-filter: blur(18px) !important;
             border-right: 1px solid rgba(16, 185, 129, 0.12) !important;
         }
+        /* Sidebar nav items adopt topology green palette */
+        body.topology-fullscreen .nav-item {
+            color: rgba(16, 185, 129, 0.55) !important;
+            border-left-color: transparent !important;
+        }
+        body.topology-fullscreen .nav-item:hover {
+            background: rgba(16, 185, 129, 0.09) !important;
+            color: #10b981 !important;
+            border-left-color: rgba(16, 185, 129, 0.45) !important;
+        }
+        body.topology-fullscreen .nav-item.active {
+            background: rgba(16, 185, 129, 0.13) !important;
+            color: #10b981 !important;
+            border-left-color: #10b981 !important;
+        }
+        body.topology-fullscreen .nav-item svg {
+            opacity: 0.7;
+        }
+        body.topology-fullscreen .nav-item:hover svg,
+        body.topology-fullscreen .nav-item.active svg {
+            opacity: 1;
+        }
         html[data-theme="light"] body.topology-fullscreen #top-bar {
             background: rgba(242, 250, 246, 0.78) !important;
             border-bottom-color: rgba(5, 150, 105, 0.16) !important;
@@ -710,6 +732,18 @@
         html[data-theme="light"] body.topology-fullscreen .sidebar {
             background: rgba(242, 250, 246, 0.88) !important;
             border-right-color: rgba(5, 150, 105, 0.14) !important;
+        }
+        html[data-theme="light"] body.topology-fullscreen .nav-item {
+            color: rgba(5, 150, 105, 0.60) !important;
+        }
+        html[data-theme="light"] body.topology-fullscreen .nav-item:hover {
+            background: rgba(5, 150, 105, 0.08) !important;
+            color: #059669 !important;
+        }
+        html[data-theme="light"] body.topology-fullscreen .nav-item.active {
+            background: rgba(5, 150, 105, 0.10) !important;
+            color: #059669 !important;
+            border-left-color: #059669 !important;
         }
 
         /* Full-page topology HUD panels */

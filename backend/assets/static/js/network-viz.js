@@ -19,8 +19,8 @@
 
     var currentTs = 0;
     var ipackets = [];
-    // y=90 keeps the internet node below the glass navbar (73px)
-    var internet = { x: 0, y: 90, connected: null, ip: '', prevConnected: null, lostAt: 0 };
+    // y=115 keeps the internet node below the glass navbar (73px) with breathing room
+    var internet = { x: 0, y: 115, connected: null, ip: '', prevConnected: null, lostAt: 0 };
 
     var activityEvents = [];
 
@@ -38,8 +38,8 @@
             C.orbitOuter = 'rgba(5,150,105,0.11)';
             C.sweepAlpha = 0.10;
             C.sweepLine  = 'rgba(5,150,105,0.42)';
-            C.edgeActive = 'rgba(5,150,105,0.45)';
-            C.edgeInact  = 'rgba(100,116,139,0.22)';
+            C.edgeActive = 'rgba(5,150,105,0.68)';
+            C.edgeInact  = 'rgba(100,116,139,0.38)';
             C.packetBase = 'rgba(5,150,105,';
             C.pulseBase  = 'rgba(5,150,105,';
             C.glowInner  = 'rgba(5,150,105,0.35)';
@@ -65,8 +65,8 @@
             C.orbitOuter = 'rgba(16,185,129,0.13)';
             C.sweepAlpha = 0.18;
             C.sweepLine  = 'rgba(16,185,129,0.55)';
-            C.edgeActive = 'rgba(16,185,129,0.50)';
-            C.edgeInact  = 'rgba(75,85,99,0.28)';
+            C.edgeActive = 'rgba(16,185,129,0.75)';
+            C.edgeInact  = 'rgba(75,85,99,0.45)';
             C.packetBase = 'rgba(110,231,183,';
             C.pulseBase  = 'rgba(16,185,129,';
             C.glowInner  = 'rgba(16,185,129,0.65)';
@@ -251,7 +251,7 @@
         var maxR = Math.min(cx * 0.92, cy * 0.88);
         var inner = maxR * 0.46, outer = maxR * 0.86;
         internet.x = cx;
-        internet.y = 90;
+        internet.y = 115;
 
         var active   = nodes.filter(function (n) { return n.status === 'online' || n.status === 'idle'; });
         var inactive = nodes.filter(function (n) { return n.status !== 'online' && n.status !== 'idle'; });
@@ -416,7 +416,7 @@
         if (internet.connected === null) return;
         var cx = internet.x, cy = internet.y;
         var conn = internet.connected;
-        var r = 15;
+        var r = 20;
         var color = conn ? C.green : C.warnRedSolid;
 
         // Glow halo
@@ -528,8 +528,8 @@
             ctx.moveTo(gateway.x, gateway.y);
             ctx.lineTo(n.x, n.y);
             ctx.strokeStyle = active ? C.edgeActive : C.edgeInact;
-            ctx.lineWidth = active ? 1.5 : 0.8;
-            ctx.setLineDash(active ? [] : [4, 7]);
+            ctx.lineWidth = active ? 2.0 : 1.2;
+            ctx.setLineDash(active ? [] : [4, 8]);
             ctx.stroke();
         });
         ctx.setLineDash([]);
