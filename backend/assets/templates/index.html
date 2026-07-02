@@ -312,15 +312,18 @@
                     </div>
                 {{else}}
                     <!-- Full-page topology dashboard -->
-                    <script>document.body.style.overflow = 'hidden';</script>
+                    <script>
+                        document.body.style.overflow = 'hidden';
+                        document.body.classList.add('topology-fullscreen');
+                    </script>
 
-                    <!-- Topology canvas (fixed, fills viewport below navbar) -->
-                    <div id="network-viz-wrap" style="position:fixed;top:73px;left:0;right:0;bottom:0;z-index:1;">
+                    <!-- Topology canvas: full viewport, sits behind glass navbar -->
+                    <div id="network-viz-wrap" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:1;">
                         <canvas id="network-viz-canvas" style="display:block;"></canvas>
                         <div id="network-viz-tip" style="display:none;"></div>
                     </div>
 
-                    <!-- HUD: Network stats (top-left) -->
+                    <!-- HUD: Network stats (below navbar, left) -->
                     <div class="hud-panel" style="position:fixed;top:89px;left:16px;z-index:20;">
                         <div class="hud-label">Network Status</div>
                         <div style="display:flex;gap:20px;align-items:flex-end;">
@@ -347,7 +350,7 @@
                         </div>
                     </div>
 
-                    <!-- HUD: Scan control (top-right) -->
+                    <!-- HUD: Scan control (below navbar, right) -->
                     <div class="hud-panel" style="position:fixed;top:89px;right:16px;z-index:20;width:260px;">
                         <div id="scan-control-container">
                             <div class="flex items-center justify-center py-4" id="scan-control-loading">
@@ -355,12 +358,6 @@
                             </div>
                             <div id="scan-control-content" class="hidden"></div>
                         </div>
-                    </div>
-
-                    <!-- HUD: Activity log (bottom-right) -->
-                    <div class="hud-panel" style="position:fixed;bottom:16px;right:16px;z-index:20;width:300px;">
-                        <div class="hud-label">Activity</div>
-                        <div id="activity-log" style="max-height:200px;overflow-y:auto;font-size:11px;"></div>
                     </div>
 
                     <!-- No-networks alert (overlay, top-center) -->
@@ -383,8 +380,9 @@
                     </div>
 
                     <!-- Hidden stubs for JS that checks these containers -->
+                    <div id="activity-log"        style="display:none;"></div>
                     <div id="network-map-content" style="display:none;"></div>
-                    <div id="devices-container" style="display:none;"></div>
+                    <div id="devices-container"   style="display:none;"></div>
                 {{end}}
             </main>
         </div>
@@ -690,6 +688,28 @@
             font-size: 1.5rem;
             font-weight: 600;
             color: #fff;
+        }
+
+        /* Topology fullscreen: glass navbar and sidebar */
+        body.topology-fullscreen #top-bar {
+            background: rgba(7, 13, 23, 0.72) !important;
+            backdrop-filter: blur(18px) !important;
+            -webkit-backdrop-filter: blur(18px) !important;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.14) !important;
+        }
+        body.topology-fullscreen .sidebar {
+            background: rgba(7, 13, 23, 0.82) !important;
+            backdrop-filter: blur(18px) !important;
+            -webkit-backdrop-filter: blur(18px) !important;
+            border-right: 1px solid rgba(16, 185, 129, 0.12) !important;
+        }
+        html[data-theme="light"] body.topology-fullscreen #top-bar {
+            background: rgba(242, 250, 246, 0.78) !important;
+            border-bottom-color: rgba(5, 150, 105, 0.16) !important;
+        }
+        html[data-theme="light"] body.topology-fullscreen .sidebar {
+            background: rgba(242, 250, 246, 0.88) !important;
+            border-right-color: rgba(5, 150, 105, 0.14) !important;
         }
 
         /* Full-page topology HUD panels */

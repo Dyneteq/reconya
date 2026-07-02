@@ -2,7 +2,7 @@
     'use strict';
 
     var canvas, ctx;
-    var lw = 0, lh = 480;
+    var lw = 0, lh = 600;
     var nodes = [];
     var gateway = { x: 0, y: 0, pulse: 0, sweep: 0, rot: 0 };
     var packets = [];
@@ -19,7 +19,10 @@
 
     var currentTs = 0;
     var ipackets = [];
-    var internet = { x: 0, y: 22, connected: null, ip: '', prevConnected: null, lostAt: 0 };
+    // y=90 keeps the internet node below the glass navbar (73px)
+    var internet = { x: 0, y: 90, connected: null, ip: '', prevConnected: null, lostAt: 0 };
+
+    var activityEvents = [];
 
     // Theme-aware color palette — updated each render()
     var C = {};
@@ -114,8 +117,8 @@
 
         function resize() {
             var dpr = window.devicePixelRatio || 1;
-            lw = wrap.clientWidth || 600;
-            lh = 480;
+            lw = wrap.clientWidth  || window.innerWidth  || 800;
+            lh = wrap.clientHeight || window.innerHeight || 600;
             canvas.style.width  = lw + 'px';
             canvas.style.height = lh + 'px';
             canvas.width  = Math.round(lw * dpr);
@@ -152,6 +155,8 @@
         setInterval(fetchInternetIP, 30000);
         pingInternet();
         setInterval(pingInternet, 3000);
+        fetchActivity();
+        setInterval(fetchActivity, 20000);
     }
 
     function pingInternet() {
@@ -179,6 +184,60 @@
             .catch(function () {});
     }
 
+    function fetchActivity() {
+        fetch('/api/event-logs', { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { activityEvents = (d.logs || []).slice(0, 8); })
+            .catch(function () {});
+    }
+
+    function timeAgo(ts) {
+        if (!ts) return '';
+        var diff = Date.now() - new Date(ts).getTime();
+        var m = Math.floor(diff / 60000);
+        if (m < 1)  return 'now';
+        if (m < 60) return m + 'm';
+        var h = Math.floor(m / 60);
+        if (h < 24) return h + 'h';
+        return Math.floor(h / 24) + 'd';
+    }
+
+    function drawActivityFeed() {
+        if (activityEvents.length === 0) return;
+        var lineH   = 14;
+        var maxDesc = 44;
+        var x       = 28;
+        var yBase   = lh - 28; // bottom bracket clearance
+
+        ctx.textBaseline = 'bottom';
+        ctx.textAlign    = 'left';
+        ctx.font = '8px "Orbitron", monospace';
+        ctx.fillStyle = C.bracket;
+        ctx.fillText('ACTIVITY', x, yBase - activityEvents.length * lineH - 6);
+
+        for (var i = activityEvents.length - 1; i >= 0; i--) {
+            var ev   = activityEvents[i];
+            var desc = ev.description || ev.Description || '';
+            var ts   = ev.created_at  || ev.CreatedAt   || '';
+            if (desc.length > maxDesc) desc = desc.slice(0, maxDesc) + '…';
+
+            var row = yBase - (activityEvents.length - 1 - i) * lineH;
+            var fresh = i === 0;
+
+            ctx.font      = '9px "Roboto Mono", monospace';
+            ctx.fillStyle = fresh ? C.ipOnline : C.ipOffline;
+            ctx.fillText('· ' + desc, x, row);
+
+            var tag = timeAgo(ts);
+            if (tag) {
+                ctx.fillStyle  = C.statOff;
+                ctx.textAlign  = 'right';
+                ctx.fillText(tag, x + 320, row);
+                ctx.textAlign  = 'left';
+            }
+        }
+    }
+
     function fetchData() {
         fetch('/api/device-list', { credentials: 'include' })
             .then(function (r) { return r.json(); })
@@ -192,7 +251,7 @@
         var maxR = Math.min(cx * 0.92, cy * 0.88);
         var inner = maxR * 0.46, outer = maxR * 0.86;
         internet.x = cx;
-        internet.y = 22;
+        internet.y = 90;
 
         var active   = nodes.filter(function (n) { return n.status === 'online' || n.status === 'idle'; });
         var inactive = nodes.filter(function (n) { return n.status !== 'online' && n.status !== 'idle'; });
@@ -316,6 +375,7 @@
         // HUD overlays stay in screen space
         drawBrackets();
         drawStats();
+        drawActivityFeed();
         drawZoomHint();
         drawInternetWarning();
     }
