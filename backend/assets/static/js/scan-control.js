@@ -1,35 +1,7 @@
 // Scan control functionality
 
-function updateNavbarScanIndicator(isScanning, isStopping) {
-    const indicator = document.getElementById('navbar-scan-indicator');
-    if (!indicator) return;
-
-    if (isScanning || isStopping) {
-        var color = isStopping ? 'yellow' : 'green';
-        var text = isStopping ? 'Stopping' : 'Scanning';
-        indicator.className = 'flex items-center gap-2 px-3 py-1.5 rounded '
-            + 'bg-' + color + '-900/40 border border-' + color + '-500/30';
-
-        var dotContainer = document.createElement('span');
-        dotContainer.className = 'relative flex h-2.5 w-2.5';
-
-        var ping = document.createElement('span');
-        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-' + color + '-400 opacity-75';
-        dotContainer.appendChild(ping);
-
-        var dot = document.createElement('span');
-        dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-' + color + '-500';
-        dotContainer.appendChild(dot);
-
-        var label = document.createElement('span');
-        label.className = 'text-' + color + '-400 text-sm font-medium';
-        label.style.fontFamily = "'Orbitron', monospace";
-        label.textContent = text;
-
-        indicator.replaceChildren(dotContainer, label);
-    } else {
-        indicator.className = 'hidden';
-    }
+function updateNavbarScanIndicator() {
+    // navbar scan indicator removed
 }
 
 function renderScanControlFromData(data) {
@@ -79,472 +51,93 @@ function renderScanControlFromData(data) {
         }
     }
     
+    const networkOptions = networks.map(n =>
+        `<option value="${n.id}" ${selectedNetwork === n.id ? 'selected' : ''}>${n.name} (${n.cidr})</option>`
+    ).join('');
+
+    const onchange = !isScanning && !isStopping
+        ? 'onchange="scanControlNetworkSelected(this.value)"'
+        : '';
+
+    const selectEl = (disabled) => `
+        <select id="network-selector" ${disabled ? 'disabled' : ''} ${onchange}
+                style="width:100%;padding:5px 8px;font-family:'Roboto Condensed',sans-serif;font-size:11px;
+                       color:rgba(16,185,129,${disabled ? '0.35' : '0.65'});
+                       background:rgba(7,13,23,0.55);border:1px solid rgba(16,185,129,${disabled ? '0.10' : '0.18'});
+                       border-radius:4px;outline:none;margin-bottom:10px;${disabled ? 'cursor:not-allowed;' : ''}">
+            <option value="">${!selectedNetwork ? 'Select Network' : 'Target Network'}</option>
+            ${networkOptions}
+        </select>`;
+
+    const divider = `<div style="border-top:1px solid rgba(16,185,129,0.12);margin:10px 0;"></div>`;
+
+    const statsRow = (col1label, col1val, col2label, col2val, col2id, col2attr, col3label, col3val, col3style) => `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;">
+            <div>
+                <div class="hud-sublabel">${col1label}</div>
+                <div class="hud-value">${col1val}</div>
+            </div>
+            <div>
+                <div class="hud-sublabel">${col2label}</div>
+                <div ${col2id ? `id="${col2id}"` : ''} class="hud-value" style="font-size:12px;" ${col2attr || ''}>${col2val}</div>
+            </div>
+            <div>
+                <div class="hud-sublabel">${col3label}</div>
+                <div class="hud-value" style="font-size:11px;${col3style || ''}">${col3val}</div>
+            </div>
+        </div>`;
+
+    // Buttons always wire onclick; visual enabled/disabled state is cosmetic only
+    const hudBtn = (label, id, onclick, enabled) => `
+        <div ${id ? `id="${id}"` : ''} onclick="${onclick}"
+             style="width:100%;padding:7px 12px;font-family:'Orbitron',monospace;font-size:8px;
+                    letter-spacing:0.12em;text-transform:uppercase;text-align:center;border-radius:4px;
+                    margin-bottom:10px;box-sizing:border-box;
+                    color:rgba(16,185,129,${enabled ? '0.70' : '0.28'});
+                    background:rgba(16,185,129,${enabled ? '0.07' : '0.02'});
+                    border:1px solid rgba(16,185,129,${enabled ? '0.22' : '0.10'});
+                    cursor:${enabled ? 'pointer' : 'not-allowed'};"
+             ${enabled ? `onmouseover="this.style.background='rgba(16,185,129,0.13)';this.style.borderColor='rgba(16,185,129,0.40)';this.style.color='#10b981';"
+                         onmouseout="this.style.background='rgba(16,185,129,0.07)';this.style.borderColor='rgba(16,185,129,0.22)';this.style.color='rgba(16,185,129,0.70)';"` : ''}>
+            ${label}
+        </div>`;
+
     return `
         <div id="scan-control-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div class="hud-label" style="margin-bottom:0;">Scan Control</div>
+                ${isScanning ? `<div style="display:flex;align-items:center;gap:5px;">
+                    <div style="width:5px;height:5px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>
+                    <span style="font-family:'Orbitron',monospace;font-size:7px;letter-spacing:0.1em;color:#10b981;text-transform:uppercase;">Active</span>
+                </div>` : ''}
+                ${isStopping ? `<span style="font-family:'Orbitron',monospace;font-size:7px;letter-spacing:0.1em;color:rgba(16,185,129,0.40);text-transform:uppercase;">Stopping</span>` : ''}
+            </div>
             ${isStopping ? `
-                <!-- Stopping State -->
-                <div class="mb-2">
-                    <div class="text-sm text-yellow-400 mb-2">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
-                    <div class="mb-3">
-                        <select id="network-selector" disabled class="w-full px-2 py-1.5 text-xs rounded focus:outline-none focus:ring-1 focus:ring-green-500 opacity-50 cursor-not-allowed" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
-                            <option value="">${!selectedNetwork ? 'Select Network to Start' : 'Target Network'}</option>
-                            ${networks.map(network => `
-                                <option value="${network.id}" ${selectedNetwork === network.id ? 'selected' : ''}>
-                                    ${network.name} (${network.cidr})
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <div class="w-full px-3 py-2 bg-yellow-600 text-white text-xs rounded text-center">
-                            Stopping...
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-yellow-600 h-2 rounded-full mb-4">
-                    <div class="h-full bg-yellow-400 rounded-full animate-pulse"></div>
-                </div>
-                
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <div class="text-green-400 text-sm">Scans</div>
-                        <div class="text-white font-bold">${scanState.scan_count || 0}</div>
-                    </div>
-                    <div>
-                        <div class="text-green-400 text-sm">Runtime</div>
-                        <div id="scan-runtime" class="text-white font-bold font-mono" data-start-time="${scanState.start_time || ''}">${formatScanTime(scanState.start_time)}</div>
-                    </div>
-                    <div>
-                        <div class="text-green-400 text-sm">Status</div>
-                        <div class="text-yellow-400 font-bold">Stopping</div>
-                    </div>
-                </div>
+                ${selectEl(true)}
+                ${hudBtn('Stopping…', '', '', false)}
+                ${divider}
+                ${statsRow('Scans', scanState.scan_count || 0,
+                           'Runtime', formatScanTime(scanState.start_time), 'scan-runtime', `data-start-time="${scanState.start_time || ''}"`,
+                           'Status', 'Stopping', '')}
             ` : isScanning ? `
-                <!-- Scanning State -->
-                <div class="mb-2">
-                    <div class="text-sm text-green-400 mb-2">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
-                    <div class="mb-3">
-                        <select id="network-selector" disabled class="w-full px-2 py-1.5 text-xs rounded focus:outline-none focus:ring-1 focus:ring-green-500 opacity-50 cursor-not-allowed" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
-                            <option value="">${!selectedNetwork ? 'Select Network to Start' : 'Target Network'}</option>
-                            ${networks.map(network => `
-                                <option value="${network.id}" ${selectedNetwork === network.id ? 'selected' : ''}>
-                                    ${network.name} (${network.cidr})
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <button onclick="stopScan()" class="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors">
-                            Stop Scan
-                        </button>
-                    </div>
-                </div>
-                <div class="mb-4 flex justify-center items-center" style="min-height: 120px;">
-                    <div class="holographic-globe">
-                        <!-- Main rotating globe -->
-                        <svg class="globe-svg globe-layer-main" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                            <!-- Outer circle with gradient -->
-                            <defs>
-                                <radialGradient id="globeGradient">
-                                    <stop offset="0%" style="stop-color:rgba(34, 197, 94, 0.2)" />
-                                    <stop offset="70%" style="stop-color:rgba(34, 197, 94, 0.05)" />
-                                    <stop offset="100%" style="stop-color:transparent" />
-                                </radialGradient>
-                                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" style="stop-color:rgba(34, 197, 94, 0.1)" />
-                                    <stop offset="50%" style="stop-color:rgba(34, 197, 94, 0.6)" />
-                                    <stop offset="100%" style="stop-color:rgba(34, 197, 94, 0.1)" />
-                                </linearGradient>
-                            </defs>
-
-                            <circle cx="50" cy="50" r="45" fill="url(#globeGradient)" stroke="rgba(34, 197, 94, 0.6)" stroke-width="1.5" class="globe-circle"/>
-
-                            <!-- Latitude lines -->
-                            <ellipse cx="50" cy="50" rx="45" ry="12" fill="none" stroke="url(#lineGradient)" stroke-width="0.8" class="globe-lat globe-lat-1"/>
-                            <ellipse cx="50" cy="50" rx="45" ry="25" fill="none" stroke="rgba(34, 197, 94, 0.4)" stroke-width="0.8" class="globe-lat globe-lat-2"/>
-                            <ellipse cx="50" cy="50" rx="45" ry="38" fill="none" stroke="rgba(34, 197, 94, 0.3)" stroke-width="0.8" class="globe-lat globe-lat-3"/>
-
-                            <!-- Longitude lines -->
-                            <ellipse cx="50" cy="50" rx="12" ry="45" fill="none" stroke="rgba(34, 197, 94, 0.4)" stroke-width="0.8" class="globe-lon globe-lon-1"/>
-                            <ellipse cx="50" cy="50" rx="25" ry="45" fill="none" stroke="rgba(34, 197, 94, 0.35)" stroke-width="0.8" class="globe-lon globe-lon-2"/>
-                            <ellipse cx="50" cy="50" rx="38" ry="45" fill="none" stroke="rgba(34, 197, 94, 0.3)" stroke-width="0.8" class="globe-lon globe-lon-3"/>
-
-                            <!-- Center vertical line -->
-                            <line x1="50" y1="5" x2="50" y2="95" stroke="rgba(34, 197, 94, 0.4)" stroke-width="1" class="globe-meridian"/>
-
-                            <!-- Horizontal equator -->
-                            <line x1="5" y1="50" x2="95" y2="50" stroke="rgba(34, 197, 94, 0.4)" stroke-width="1" class="globe-equator"/>
-
-                            <!-- Corner nodes -->
-                            <circle cx="50" cy="5" r="2" fill="rgba(34, 197, 94, 0.8)" class="globe-node globe-node-1"/>
-                            <circle cx="50" cy="95" r="2" fill="rgba(34, 197, 94, 0.8)" class="globe-node globe-node-2"/>
-                            <circle cx="5" cy="50" r="2" fill="rgba(34, 197, 94, 0.8)" class="globe-node globe-node-3"/>
-                            <circle cx="95" cy="50" r="2" fill="rgba(34, 197, 94, 0.8)" class="globe-node globe-node-4"/>
-                        </svg>
-
-                        <!-- Secondary layer (counter-rotating for depth) -->
-                        <svg class="globe-svg globe-layer-secondary" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                            <ellipse cx="50" cy="50" rx="40" ry="20" fill="none" stroke="rgba(34, 197, 94, 0.2)" stroke-width="0.6" class="globe-secondary-1"/>
-                            <ellipse cx="50" cy="50" rx="20" ry="40" fill="none" stroke="rgba(34, 197, 94, 0.2)" stroke-width="0.6" class="globe-secondary-2"/>
-                        </svg>
-
-                        <!-- Pulse layer -->
-                        <svg class="globe-svg globe-layer-pulse" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="50" cy="50" r="20" fill="none" stroke="rgba(34, 197, 94, 0.8)" stroke-width="1.5" class="globe-pulse-1"/>
-                            <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(34, 197, 94, 0.6)" stroke-width="1.2" class="globe-pulse-2"/>
-                            <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(34, 197, 94, 0.4)" stroke-width="1" class="globe-pulse-3"/>
-                        </svg>
-
-                        <!-- Orbiting particles -->
-                        <div class="particle particle-1"></div>
-                        <div class="particle particle-2"></div>
-                        <div class="particle particle-3"></div>
-                        <div class="particle particle-4"></div>
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <div class="text-green-400 text-sm">Scans</div>
-                        <div class="text-white font-bold">${scanState.scan_count || 0}</div>
-                    </div>
-                    <div>
-                        <div class="text-green-400 text-sm">Runtime</div>
-                        <div id="scan-runtime" class="text-white font-bold font-mono" data-start-time="${scanState.start_time || ''}">${formatScanTime(scanState.start_time)}</div>
-                    </div>
-                    <div>
-                        <div class="text-green-400 text-sm">Last Scan</div>
-                        <div class="text-white font-bold">${scanState.last_scan_time ? 'Recent' : 'Never'}</div>
-                    </div>
-                </div>
+                ${selectEl(true)}
+                ${hudBtn('Stop Scan', 'stop-scan-btn', 'stopScan()', true)}
+                ${divider}
+                ${statsRow('Scans', scanState.scan_count || 0,
+                           'Runtime', formatScanTime(scanState.start_time), 'scan-runtime', `data-start-time="${scanState.start_time || ''}"`,
+                           'Status', 'Active', 'color:#10b981;')}
             ` : `
-                <!-- Ready to Scan State -->
-                <div class="mb-2">
-                    <div class="text-sm text-gray-400 mb-2">${selectedNetworkName}${selectedNetworkCidr ? ` (${selectedNetworkCidr})` : ''}</div>
-                    <div class="mb-3">
-                        <select id="network-selector" class="w-full px-2 py-1.5 text-xs rounded focus:outline-none focus:ring-1 focus:ring-green-500" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
-                            <option value="">${!selectedNetwork ? 'Select Network to Start' : 'Target Network'}</option>
-                            ${networks.map(network => `
-                                <option value="${network.id}" ${selectedNetwork === network.id ? 'selected' : ''}>
-                                    ${network.name} (${network.cidr})
-                                </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <button id="start-scan-btn" onclick="startScan()" ${!selectedNetwork ? 'disabled' : ''} class="w-full px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs rounded transition-colors">
-                            Start Scan
-                        </button>
-                    </div>
-                </div>
-                <div class="bg-green-600 h-2 rounded-full mb-4"></div>
-                
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <div class="text-green-400 text-sm">Scans</div>
-                        <div class="text-white font-bold">${scanState.scan_count || scanState.total_scans || 0}</div>
-                    </div>
-                    <div>
-                        <div class="text-green-400 text-sm">Runtime</div>
-                        <div class="text-white font-bold">00:00:00</div>
-                    </div>
-                    <div>
-                        <div class="text-green-400 text-sm">Last Scan</div>
-                        <div class="text-white font-bold">${scanState.last_scan_time ? 'Recent' : 'Never'}</div>
-                    </div>
-                </div>
+                ${selectEl(false)}
+                ${hudBtn('Start Scan', 'start-scan-btn', 'startScan()', !!selectedNetwork)}
+                ${divider}
+                ${statsRow('Scans', scanState.scan_count || scanState.total_scans || 0,
+                           'Runtime', '00:00:00', '', '',
+                           'Last', scanState.last_scan_time ? 'Recent' : 'Never', '')}
             `}
         </div>
-        
-        <style>
-        /* Enhanced Holographic 3D Globe */
-        .holographic-globe {
-            width: 100px;
-            height: 100px;
-            position: relative;
-            perspective: 1200px;
-            transform-style: preserve-3d;
-        }
-
-        /* Chromatic aberration holographic effect */
-        .holographic-globe::before {
-            content: '';
-            position: absolute;
-            width: 120%;
-            height: 120%;
-            left: -10%;
-            top: -10%;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%,
-                rgba(34, 197, 94, 0.3) 0%,
-                rgba(34, 197, 94, 0.15) 30%,
-                rgba(0, 255, 255, 0.1) 50%,
-                transparent 70%);
-            animation: holographic-pulse 4s ease-in-out infinite;
-            pointer-events: none;
-            filter: blur(8px);
-            z-index: -1;
-        }
-
-        /* Additional chromatic layer */
-        .holographic-globe::after {
-            content: '';
-            position: absolute;
-            width: 120%;
-            height: 120%;
-            left: -10%;
-            top: -10%;
-            border-radius: 50%;
-            background: radial-gradient(circle at 70% 70%,
-                rgba(0, 255, 255, 0.2) 0%,
-                rgba(34, 197, 94, 0.1) 40%,
-                transparent 70%);
-            animation: holographic-pulse 4s ease-in-out infinite reverse;
-            pointer-events: none;
-            filter: blur(10px);
-            z-index: -1;
-        }
-
-        .globe-svg {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-style: preserve-3d;
-        }
-
-        /* Main layer - primary rotation */
-        .globe-layer-main {
-            animation: globe-rotate 10s linear infinite;
-            filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))
-                    drop-shadow(0 0 15px rgba(34, 197, 94, 0.4));
-            z-index: 3;
-        }
-
-        /* Secondary layer - counter rotation for depth */
-        .globe-layer-secondary {
-            animation: globe-rotate-reverse 15s linear infinite;
-            opacity: 0.4;
-            z-index: 2;
-        }
-
-        /* Pulse layer - static with expanding circles */
-        .globe-layer-pulse {
-            z-index: 4;
-        }
-
-        /* 3D Rotations with deeper perspective */
-        @keyframes globe-rotate {
-            0% {
-                transform: rotateY(0deg) rotateX(20deg) rotateZ(0deg);
-            }
-            100% {
-                transform: rotateY(360deg) rotateX(20deg) rotateZ(0deg);
-            }
-        }
-
-        @keyframes globe-rotate-reverse {
-            0% {
-                transform: rotateY(360deg) rotateX(-15deg) rotateZ(0deg);
-            }
-            100% {
-                transform: rotateY(0deg) rotateX(-15deg) rotateZ(0deg);
-            }
-        }
-
-        /* Enhanced holographic pulse */
-        @keyframes holographic-pulse {
-            0%, 100% {
-                opacity: 0.5;
-                transform: scale(1) rotate(0deg);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1.1) rotate(5deg);
-            }
-        }
-
-        /* Pulse animation for scan circles */
-        @keyframes pulse-expand {
-            0% {
-                r: 10;
-                opacity: 1;
-                stroke-width: 1.5;
-            }
-            100% {
-                r: 48;
-                opacity: 0;
-                stroke-width: 0.5;
-            }
-        }
-
-        .globe-pulse-1 {
-            animation: pulse-expand 3s ease-out infinite;
-        }
-
-        .globe-pulse-2 {
-            animation: pulse-expand 3s ease-out infinite 1s;
-        }
-
-        .globe-pulse-3 {
-            animation: pulse-expand 3s ease-out infinite 2s;
-        }
-
-        /* Outer circle glow with chromatic effect */
-        .globe-circle {
-            animation: circle-glow 3s ease-in-out infinite;
-        }
-
-        @keyframes circle-glow {
-            0%, 100% {
-                stroke: rgba(34, 197, 94, 0.6);
-                filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.8));
-            }
-            33% {
-                stroke: rgba(34, 197, 94, 0.8);
-                filter: drop-shadow(0 0 10px rgba(34, 197, 94, 1))
-                        drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));
-            }
-            66% {
-                stroke: rgba(0, 255, 255, 0.6);
-                filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.8));
-            }
-        }
-
-        /* Latitude/Longitude line shimmer */
-        .globe-lat, .globe-lon, .globe-meridian, .globe-equator {
-            animation: line-shimmer 4s ease-in-out infinite;
-        }
-
-        .globe-lat-1 { animation-delay: 0s; }
-        .globe-lat-2 { animation-delay: 0.4s; }
-        .globe-lat-3 { animation-delay: 0.8s; }
-        .globe-lon-1 { animation-delay: 1.2s; }
-        .globe-lon-2 { animation-delay: 1.6s; }
-        .globe-lon-3 { animation-delay: 2s; }
-        .globe-meridian { animation-delay: 2.4s; }
-        .globe-equator { animation-delay: 2.8s; }
-
-        @keyframes line-shimmer {
-            0%, 100% {
-                stroke-opacity: 0.3;
-            }
-            50% {
-                stroke-opacity: 0.9;
-            }
-        }
-
-        /* Node pulsing */
-        .globe-node {
-            animation: node-pulse 2s ease-in-out infinite;
-        }
-
-        .globe-node-1 { animation-delay: 0s; }
-        .globe-node-2 { animation-delay: 0.5s; }
-        .globe-node-3 { animation-delay: 1s; }
-        .globe-node-4 { animation-delay: 1.5s; }
-
-        @keyframes node-pulse {
-            0%, 100% {
-                r: 1.5;
-                fill-opacity: 0.6;
-            }
-            50% {
-                r: 3;
-                fill-opacity: 1;
-                filter: drop-shadow(0 0 5px rgba(34, 197, 94, 1));
-            }
-        }
-
-        /* Orbiting particles */
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(34, 197, 94, 0.9);
-            border-radius: 50%;
-            box-shadow: 0 0 8px rgba(34, 197, 94, 1),
-                       0 0 15px rgba(34, 197, 94, 0.6);
-            top: 50%;
-            left: 50%;
-            margin: -2px 0 0 -2px;
-        }
-
-        .particle-1 {
-            animation: orbit-1 8s linear infinite;
-        }
-
-        .particle-2 {
-            animation: orbit-2 10s linear infinite;
-        }
-
-        .particle-3 {
-            animation: orbit-3 12s linear infinite;
-        }
-
-        .particle-4 {
-            animation: orbit-4 9s linear infinite;
-        }
-
-        @keyframes orbit-1 {
-            0% {
-                transform: rotate(0deg) translateX(55px) rotate(0deg);
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.3;
-            }
-            100% {
-                transform: rotate(360deg) translateX(55px) rotate(-360deg);
-                opacity: 1;
-            }
-        }
-
-        @keyframes orbit-2 {
-            0% {
-                transform: rotate(90deg) translateX(50px) rotate(-90deg);
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.3;
-            }
-            100% {
-                transform: rotate(450deg) translateX(50px) rotate(-450deg);
-                opacity: 1;
-            }
-        }
-
-        @keyframes orbit-3 {
-            0% {
-                transform: rotate(180deg) translateX(58px) rotate(-180deg);
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.3;
-            }
-            100% {
-                transform: rotate(540deg) translateX(58px) rotate(-540deg);
-                opacity: 1;
-            }
-        }
-
-        @keyframes orbit-4 {
-            0% {
-                transform: rotate(270deg) translateX(53px) rotate(-270deg);
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.3;
-            }
-            100% {
-                transform: rotate(630deg) translateX(53px) rotate(-630deg);
-                opacity: 1;
-            }
-        }
-        </style>
     `;
 }
+
 
 function formatScanTime(startTime) {
     if (!startTime) return '00:00:00';
@@ -558,6 +151,32 @@ function formatScanTime(startTime) {
     
     return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
 }
+
+function scanControlNetworkSelected(val) {
+    var btn = document.getElementById('start-scan-btn');
+    if (!btn) return;
+    var enabled = val !== '';
+    btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    btn.style.color = 'rgba(16,185,129,' + (enabled ? '0.70' : '0.28') + ')';
+    btn.style.background = 'rgba(16,185,129,' + (enabled ? '0.07' : '0.02') + ')';
+    btn.style.borderColor = 'rgba(16,185,129,' + (enabled ? '0.22' : '0.10') + ')';
+    if (enabled) {
+        btn.onmouseover = function() {
+            this.style.background = 'rgba(16,185,129,0.13)';
+            this.style.borderColor = 'rgba(16,185,129,0.40)';
+            this.style.color = '#10b981';
+        };
+        btn.onmouseout = function() {
+            this.style.background = 'rgba(16,185,129,0.07)';
+            this.style.borderColor = 'rgba(16,185,129,0.22)';
+            this.style.color = 'rgba(16,185,129,0.70)';
+        };
+    } else {
+        btn.onmouseover = null;
+        btn.onmouseout = null;
+    }
+}
+window.scanControlNetworkSelected = scanControlNetworkSelected;
 
 // Cache to prevent duplicate concurrent requests
 let scanControlLoading = false;
@@ -575,16 +194,6 @@ function loadScanControl(showSpinner = true) {
     }
 
     scanControlLoading = true;
-
-    if (showSpinner) {
-        scanControlContainer.innerHTML = `
-            <div class="p-4 flex items-center justify-center" style="background: var(--bg-secondary);">
-                <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent">
-                    <span class="sr-only">Loading scan control...</span>
-                </div>
-            </div>
-        `;
-    }
     
     // Add timeout to prevent hanging requests
     const controller = new AbortController();
@@ -630,55 +239,8 @@ function loadScanControl(showSpinner = true) {
         });
 }
 
-function setupScanControlEventListeners() {    
-    // Network dropdown functionality
-    const networkSelect = document.getElementById('networkSelect');
-    if (networkSelect) {
-        const options = networkSelect.querySelectorAll('.network-option');
-        options.forEach(option => {
-            option.addEventListener('click', function() {
-                selectNetworkOption(this);
-            });
-        });
-    }
-    
-    // Network selector change handler
-    const networkSelector = document.getElementById('network-selector');
-    if (networkSelector) {
-        networkSelector.addEventListener('change', function() {
-            const startBtn = document.getElementById('start-scan-btn');
-            if (startBtn) {
-                startBtn.disabled = this.value === '';
-            }
-        });
-    }
-    
-    // Start scan button handler
-    const startScanBtn = document.getElementById('start-scan-btn');
-    if (startScanBtn) {
-        startScanBtn.addEventListener('click', function() {
-            startScan();
-        });
-    } else {
-        // Fallback to onclick if button exists but ID doesn't work
-        const allButtons = document.querySelectorAll('button');
-        allButtons.forEach(btn => {
-            if (btn.textContent.includes('Start Scan')) {
-                btn.addEventListener('click', function() {
-                    startScan();
-                });
-            }
-        });
-    }
-    
-    // Stop scan button handler
-    const stopScanBtn = document.querySelector('button[onclick*="stopScan"]');
-    if (stopScanBtn) {
-        stopScanBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            stopScan();
-        });
-    }
+function setupScanControlEventListeners() {
+    // onchange is wired inline on the select via scanControlNetworkSelected()
 }
 
 function selectNetworkOption(element) {

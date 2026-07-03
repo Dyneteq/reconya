@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Core functionality -->
-    <script src="/static/js/theme.js"></script>
     <script src="/static/js/sidebar.js"></script>
     <script src="/static/js/modal.js"></script>
     
@@ -33,19 +32,8 @@
     <!-- Fixed Top Bar -->
     <header id="top-bar" class="fixed top-0 left-0 right-0 bg-gray-800 p-4 border-b border-gray-700 z-50">
         <div class="flex items-center justify-between w-full">
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center" style="width: 14rem; flex-shrink: 0;">
-                    <span class="text-lg font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.5px;">reconYa</span>
-                </div>
-                <!-- Sidebar Toggle Button -->
-                <button id="sidebarToggle" class="p-2 text-gray-300 hover:text-white focus:outline-none bg-gray-700 rounded" title="Toggle Sidebar">
-                    <svg id="sidebarCollapseIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-                    </svg>
-                    <svg id="sidebarExpandIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
-                    </svg>
-                </button>
+            <div class="flex items-center justify-center" style="flex-shrink: 0;">
+                <span class="text-lg font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.5px;">reconYa</span>
             </div>
 
             <!-- Theme Toggle and User Menu -->
@@ -58,24 +46,6 @@
                     </span>
                     <span style="font-family: 'Orbitron', monospace; font-size: 0.68rem; color: #f87171; letter-spacing: 0.06em;">INTERNET DOWN</span>
                 </div>
-                <!-- Scan Indicator -->
-                <div id="navbar-scan-indicator" class="hidden flex items-center gap-2 px-3 py-1.5 rounded bg-green-900/40 border border-green-500/30">
-                    <span class="relative flex h-2.5 w-2.5">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                    </span>
-                    <span class="text-green-400 text-sm font-medium" style="font-family: 'Orbitron', monospace;">Scanning</span>
-                </div>
-                <!-- Theme Toggle Button -->
-                <button id="themeToggle" class="p-2 text-gray-300 hover:text-green-500 focus:outline-none bg-gray-700 rounded transition-colors">
-                    <svg id="sunIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                    </svg>
-                    <svg id="moonIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                    </svg>
-                </button>
-
                 <!-- User Menu -->
                 <div class="relative">
                     <button class="flex items-center px-3 py-2 text-gray-300 hover:text-green-500" id="dropdownMenuButton">
@@ -110,63 +80,51 @@
     </header>
 
     <div class="flex min-h-screen" style="padding-top: 73px;">
-        <!-- Sidebar -->
-        <nav id="sidebar" class="sidebar w-64 bg-gray-800 text-white fixed left-0 h-full overflow-y-auto transition-all duration-300 z-40" style="top: 73px;">
-            <!-- Navigation Menu -->
-            <div class="sidebar-menu py-4">
-                <ul class="space-y-1">
-                    <li>
-                        <a href="/" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="home">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                            </svg>
-                            <span class="nav-text">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/devices" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="devices">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                            </svg>
-                            <span class="nav-text">Devices</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/networks" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="networks">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 919-9"></path>
-                            </svg>
-                            <span class="nav-text">Networks</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/logs" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="logs">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-3-7h.01"></path>
-                            </svg>
-                            <span class="nav-text">Activity</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/settings" class="nav-item flex items-center px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 border-l-4 border-transparent hover:border-green-500" data-page="settings">
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                            <span class="nav-text">Settings</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
         <!-- Main Content -->
-        <div id="main-content" class="flex-1 ml-0 transition-all duration-300">
+        <div id="main-content" class="flex-1 transition-all duration-300">
             <!-- Content Area -->
-            <main id="content" class="p-6">
+            <main id="content">
+                {{if ne .Page "dashboard"}}
+                <!-- Fixed nav button for non-dashboard pages -->
+                <div id="global-nav-menu" style="position:fixed;top:89px;left:16px;z-index:25;">
+                    <div style="position:relative;">
+                        <div id="nav-menu-btn" onclick="toggleNavMenu(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+                            <span class="hud-label" style="margin-bottom:0;">Menu</span>
+                            <svg id="nav-menu-chevron" style="width:9px;height:9px;flex-shrink:0;opacity:0.45;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                        <div id="nav-menu-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:160px;z-index:100;" class="hud-panel">
+                            <nav style="display:flex;flex-direction:column;gap:1px;">
+                                <a href="/" class="nav-menu-link" data-page="dashboard">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                                    Dashboard
+                                </a>
+                                <a href="/devices" class="nav-menu-link" data-page="devices">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    Devices
+                                </a>
+                                <a href="/networks" class="nav-menu-link" data-page="networks">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                                    Networks
+                                </a>
+                                <a href="/logs" class="nav-menu-link" data-page="logs">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6"/></svg>
+                                    Activity
+                                </a>
+                                <a href="/settings" class="nav-menu-link" data-page="settings">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    Settings
+                                </a>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+
                 {{if eq .Page "devices"}}
                     <!-- Devices Page Content -->
-                    <div class="flex gap-4 p-4">
+                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
                         <!-- Main Content -->
                         <div class="flex-1">
                             <div class="mb-6">
@@ -193,7 +151,7 @@
                     </div>
                 {{else if eq .Page "networks"}}
                     <!-- Networks Page Content -->
-                    <div class="flex gap-4 p-4">
+                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
                         <!-- Main Content -->
                         <div class="flex-1">
                             <div class="mb-6">
@@ -218,7 +176,7 @@
                     </div>
                 {{else if eq .Page "alerts"}}
                     <!-- Alerts Page Content -->
-                    <div class="flex gap-4 p-4">
+                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
                         <!-- Main Content -->
                         <div class="flex-1">
                             <div class="mb-6">
@@ -252,7 +210,7 @@
                     </div>
                 {{else if eq .Page "logs"}}
                     <!-- Logs Page Content -->
-                    <div class="flex gap-4 p-4">
+                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
                         <!-- Main Content -->
                         <div class="flex-1">
                             <div class="mb-6">
@@ -271,7 +229,7 @@
                     </div>
                 {{else if eq .Page "settings"}}
                     <!-- Settings Page Content -->
-                    <div class="flex gap-4 p-4">
+                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
                         <!-- Main Content -->
                         <div class="flex-1 lg:w-3/4">
                             <div class="mb-6">
@@ -323,41 +281,71 @@
                         <div id="network-viz-tip" style="display:none;"></div>
                     </div>
 
-                    <!-- HUD: Network stats (below navbar, left) -->
-                    <div class="hud-panel" style="position:fixed;top:89px;left:16px;z-index:20;">
-                        <div class="hud-label">Network Status</div>
-                        <div style="display:flex;gap:20px;align-items:flex-end;">
-                            <div>
-                                <div class="hud-sublabel">Range</div>
-                                <div id="network-range" class="hud-value" style="font-size:12px;">N/A</div>
+                    <!-- HUD: Network stats + nav menu (below navbar, left) -->
+                    <div style="position:fixed;top:89px;left:16px;z-index:20;display:flex;flex-direction:column;gap:6px;">
+                        <div class="hud-panel">
+                            <div class="hud-label">Network Status</div>
+                            <div style="display:flex;gap:20px;align-items:flex-end;">
+                                <div>
+                                    <div class="hud-sublabel">Range</div>
+                                    <div id="network-range" class="hud-value" style="font-size:12px;">N/A</div>
+                                </div>
+                                <div>
+                                    <div class="hud-sublabel">Found</div>
+                                    <div id="devices-found" class="hud-value">0</div>
+                                </div>
+                                <div>
+                                    <div class="hud-sublabel">Online</div>
+                                    <div id="devices-online" class="hud-value" style="color:#10b981;">0</div>
+                                </div>
+                                <div>
+                                    <div class="hud-sublabel">Public IP</div>
+                                    <div id="public-ip" class="hud-value" style="font-size:12px;">—</div>
+                                </div>
+                                <div>
+                                    <div class="hud-sublabel">Saturation</div>
+                                    <div id="network-saturation" class="hud-value">0%</div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="hud-sublabel">Found</div>
-                                <div id="devices-found" class="hud-value">0</div>
+                        </div>
+                        <!-- Nav menu button -->
+                        <div style="position:relative;">
+                            <div id="nav-menu-btn" onclick="toggleNavMenu(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+                                <span class="hud-label" style="margin-bottom:0;">Menu</span>
+                                <svg id="nav-menu-chevron" style="width:9px;height:9px;flex-shrink:0;opacity:0.45;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                </svg>
                             </div>
-                            <div>
-                                <div class="hud-sublabel">Online</div>
-                                <div id="devices-online" class="hud-value" style="color:#10b981;">0</div>
-                            </div>
-                            <div>
-                                <div class="hud-sublabel">Public IP</div>
-                                <div id="public-ip" class="hud-value" style="font-size:12px;">—</div>
-                            </div>
-                            <div>
-                                <div class="hud-sublabel">Saturation</div>
-                                <div id="network-saturation" class="hud-value">0%</div>
+                            <div id="nav-menu-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:160px;z-index:100;" class="hud-panel">
+                                <nav style="display:flex;flex-direction:column;gap:1px;">
+                                    <a href="/" class="nav-menu-link" data-page="dashboard">
+                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                                        Dashboard
+                                    </a>
+                                    <a href="/devices" class="nav-menu-link" data-page="devices">
+                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                        Devices
+                                    </a>
+                                    <a href="/networks" class="nav-menu-link" data-page="networks">
+                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                                        Networks
+                                    </a>
+                                    <a href="/logs" class="nav-menu-link" data-page="logs">
+                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6"/></svg>
+                                        Activity
+                                    </a>
+                                    <a href="/settings" class="nav-menu-link" data-page="settings">
+                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                        Settings
+                                    </a>
+                                </nav>
                             </div>
                         </div>
                     </div>
 
                     <!-- HUD: Scan control (below navbar, right) -->
                     <div class="hud-panel" style="position:fixed;top:89px;right:16px;z-index:20;width:260px;">
-                        <div id="scan-control-container">
-                            <div class="flex items-center justify-center py-4" id="scan-control-loading">
-                                <div class="animate-spin rounded-full h-6 w-6 border-2 border-green-500 border-t-transparent"></div>
-                            </div>
-                            <div id="scan-control-content" class="hidden"></div>
-                        </div>
+                        <div id="scan-control-container"></div>
                     </div>
 
                     <!-- No-networks alert (overlay, top-center) -->
@@ -388,9 +376,7 @@
         </div>
     </div>
 
-    <!-- Sidebar & Modal CSS -->
     <style>
-        /* Activity log flash animation for new entries */
         @keyframes flash-green-text {
             0% { color: #10b981; }
             80% { color: #10b981; }
@@ -400,96 +386,61 @@
             animation: flash-green-text 5s ease-out forwards;
         }
 
-        /* Sidebar Styles */
-        .sidebar {
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Fixed top bar height */
         #top-bar {
             height: 73px;
             box-sizing: border-box;
             display: flex;
             align-items: center;
         }
-        
-        .sidebar.collapsed {
-            transform: translateX(-100%);
+
+        /* Nav panel links */
+        .nav-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            color: rgba(16,185,129,0.60);
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'Roboto Condensed', sans-serif;
         }
-        
-        /* Ensure nav items are clickable */
-        .nav-item {
-            pointer-events: auto;
-            z-index: 10;
-            position: relative;
+        .nav-menu-link:hover, .nav-menu-link.active {
+            background: rgba(16,185,129,0.10);
+            color: #10b981;
         }
-        
-        /* Active nav item */
-        .nav-item.active {
-            background-color: #374151; /* bg-gray-700 */
-            color: white;
-            border-left-color: #10b981; /* border-green-500 */
-        }
-        
-        /* Responsive behavior */
-        @media (max-width: 1024px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            
-            #main-content {
-                margin-left: 0 !important;
-            }
-        }
-        
+
         /* Modal Styles */
         .modal {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 1000;
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
-        
-        .modal.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        
+        .modal.show { opacity: 1; visibility: visible; }
         .modal-backdrop {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
             cursor: pointer;
         }
-        
         .modal-container {
             position: relative;
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 1rem;
             pointer-events: none;
         }
-        
         .modal-content {
-            background: var(--bg-secondary);
+            background: #1f2937;
             border-radius: 0.5rem;
-            border: 1px solid var(--border-accent);
+            border: 1px solid #10b981;
             max-width: 90vw;
             max-height: 90vh;
             overflow-y: auto;
@@ -497,14 +448,10 @@
             transform: scale(0.9);
             transition: transform 0.3s ease;
         }
-        
-        .modal.show .modal-content {
-            transform: scale(1);
-        }
-        
-        /* Theme System */
+        .modal.show .modal-content { transform: scale(1); }
+
+        /* CSS variables (dark only) */
         :root {
-            /* Dark theme variables (default) */
             --bg-primary: #111827;
             --bg-secondary: #1f2937;
             --bg-tertiary: #374151;
@@ -515,174 +462,9 @@
             --border-color: #4b5563;
             --border-accent: #10b981;
         }
-        
-        [data-theme="light"] {
-            /* Light theme variables */
-            --bg-primary: #f9fafb;
-            --bg-secondary: #f3f4f6;
-            --bg-tertiary: #e5e7eb;
-            --text-primary: #111827;
-            --text-secondary: #374151;
-            --text-muted: #6b7280;
-            --text-accent: #059669;
-            --border-color: #d1d5db;
-            --border-accent: #059669;
-        }
-        
-        /* Apply theme variables */
-        body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-        }
-        
-        /* Light theme - Very specific selectors */
-        html[data-theme="light"] body,
-        html[data-theme="light"] body.bg-gray-900 { 
-            background-color: #f9fafb !important; 
-            color: #111827 !important; 
-        }
-        
-        /* Sidebar light theme */
-        html[data-theme="light"] .bg-gray-900,
-        html[data-theme="light"] nav.bg-gray-800,
-        html[data-theme="light"] .sidebar.bg-gray-800 {
-            background-color: #ffffff !important; 
-            border-color: #e5e7eb !important;
-        }
-        
-        /* Header and main backgrounds */
-        html[data-theme="light"] .bg-gray-800,
-        html[data-theme="light"] header.bg-gray-800 { background-color: #f3f4f6 !important; }
-        
-        /* Navigation items */
-        html[data-theme="light"] .bg-gray-700,
-        html[data-theme="light"] .hover\\:bg-gray-700:hover { background-color: #f3f4f6 !important; }
-        html[data-theme="light"] .bg-gray-600 { background-color: #e5e7eb !important; }
-        
-        /* Text colors */
-        html[data-theme="light"] .text-white,
-        html[data-theme="light"] .text-gray-200,
-        html[data-theme="light"] nav .text-white { color: #111827 !important; }
-        html[data-theme="light"] .text-gray-300,
-        html[data-theme="light"] nav .text-gray-300 { color: #6b7280 !important; }
-        html[data-theme="light"] .text-gray-400,
-        html[data-theme="light"] .text-gray-500 { color: #9ca3af !important; }
-        html[data-theme="light"] .text-green-500 { color: #059669 !important; }
-        
-        /* Borders */
-        html[data-theme="light"] .border-gray-700,
-        html[data-theme="light"] .border-gray-600 { border-color: #e5e7eb !important; }
-        
-        /* Sidebar specific hover states */
-        html[data-theme="light"] .nav-item:hover {
-            background-color: #f3f4f6 !important;
-            color: #111827 !important;
-        }
-        html[data-theme="light"] .nav-item.active {
-            background-color: #f3f4f6 !important;
-            color: #111827 !important;
-        }
-        
-        /* Sidebar shadow in light mode */
-        html[data-theme="light"] .sidebar {
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1) !important;
-            border-right: 1px solid #e5e7eb !important;
-        }
-        
-        /* Sidebar toggle button light mode */
-        html[data-theme="light"] #sidebarToggle {
-            background-color: #e5e7eb !important;
-            color: #6b7280 !important;
-        }
-        html[data-theme="light"] #sidebarToggle:hover {
-            color: #111827 !important;
-        }
-        
-        /* Table hover states for light mode */
-        html[data-theme="light"] tr.hover\\:bg-gray-700:hover,
-        html[data-theme="light"] .hover\\:bg-gray-700:hover {
-            background-color: #f3f4f6 !important;
-        }
-        
-        /* Specific table row hover overrides */
-        html[data-theme="light"] table tbody tr:hover {
-            background-color: #f3f4f6 !important;
-        }
-        
-        /* Dark theme - Very specific selectors */
-        html[data-theme="dark"] body,
-        html[data-theme="dark"] body.bg-gray-900 { 
-            background-color: #111827 !important; 
-            color: #f9fafb !important; 
-        }
-        html[data-theme="dark"] .bg-gray-900 { background-color: #111827 !important; }
-        html[data-theme="dark"] .bg-gray-800,
-        html[data-theme="dark"] nav.bg-gray-800,
-        html[data-theme="dark"] .sidebar.bg-gray-800,
-        html[data-theme="dark"] header.bg-gray-800 { background-color: #1f2937 !important; }
-        html[data-theme="dark"] .bg-gray-700 { background-color: #374151 !important; }
-        html[data-theme="dark"] .bg-gray-600 { background-color: #374151 !important; }
-        html[data-theme="dark"] .text-white,
-        html[data-theme="dark"] .text-gray-200 { color: #f9fafb !important; }
-        html[data-theme="dark"] .text-gray-300 { color: #d1d5db !important; }
-        html[data-theme="dark"] .text-gray-400,
-        html[data-theme="dark"] .text-gray-500 { color: #9ca3af !important; }
-        html[data-theme="dark"] .text-green-500 { color: #10b981 !important; }
-        html[data-theme="dark"] .border-gray-700,
-        html[data-theme="dark"] .border-gray-600 { border-color: #374151 !important; }
-        
-        /* Hover state overrides */
-        html[data-theme="light"] .hover\\:bg-gray-700:hover { background-color: #d1d5db !important; }
-        html[data-theme="light"] .hover\\:text-white:hover { color: #111827 !important; }
-        html[data-theme="light"] .hover\\:text-green-500:hover { color: #059669 !important; }
-        html[data-theme="dark"] .hover\\:bg-gray-700:hover { background-color: #374151 !important; }
-        html[data-theme="dark"] .hover\\:text-white:hover { color: #f9fafb !important; }
-        html[data-theme="dark"] .hover\\:text-green-500:hover { color: #10b981 !important; }
-        
-        /* Additional border overrides */
-        html[data-theme="light"] .border-green-500,
-        html[data-theme="light"] .border-green-600 { border-color: #059669 !important; }
-        html[data-theme="dark"] .border-green-500,
-        html[data-theme="dark"] .border-green-600 { border-color: #10b981 !important; }
-        
-        /* Theme transition animation */
-        * {
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
+        body { background-color: var(--bg-primary); color: var(--text-primary); }
 
-        /* Network Map light mode - lighter grey boxes */
-        html[data-theme="light"] .bg-gray-700.border-gray-600 {
-            background-color: #f3f4f6 !important; /* Very light grey */
-            border-color: #d1d5db !important; /* Light grey border */
-        }
-
-        /* Theme toggle button light mode - lighter colors */
-        html[data-theme="light"] #themeToggle {
-            background-color: #e5e7eb !important; /* Light grey background */
-            color: #6b7280 !important; /* Medium grey icon */
-        }
-        html[data-theme="light"] #themeToggle:hover {
-            background-color: #d1d5db !important; /* Slightly darker grey on hover */
-            color: #059669 !important; /* Green icon on hover */
-        }
-
-        /* Start scan button light mode - lighter colors */
-        html[data-theme="light"] .bg-green-600 {
-            background-color: #16a34a !important; /* Lighter green */
-        }
-        html[data-theme="light"] .hover\\:bg-green-700:hover {
-            background-color: #15803d !important; /* Lighter green hover */
-        }
-
-        /* Devices table light mode - lighter header and borders */
-        html[data-theme="light"] table thead.bg-gray-700 {
-            background-color: #f3f4f6 !important; /* Light grey header */
-        }
-        html[data-theme="light"] .divide-gray-600 > * + * {
-            border-top-color: #e5e7eb !important; /* Light grey borders */
-        }
-
-        /* Device IP styling to match master branch */
+        /* Device IP styling */
         .device-ip {
             font-family: 'JetBrains Mono', monospace !important;
             font-size: 1.5rem;
@@ -690,113 +472,39 @@
             color: #fff;
         }
 
-        /* Topology fullscreen: glass navbar and sidebar */
+        /* Topology fullscreen: glass navbar */
         body.topology-fullscreen #top-bar {
-            background: rgba(7, 13, 23, 0.72) !important;
+            background: rgba(7,13,23,0.72) !important;
             backdrop-filter: blur(18px) !important;
             -webkit-backdrop-filter: blur(18px) !important;
-            border-bottom: 1px solid rgba(16, 185, 129, 0.14) !important;
-        }
-        body.topology-fullscreen .sidebar {
-            background: rgba(7, 13, 23, 0.82) !important;
-            backdrop-filter: blur(18px) !important;
-            -webkit-backdrop-filter: blur(18px) !important;
-            border-right: 1px solid rgba(16, 185, 129, 0.12) !important;
-        }
-        /* Sidebar nav items adopt topology green palette */
-        body.topology-fullscreen .nav-item {
-            color: rgba(16, 185, 129, 0.55) !important;
-            border-left-color: transparent !important;
-        }
-        body.topology-fullscreen .nav-item:hover {
-            background: rgba(16, 185, 129, 0.09) !important;
-            color: #10b981 !important;
-            border-left-color: rgba(16, 185, 129, 0.45) !important;
-        }
-        body.topology-fullscreen .nav-item.active {
-            background: rgba(16, 185, 129, 0.13) !important;
-            color: #10b981 !important;
-            border-left-color: #10b981 !important;
-        }
-        body.topology-fullscreen .nav-item svg {
-            opacity: 0.7;
-        }
-        body.topology-fullscreen .nav-item:hover svg,
-        body.topology-fullscreen .nav-item.active svg {
-            opacity: 1;
-        }
-        html[data-theme="light"] body.topology-fullscreen #top-bar {
-            background: rgba(242, 250, 246, 0.78) !important;
-            border-bottom-color: rgba(5, 150, 105, 0.16) !important;
-        }
-        html[data-theme="light"] body.topology-fullscreen .sidebar {
-            background: rgba(242, 250, 246, 0.88) !important;
-            border-right-color: rgba(5, 150, 105, 0.14) !important;
-        }
-        html[data-theme="light"] body.topology-fullscreen .nav-item {
-            color: rgba(5, 150, 105, 0.60) !important;
-        }
-        html[data-theme="light"] body.topology-fullscreen .nav-item:hover {
-            background: rgba(5, 150, 105, 0.08) !important;
-            color: #059669 !important;
-        }
-        html[data-theme="light"] body.topology-fullscreen .nav-item.active {
-            background: rgba(5, 150, 105, 0.10) !important;
-            color: #059669 !important;
-            border-left-color: #059669 !important;
-        }
-        /* Sidebar toggle button matches topology palette */
-        body.topology-fullscreen #sidebarToggle {
-            background: rgba(16, 185, 129, 0.08) !important;
-            border: 1px solid rgba(16, 185, 129, 0.22) !important;
-            color: rgba(16, 185, 129, 0.60) !important;
-        }
-        body.topology-fullscreen #sidebarToggle:hover {
-            background: rgba(16, 185, 129, 0.16) !important;
-            border-color: rgba(16, 185, 129, 0.40) !important;
-            color: #10b981 !important;
-        }
-        html[data-theme="light"] body.topology-fullscreen #sidebarToggle {
-            background: rgba(5, 150, 105, 0.07) !important;
-            border-color: rgba(5, 150, 105, 0.22) !important;
-            color: rgba(5, 150, 105, 0.65) !important;
-        }
-        html[data-theme="light"] body.topology-fullscreen #sidebarToggle:hover {
-            background: rgba(5, 150, 105, 0.14) !important;
-            color: #059669 !important;
+            border-bottom: 1px solid rgba(16,185,129,0.14) !important;
         }
 
-        /* Full-page topology HUD panels */
+        /* HUD panels */
         .hud-panel {
-            background: rgba(7, 13, 23, 0.82);
-            border: 1px solid rgba(16, 185, 129, 0.18);
+            background: rgba(7,13,23,0.82);
+            border: 1px solid rgba(16,185,129,0.18);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             border-radius: 6px;
             padding: 12px 16px;
         }
-        html[data-theme="light"] .hud-panel {
-            background: rgba(242, 250, 246, 0.90);
-            border-color: rgba(5, 150, 105, 0.22);
-        }
         .hud-label {
             font-family: 'Orbitron', monospace;
             font-size: 8px;
             letter-spacing: 0.12em;
-            color: rgba(16, 185, 129, 0.55);
+            color: rgba(16,185,129,0.55);
             text-transform: uppercase;
             margin-bottom: 8px;
         }
-        html[data-theme="light"] .hud-label { color: rgba(5, 150, 105, 0.60); }
         .hud-sublabel {
             font-family: 'Orbitron', monospace;
             font-size: 7px;
             letter-spacing: 0.08em;
-            color: rgba(16, 185, 129, 0.40);
+            color: rgba(16,185,129,0.40);
             text-transform: uppercase;
             margin-bottom: 3px;
         }
-        html[data-theme="light"] .hud-sublabel { color: rgba(5, 150, 105, 0.50); }
         .hud-value {
             font-family: 'Roboto Mono', monospace;
             font-size: 14px;
@@ -804,12 +512,39 @@
             color: #10b981;
             line-height: 1;
         }
-        html[data-theme="light"] .hud-value { color: #059669; }
     </style>
     
-    <script>   
+    <script>
+        // Nav menu toggle
+        function toggleNavMenu(e) {
+            if (e) e.stopPropagation();
+            var d = document.getElementById('nav-menu-dropdown');
+            var c = document.getElementById('nav-menu-chevron');
+            if (!d) return;
+            var open = d.style.display !== 'none';
+            d.style.display = open ? 'none' : 'block';
+            if (c) c.style.transform = open ? '' : 'rotate(180deg)';
+        }
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#nav-menu-btn') && !e.target.closest('#nav-menu-dropdown')) {
+                var d = document.getElementById('nav-menu-dropdown');
+                var c = document.getElementById('nav-menu-chevron');
+                if (d) d.style.display = 'none';
+                if (c) c.style.transform = '';
+            }
+        });
+
+        // Mark active nav link
+        (function() {
+            var path = window.location.pathname;
+            var page = path === '/' ? 'dashboard' : path.replace(/^\//, '');
+            document.querySelectorAll('.nav-menu-link').forEach(function(a) {
+                if (a.getAttribute('data-page') === page) a.classList.add('active');
+            });
+        })();
+
         // Dropdown functionality is handled by main.js
-        
+
         // About page function
         function loadAboutPage() {
             if (typeof showAboutModal === 'function') {
