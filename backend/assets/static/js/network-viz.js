@@ -4,7 +4,7 @@
     var canvas, ctx;
     var lw = 0, lh = 600;
     var nodes = [];
-    var gateway = { x: 0, y: 0, pulse: 0, sweep: 0, rot: 0 };
+    var gateway = { x: 0, y: 0, pulse: 0, rot: 0 };
     var packets = [];
     var hitIdx = null;
     var rafId = null;
@@ -19,8 +19,7 @@
 
     var currentTs = 0;
     var ipackets = [];
-    // y=118: node circle (r=20) starts at y=98, comfortably below the 73px glass navbar
-    var internet = { x: 0, y: 118, connected: null, ip: '', prevConnected: null, lostAt: 0 };
+    var internet = { x: 80, y: 0, connected: null, ip: '', prevConnected: null, lostAt: 0 };
 
     var activityEvents = [];
 
@@ -36,8 +35,6 @@
             C.vigOuter   = 'rgba(180,210,195,0.40)';
             C.orbitInner = 'rgba(5,150,105,0.20)';
             C.orbitOuter = 'rgba(5,150,105,0.11)';
-            C.sweepAlpha = 0.10;
-            C.sweepLine  = 'rgba(5,150,105,0.42)';
             C.edgeActive = 'rgba(5,150,105,0.68)';
             C.edgeInact  = 'rgba(100,116,139,0.38)';
             C.packetBase = 'rgba(5,150,105,';
@@ -63,8 +60,6 @@
             C.vigOuter   = 'rgba(0,0,0,0.55)';
             C.orbitInner = 'rgba(16,185,129,0.22)';
             C.orbitOuter = 'rgba(16,185,129,0.13)';
-            C.sweepAlpha = 0.18;
-            C.sweepLine  = 'rgba(16,185,129,0.55)';
             C.edgeActive = 'rgba(16,185,129,0.75)';
             C.edgeInact  = 'rgba(75,85,99,0.45)';
             C.packetBase = 'rgba(110,231,183,';
@@ -124,7 +119,7 @@
             canvas.width  = Math.round(lw * dpr);
             canvas.height = Math.round(lh * dpr);
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            gateway.x = lw / 2;
+            gateway.x = lw * 0.33;
             gateway.y = lh / 2;
             zoom = 1; panX = 0; panY = 0;
             positionNodes();
@@ -247,25 +242,28 @@
 
     function positionNodes() {
         if (!lw) return;
-        var cx = lw / 2, cy = lh / 2;
-        var maxR = Math.min(cx * 0.82, cy * 0.78);
-        // Tighter rings leave clear vertical space between internet node and device cloud
-        var inner = maxR * 0.40, outer = maxR * 0.68;
-        internet.x = cx;
-        internet.y = 118;
+        var gx = gateway.x, gy = gateway.y;
+        internet.x = 80;
+        internet.y = gy;
 
         var active   = nodes.filter(function (n) { return n.status === 'online' || n.status === 'idle'; });
         var inactive = nodes.filter(function (n) { return n.status !== 'online' && n.status !== 'idle'; });
+        var all = active.concat(inactive);
+        if (all.length === 0) return;
 
-        function place(arr, r) {
-            arr.forEach(function (n, i) {
-                var a = (arr.length > 1 ? i / arr.length : 0.25) * Math.PI * 2 - Math.PI / 2;
-                n.tx = cx + Math.cos(a) * r;
-                n.ty = cy + Math.sin(a) * r;
-            });
-        }
-        place(active, inner);
-        place(inactive, outer);
+        var startX  = gx + (lw - gx) * 0.26;
+        var maxRows = Math.max(4, Math.min(8, Math.floor((lh - 120) / 55)));
+        var rowH    = Math.min(58, (lh - 120) / maxRows);
+        var numCols = Math.ceil(all.length / maxRows);
+        var colW    = numCols > 1 ? Math.min(95, (lw - 40 - startX) / (numCols - 1)) : 0;
+
+        all.forEach(function (n, i) {
+            var col = Math.floor(i / maxRows);
+            var row = i % maxRows;
+            var rowsInThisCol = Math.min(maxRows, all.length - col * maxRows);
+            n.tx = startX + col * colW;
+            n.ty = gy - (rowsInThisCol - 1) * rowH / 2 + row * rowH;
+        });
     }
 
     function setDevices(devices) {
@@ -307,7 +305,6 @@
         currentTs = ts;
 
         gateway.pulse += dt * 0.003;
-        gateway.sweep += dt * 0.00055;
         gateway.rot   += dt * 0.00035;
 
         // Internet state change detection
@@ -363,7 +360,6 @@
         ctx.scale(zoom, zoom);
 
         drawOrbitRings();
-        drawSweep();
         drawInternetEdge();
         if (nodes.length > 0) { drawEdges(); drawPackets(); }
         if (internet.connected) drawInternetPackets();
@@ -488,38 +484,23 @@
     }
 
     function drawOrbitRings() {
-        var cx = gateway.x, cy = gateway.y;
-        var mr = Math.min(cx * 0.82, cy * 0.78);
-        [mr * 0.40, mr * 0.68].forEach(function (r, i) {
-            ctx.setLineDash([4, 8]);
+        var gx = gateway.x, gy = gateway.y;
+        var spread1 = lh * 0.16, spread2 = lh * 0.32;
+        ctx.setLineDash([3, 10]);
+        ctx.lineWidth = 1;
+        [
+            [gy - spread2, C.orbitOuter],
+            [gy - spread1, C.orbitInner],
+            [gy + spread1, C.orbitInner],
+            [gy + spread2, C.orbitOuter]
+        ].forEach(function (lane) {
             ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.strokeStyle = i === 0 ? C.orbitInner : C.orbitOuter;
-            ctx.lineWidth = 1;
+            ctx.moveTo(gx + 50, lane[0]);
+            ctx.lineTo(lw - 20, lane[0]);
+            ctx.strokeStyle = lane[1];
             ctx.stroke();
-            ctx.setLineDash([]);
         });
-    }
-
-    function drawSweep() {
-        var cx = gateway.x, cy = gateway.y;
-        var maxR = Math.max(lw, lh);
-        var sweepW = 0.70, steps = 28;
-        for (var i = 0; i < steps; i++) {
-            var a0 = gateway.sweep - sweepW * (i / steps);
-            var a1 = gateway.sweep - sweepW * ((i + 1) / steps);
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, maxR, a0, a1, true);
-            ctx.closePath();
-            ctx.fillStyle = C.pulseBase + ((1 - i / steps) * C.sweepAlpha) + ')';
-            ctx.fill();
-        }
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(cx + Math.cos(gateway.sweep) * maxR, cy + Math.sin(gateway.sweep) * maxR);
-        ctx.strokeStyle = C.sweepLine;
-        ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.setLineDash([]);
     }
 
     function drawEdges() {
@@ -790,7 +771,9 @@
     function onClick(e) {
         var rect = canvas.getBoundingClientRect();
         var i = hitTest(e.clientX - rect.left, e.clientY - rect.top);
-        if (i >= 0 && typeof loadDeviceModal === 'function') loadDeviceModal(nodes[i].id);
+        if (i >= 0 && typeof showNodeDropdown === 'function') {
+            showNodeDropdown(nodes[i].id, e.clientX, e.clientY);
+        }
     }
 
     window.initNetworkViz   = initNetworkViz;

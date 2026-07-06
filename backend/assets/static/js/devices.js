@@ -529,3 +529,364 @@ window.getStatusBadgeColor = getStatusBadgeColor;
 window.formatLogTime = formatLogTime;
 window.saveDeviceChanges = saveDeviceChanges;
 window.deleteDevice = deleteDevice;
+
+// ── Node dropdown (topology canvas click) ───────────────────────────────────
+
+function showNodeDropdown(deviceId, clientX, clientY) {
+    closeNodeDropdown();
+
+    var tip = document.getElementById('network-viz-tip');
+    if (tip) tip.style.display = 'none';
+
+    fetch('/api/devices/' + deviceId + '/modal', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var d = data.device;
+            var light  = document.documentElement.getAttribute('data-theme') === 'light';
+            var green  = light ? '#059669'  : '#10b981';
+            var muted  = light ? '#9ca3af'  : '#6b7280';
+            var dim    = light ? '#374151'  : '#9ca3af';
+            var bg     = light ? 'rgba(242,250,246,0.98)' : 'rgba(7,13,23,0.97)';
+            var border = light ? 'rgba(5,150,105,0.45)'   : 'rgba(16,185,129,0.30)';
+            var body   = light ? '#111827'  : '#d1fae5';
+            var red    = light ? '#dc2626'  : '#ef4444';
+            var inputBg = light ? '#fff'    : 'rgba(255,255,255,0.05)';
+
+            var openPorts = (d.ports || []).filter(function(p) { return p.state === 'open'; }).length;
+            var statusColor = d.status === 'online' ? green
+                            : d.status === 'idle'   ? (light ? '#d97706' : '#eab308')
+                            : muted;
+
+            function ago(ts) {
+                if (!ts) return '';
+                var diff = Date.now() - new Date(ts).getTime();
+                var m = Math.floor(diff / 60000);
+                if (m < 1)  return 'just now';
+                if (m < 60) return m + 'm ago';
+                var h = Math.floor(m / 60);
+                if (h < 24) return h + 'h ago';
+                return Math.floor(h / 24) + 'd ago';
+            }
+
+            function makeRow(labelText, valueText, valueColor) {
+                var row = document.createElement('div');
+                var lbl = document.createElement('span');
+                lbl.textContent = labelText;
+                lbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';';
+                var val = document.createElement('span');
+                val.textContent = valueText;
+                if (valueColor) val.style.color = valueColor;
+                row.appendChild(lbl);
+                row.appendChild(document.createTextNode(' '));
+                row.appendChild(val);
+                return row;
+            }
+
+            function makeFieldGroup(labelText, el) {
+                var wrap = document.createElement('div');
+                wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
+                var lbl = document.createElement('label');
+                lbl.textContent = labelText;
+                lbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';';
+                wrap.appendChild(lbl);
+                wrap.appendChild(el);
+                return wrap;
+            }
+
+            // ── Outer container ──────────────────────────────────────────
+            var drop = document.createElement('div');
+            drop.id = 'node-dropdown';
+            drop.style.cssText =
+                'position:fixed;z-index:9999;pointer-events:auto;' +
+                'background:' + bg + ';border:1px solid ' + border + ';' +
+                'border-radius:6px;padding:10px 12px;width:260px;' +
+                'box-shadow:0 8px 32px rgba(0,0,0,0.55);' +
+                'color:' + body + ';font-family:\'Roboto Mono\',monospace;font-size:10px;line-height:1.7;';
+
+            // ── Header ───────────────────────────────────────────────────
+            var header = document.createElement('div');
+            header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;';
+
+            var headerLeft = document.createElement('div');
+            headerLeft.style.cssText = 'min-width:0;flex:1;';
+
+            var ipEl = document.createElement('div');
+            ipEl.textContent = d.ipv4 || '—';
+            ipEl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:13px;font-weight:bold;color:' + green + ';letter-spacing:0.05em;';
+            headerLeft.appendChild(ipEl);
+
+            var displayName = d.name || d.hostname || '';
+            var nameDisplay = document.createElement('div');
+            nameDisplay.textContent = displayName || '';
+            nameDisplay.style.cssText = 'font-size:10px;color:' + dim + ';margin-top:1px;' + (displayName ? '' : 'display:none;');
+            headerLeft.appendChild(nameDisplay);
+
+            var headerRight = document.createElement('div');
+            headerRight.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;padding-left:6px;';
+
+            var editBtn = document.createElement('button');
+            editBtn.title = 'Edit';
+            editBtn.style.cssText = 'background:none;border:1px solid ' + border + ';cursor:pointer;color:' + green + ';font-size:11px;line-height:1;padding:2px 5px;border-radius:3px;';
+            editBtn.textContent = '✎';
+
+            var closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕';
+            closeBtn.title = 'Close';
+            closeBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:' + muted + ';font-size:15px;line-height:1;padding:0;';
+            closeBtn.addEventListener('click', function() { window.closeNodeDropdown(); });
+
+            headerRight.appendChild(editBtn);
+            headerRight.appendChild(closeBtn);
+            header.appendChild(headerLeft);
+            header.appendChild(headerRight);
+            drop.appendChild(header);
+
+            // ── View section ─────────────────────────────────────────────
+            var viewEl = document.createElement('div');
+            viewEl.style.cssText = 'border-top:1px solid ' + border + ';padding-top:7px;display:flex;flex-direction:column;gap:3px;';
+
+            var statusRow = document.createElement('div');
+            statusRow.style.cssText = 'display:flex;align-items:center;gap:5px;';
+            var dot = document.createElement('span');
+            dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:' + statusColor + ';flex-shrink:0;';
+            var statusLbl = document.createElement('span');
+            statusLbl.textContent = (d.status || 'unknown').toUpperCase();
+            statusLbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:9px;color:' + statusColor + ';';
+            statusRow.appendChild(dot);
+            statusRow.appendChild(statusLbl);
+            if (openPorts > 0) {
+                var portsSpan = document.createElement('span');
+                portsSpan.textContent = '· ' + openPorts + ' open port' + (openPorts > 1 ? 's' : '');
+                portsSpan.style.cssText = 'color:' + red + ';margin-left:4px;';
+                statusRow.appendChild(portsSpan);
+            }
+            viewEl.appendChild(statusRow);
+
+            if (d.mac)    viewEl.appendChild(makeRow('MAC',  d.mac));
+            if (d.vendor) viewEl.appendChild(makeRow('MFR',  d.vendor, dim));
+            if (d.os && d.os.name) {
+                var osText = d.os.name + (d.os.version ? ' ' + d.os.version : '');
+                viewEl.appendChild(makeRow('OS', osText));
+            }
+            if (d.last_seen_online_at) viewEl.appendChild(makeRow('SEEN', ago(d.last_seen_online_at)));
+
+            var openPortList = (d.ports || []).filter(function(p) { return p.state === 'open'; });
+            if (openPortList.length > 0) {
+                var portsSection = document.createElement('div');
+                portsSection.style.cssText = 'margin-top:4px;';
+                var portsLbl = document.createElement('div');
+                portsLbl.textContent = 'PORTS';
+                portsLbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';margin-bottom:4px;';
+                portsSection.appendChild(portsLbl);
+
+                var table = document.createElement('table');
+                table.style.cssText = 'width:100%;border-collapse:collapse;font-size:9px;';
+
+                openPortList.forEach(function(p) {
+                    var num  = p.number   || '';
+                    var proto = p.protocol || 'tcp';
+                    var svc  = p.service  || '';
+
+                    var isHttp  = svc === 'http'  || num === '80'   || num === '8080' || num === '8000' || num === '8888';
+                    var isHttps = svc === 'https' || num === '443'  || num === '8443';
+                    var isWeb   = isHttp || isHttps;
+                    var scheme  = isHttps ? 'https' : 'http';
+
+                    var tr = document.createElement('tr');
+                    tr.style.cssText = 'border-bottom:1px solid ' + border + ';';
+
+                    // Port + protocol
+                    var tdPort = document.createElement('td');
+                    tdPort.style.cssText = 'padding:3px 6px 3px 0;white-space:nowrap;';
+                    var portNum = document.createElement('span');
+                    portNum.textContent = num;
+                    portNum.style.cssText = 'color:' + red + ';font-weight:bold;';
+                    var portProto = document.createElement('span');
+                    portProto.textContent = '/' + proto;
+                    portProto.style.cssText = 'color:' + muted + ';';
+                    tdPort.appendChild(portNum);
+                    tdPort.appendChild(portProto);
+
+                    // Service
+                    var tdSvc = document.createElement('td');
+                    tdSvc.style.cssText = 'padding:3px 6px;color:' + dim + ';width:100%;';
+                    tdSvc.textContent = svc || '—';
+
+                    // Link (web ports only)
+                    var tdLink = document.createElement('td');
+                    tdLink.style.cssText = 'padding:3px 0 3px 4px;white-space:nowrap;';
+                    if (isWeb) {
+                        var link = document.createElement('a');
+                        link.href = scheme + '://' + (d.ipv4 || '') + ':' + num;
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.textContent = '↗';
+                        link.style.cssText = 'color:' + green + ';text-decoration:none;font-size:11px;';
+                        tdLink.appendChild(link);
+                    }
+
+                    tr.appendChild(tdPort);
+                    tr.appendChild(tdSvc);
+                    tr.appendChild(tdLink);
+                    table.appendChild(tr);
+                });
+
+                portsSection.appendChild(table);
+                viewEl.appendChild(portsSection);
+            }
+
+            if (d.comment) {
+                var commentRow = document.createElement('div');
+                commentRow.style.cssText = 'margin-top:2px;';
+                var commentLbl = document.createElement('span');
+                commentLbl.textContent = 'NOTE';
+                commentLbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';display:block;';
+                var commentVal = document.createElement('div');
+                commentVal.textContent = d.comment;
+                commentVal.style.cssText = 'color:' + dim + ';font-size:9px;line-height:1.4;margin-top:1px;white-space:pre-wrap;word-break:break-word;';
+                commentRow.appendChild(commentLbl);
+                commentRow.appendChild(commentVal);
+                viewEl.appendChild(commentRow);
+            }
+
+            drop.appendChild(viewEl);
+
+            // ── Edit section (hidden by default) ─────────────────────────
+            var editEl = document.createElement('div');
+            editEl.style.cssText = 'display:none;border-top:1px solid ' + border + ';padding-top:8px;display:none;flex-direction:column;gap:8px;';
+
+            var nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = d.name || '';
+            nameInput.placeholder = 'Device name';
+            nameInput.style.cssText =
+                'width:100%;box-sizing:border-box;padding:4px 7px;border-radius:3px;' +
+                'border:1px solid ' + border + ';background:' + inputBg + ';' +
+                'color:' + body + ';font-family:\'Roboto Mono\',monospace;font-size:10px;outline:none;';
+            editEl.appendChild(makeFieldGroup('NAME', nameInput));
+
+            var commentInput = document.createElement('textarea');
+            commentInput.value = d.comment || '';
+            commentInput.placeholder = 'Add a note…';
+            commentInput.rows = 3;
+            commentInput.style.cssText =
+                'width:100%;box-sizing:border-box;padding:4px 7px;border-radius:3px;' +
+                'border:1px solid ' + border + ';background:' + inputBg + ';' +
+                'color:' + body + ';font-family:\'Roboto Mono\',monospace;font-size:10px;' +
+                'resize:vertical;outline:none;min-height:54px;';
+            editEl.appendChild(makeFieldGroup('NOTE', commentInput));
+
+            // Save / Cancel row
+            var formActions = document.createElement('div');
+            formActions.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;';
+
+            var cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.style.cssText =
+                'padding:3px 10px;border-radius:3px;border:1px solid ' + border + ';' +
+                'background:none;color:' + muted + ';font-family:\'Roboto Mono\',monospace;font-size:10px;cursor:pointer;';
+
+            var saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Save';
+            saveBtn.style.cssText =
+                'padding:3px 10px;border-radius:3px;border:1px solid ' + green + ';' +
+                'background:' + green + ';color:#fff;font-family:\'Roboto Mono\',monospace;font-size:10px;cursor:pointer;';
+
+            formActions.appendChild(cancelBtn);
+            formActions.appendChild(saveBtn);
+            editEl.appendChild(formActions);
+            drop.appendChild(editEl);
+
+            // ── Toggle edit mode ─────────────────────────────────────────
+            function enterEdit() {
+                viewEl.style.display = 'none';
+                editEl.style.display = 'flex';
+                editBtn.textContent = '✕';
+                editBtn.title = 'Cancel edit';
+                nameInput.focus();
+                document.removeEventListener('click', _nodeDropdownOutside);
+            }
+
+            function exitEdit() {
+                editEl.style.display = 'none';
+                viewEl.style.display = 'flex';
+                editBtn.textContent = '✎';
+                editBtn.title = 'Edit';
+                setTimeout(function() {
+                    document.addEventListener('click', _nodeDropdownOutside);
+                }, 0);
+            }
+
+            editBtn.addEventListener('click', function() {
+                if (editEl.style.display === 'none') enterEdit(); else exitEdit();
+            });
+            cancelBtn.addEventListener('click', function() {
+                nameInput.value    = d.name    || '';
+                commentInput.value = d.comment || '';
+                exitEdit();
+            });
+
+            saveBtn.addEventListener('click', function() {
+                saveBtn.textContent = '…';
+                saveBtn.disabled = true;
+                fetch('/api/devices/' + deviceId, {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: nameInput.value.trim(), comment: commentInput.value.trim() })
+                })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.text();
+                })
+                .then(function() {
+                    d.name    = nameInput.value.trim();
+                    d.comment = commentInput.value.trim();
+                    nameDisplay.textContent = d.name || d.hostname || '';
+                    nameDisplay.style.display = (d.name || d.hostname) ? '' : 'none';
+                    exitEdit();
+                })
+                .catch(function() {
+                    saveBtn.textContent = 'Save';
+                    saveBtn.disabled = false;
+                });
+            });
+
+            document.body.appendChild(drop);
+
+            // ── Position near cursor ─────────────────────────────────────
+            var dw = 260, dh = drop.offsetHeight || 130;
+            var vw = window.innerWidth, vh = window.innerHeight;
+            var left = clientX + 14;
+            var top  = clientY + 14;
+            if (left + dw > vw - 8) left = clientX - dw - 14;
+            if (top  + dh > vh - 8) top  = clientY - dh - 14;
+            drop.style.left = Math.max(4, left) + 'px';
+            drop.style.top  = Math.max(4, top)  + 'px';
+
+            setTimeout(function() {
+                document.addEventListener('click', _nodeDropdownOutside);
+            }, 0);
+        })
+        .catch(function() {});
+}
+
+function _nodeDropdownOutside(e) {
+    var drop = document.getElementById('node-dropdown');
+    if (drop && !drop.contains(e.target)) {
+        window.closeNodeDropdown();
+    }
+}
+
+function closeNodeDropdown() {
+    var drop = document.getElementById('node-dropdown');
+    if (drop) drop.remove();
+    document.removeEventListener('click', _nodeDropdownOutside);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeNodeDropdown();
+});
+
+window.showNodeDropdown  = showNodeDropdown;
+window.closeNodeDropdown = closeNodeDropdown;
