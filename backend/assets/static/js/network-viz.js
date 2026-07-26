@@ -236,7 +236,16 @@
     function fetchData() {
         fetch('/api/device-list', { credentials: 'include' })
             .then(function (r) { return r.json(); })
-            .then(function (d) { setDevices(d.devices || []); })
+            .then(function (d) {
+                var devices = d.devices || [];
+                var activeNetworkId = d.activeNetworkId;
+                if (activeNetworkId) {
+                    devices = devices.filter(function (dev) {
+                        return dev.network_id === activeNetworkId;
+                    });
+                }
+                setDevices(devices);
+            })
             .catch(function () {});
     }
 

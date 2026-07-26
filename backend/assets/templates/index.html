@@ -348,25 +348,6 @@
                         <div id="scan-control-container"></div>
                     </div>
 
-                    <!-- No-networks alert (overlay, top-center) -->
-                    <div id="no-networks-alert" class="hidden" style="position:fixed;top:89px;left:50%;transform:translateX(-50%);z-index:30;max-width:460px;width:calc(100% - 32px);">
-                        <div class="hud-panel" style="border-color:rgba(59,130,246,0.35);padding:16px 20px;">
-                            <div class="flex items-start gap-3">
-                                <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.14 0M1.394 9.393c5.857-5.858 15.355-5.858 21.213 0"></path>
-                                </svg>
-                                <div class="flex-1">
-                                    <div style="font-size:13px;font-weight:600;color:#93c5fd;margin-bottom:4px;">Network Detected</div>
-                                    <p id="no-networks-alert-text" style="font-size:12px;color:#94a3b8;margin-bottom:10px;">A network has been detected. Add it to start scanning.</p>
-                                    <div class="flex gap-2">
-                                        <button id="no-networks-add-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors">Add Network</button>
-                                        <button id="no-networks-dismiss-btn" style="border:1px solid rgba(75,85,99,0.6);color:#94a3b8;padding:6px 12px;border-radius:4px;font-size:11px;cursor:pointer;background:transparent;">Dismiss</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Hidden stubs for JS that checks these containers -->
                     <div id="activity-log"        style="display:none;"></div>
                     <div id="network-map-content" style="display:none;"></div>

@@ -240,7 +240,7 @@ func main() {
 
 	done := make(chan bool)
 
-	nicService.Identify()
+	go nicService.Identify()
 
 	go runDeviceUpdater(deviceService, done)
 

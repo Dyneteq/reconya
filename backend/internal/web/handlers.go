@@ -1334,12 +1334,22 @@ func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Determine the active network for client-side filtering
+	activeNetworkID := ""
+	scanState := h.scanManager.GetState()
+	if scanState.CurrentNetwork != nil {
+		activeNetworkID = scanState.CurrentNetwork.ID
+	} else if scanState.SelectedNetwork != nil {
+		activeNetworkID = scanState.SelectedNetwork.ID
+	}
+
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
 		"devices":            devices,
 		"screenshotsEnabled": screenshotsEnabled,
 		"networks":           networkMap,
+		"activeNetworkId":    activeNetworkID,
 		"success":           true,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {

@@ -12,6 +12,7 @@ import (
 	"reconya/internal/network"
 	"reconya/internal/systemstatus"
 	"reconya/models"
+	"time"
 )
 
 type NicIdentifierService struct {
@@ -186,9 +187,9 @@ func (s *NicIdentifierService) getLocalNic() models.NIC {
 
 			if !ip.IsLoopback() {
 				nic := models.NIC{Name: iface.Name, IPv4: ip.String()}
-				
-				// Check if this is a Docker or container network
-				if s.isDockerOrContainerNetwork(ip.String()) {
+
+				// Check if this is a Docker/VM interface by name or IP range
+				if isDockerOrContainerInterface(iface.Name) || s.isDockerOrContainerNetwork(ip.String()) {
 					fmt.Printf("Found Docker/container interface: %s with IPv4: %s\n", iface.Name, ip.String())
 					dockerInterfaces = append(dockerInterfaces, nic)
 				} else {
@@ -222,25 +223,29 @@ func (s *NicIdentifierService) getLocalNic() models.NIC {
 	return models.NIC{}
 }
 
-// isDockerOrContainerNetwork checks if an IP belongs to common container networks
+// isDockerOrContainerInterface checks if an interface name looks like a container/VM interface
+func isDockerOrContainerInterface(name string) bool {
+	prefixes := []string{"docker", "br-", "veth", "vmenet", "vmnet", "vboxnet", "bridge1"}
+	for _, p := range prefixes {
+		if len(name) >= len(p) && name[:len(p)] == p {
+			return true
+		}
+	}
+	// bridge100, bridge101, … (Docker Desktop on macOS uses these)
+	if len(name) > 6 && name[:6] == "bridge" {
+		return true
+	}
+	return false
+}
+
+// isDockerOrContainerNetwork checks if an IP belongs to common container/VM network ranges
 func (s *NicIdentifierService) isDockerOrContainerNetwork(ip string) bool {
-	// Common Docker and container network ranges
-	dockerRanges := []string{
-		"172.17.0.0/16",    // Default Docker bridge
-		"172.18.0.0/16",    // Docker custom networks
-		"172.19.0.0/16",
-		"172.20.0.0/16",
-		"172.21.0.0/16",
-		"172.22.0.0/16",
-		"172.23.0.0/16",
-		"172.24.0.0/16",
-		"172.25.0.0/16",
-		"172.26.0.0/16",
-		"172.27.0.0/16",
-		"172.28.0.0/16",
-		"172.29.0.0/16",
-		"172.30.0.0/16",
-		"172.31.0.0/16",
+	containerRanges := []string{
+		"172.16.0.0/12",  // Docker default bridge range (covers 172.16–31.x.x)
+		"10.55.0.0/16",   // Docker Desktop for Mac (HyperKit VM host network)
+		"10.0.75.0/24",   // Docker Desktop for Windows (legacy)
+		"192.168.65.0/24", // Docker Desktop for Mac (newer versions)
+		"192.168.99.0/24", // Docker Machine / VirtualBox
 	}
 
 	parsedIP := net.ParseIP(ip)
@@ -248,7 +253,7 @@ func (s *NicIdentifierService) isDockerOrContainerNetwork(ip string) bool {
 		return false
 	}
 
-	for _, cidr := range dockerRanges {
+	for _, cidr := range containerRanges {
 		_, network, err := net.ParseCIDR(cidr)
 		if err != nil {
 			continue
@@ -286,7 +291,8 @@ func (s *NicIdentifierService) isCommonPrivateNetwork(ip string) bool {
 }
 
 func (s *NicIdentifierService) getPublicIp() (string, error) {
-	resp, err := http.Get("https://api.ipify.org")
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("https://api.ipify.org")
 	if err != nil {
 		return "", err
 	}
@@ -326,21 +332,22 @@ func (s *NicIdentifierService) CheckForNewNetworks() {
 			if !ok {
 				continue
 			}
-			
+
 			ip := ipNet.IP.To4()
 			if ip == nil || ip.IsLoopback() {
 				continue
 			}
 
-			// Skip Docker/container networks
-			if s.isDockerOrContainerNetwork(ip.String()) {
+			// Skip Docker/VM interfaces by name or IP range
+			if isDockerOrContainerInterface(iface.Name) || s.isDockerOrContainerNetwork(ip.String()) {
+				log.Printf("Skipping container/VM network: %s on interface %s", ipNet.String(), iface.Name)
 				continue
 			}
 
 			// Calculate network CIDR
 			networkCIDR := ipNet.String()
 			detectedNetworks = append(detectedNetworks, networkCIDR)
-			
+
 			log.Printf("Detected active network: %s on interface %s", networkCIDR, iface.Name)
 		}
 	}
@@ -418,8 +425,8 @@ func (s *NicIdentifierService) GetDetectedNetworks() []DetectedNetwork {
 				continue
 			}
 
-			// Skip Docker/container networks
-			if s.isDockerOrContainerNetwork(ip.String()) {
+			// Skip Docker/VM interfaces by name or IP range
+			if isDockerOrContainerInterface(iface.Name) || s.isDockerOrContainerNetwork(ip.String()) {
 				continue
 			}
 

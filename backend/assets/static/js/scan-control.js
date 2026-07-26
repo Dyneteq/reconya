@@ -51,23 +51,24 @@ function renderScanControlFromData(data) {
         }
     }
     
-    const networkOptions = networks.map(n =>
-        `<option value="${n.id}" ${selectedNetwork === n.id ? 'selected' : ''}>${n.name} (${n.cidr})</option>`
-    ).join('');
+    const activeNetId = isScanning && scanState.current_network
+        ? (typeof scanState.current_network === 'object' ? scanState.current_network.id : scanState.current_network)
+        : selectedNetwork;
 
-    const onchange = !isScanning && !isStopping
-        ? 'onchange="scanControlNetworkSelected(this.value)"'
-        : '';
-
-    const selectEl = (disabled) => `
-        <select id="network-selector" ${disabled ? 'disabled' : ''} ${onchange}
-                style="width:100%;padding:5px 8px;font-family:'Roboto Condensed',sans-serif;font-size:11px;
-                       color:rgba(16,185,129,${disabled ? '0.35' : '0.65'});
-                       background:rgba(7,13,23,0.55);border:1px solid rgba(16,185,129,${disabled ? '0.10' : '0.18'});
-                       border-radius:4px;outline:none;margin-bottom:10px;${disabled ? 'cursor:not-allowed;' : ''}">
-            <option value="">${!selectedNetwork ? 'Select Network' : 'Target Network'}</option>
-            ${networkOptions}
-        </select>`;
+    const networksEl = networks.length === 0
+        ? `<div style="font-size:10px;color:rgba(16,185,129,0.35);font-family:'Roboto Condensed',sans-serif;padding:2px 0;">No networks detected</div>`
+        : networks.map(n => {
+            const active = n.id === activeNetId;
+            const label = n.name && n.name !== n.cidr && !n.name.startsWith('Network ') ? n.name : '';
+            return `<div style="display:flex;align-items:center;gap:6px;padding:2px 0;">
+                <div style="width:4px;height:4px;border-radius:50%;flex-shrink:0;
+                            background:${active && isScanning ? '#10b981' : 'rgba(16,185,129,0.30)'};
+                            ${active && isScanning ? 'box-shadow:0 0 4px rgba(16,185,129,0.6);' : ''}"></div>
+                <span style="font-family:'Roboto Mono',monospace;font-size:10px;
+                             color:rgba(16,185,129,${active ? '0.80' : '0.45'});">${n.cidr}</span>
+                ${label ? `<span style="font-family:'Roboto Condensed',sans-serif;font-size:9px;color:rgba(16,185,129,0.35);margin-left:2px;">${label}</span>` : ''}
+            </div>`;
+        }).join('');
 
     const divider = `<div style="border-top:1px solid rgba(16,185,129,0.12);margin:10px 0;"></div>`;
 
@@ -104,7 +105,7 @@ function renderScanControlFromData(data) {
 
     return `
         <div id="scan-control-content">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                 <div class="hud-label" style="margin-bottom:0;">Scan Control</div>
                 ${isScanning ? `<div style="display:flex;align-items:center;gap:5px;">
                     <div style="width:5px;height:5px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>
@@ -112,23 +113,20 @@ function renderScanControlFromData(data) {
                 </div>` : ''}
                 ${isStopping ? `<span style="font-family:'Orbitron',monospace;font-size:7px;letter-spacing:0.1em;color:rgba(16,185,129,0.40);text-transform:uppercase;">Stopping</span>` : ''}
             </div>
+            <div style="margin-bottom:10px;">${networksEl}</div>
             ${isStopping ? `
-                ${selectEl(true)}
                 ${hudBtn('Stopping…', '', '', false)}
                 ${divider}
                 ${statsRow('Scans', scanState.scan_count || 0,
                            'Runtime', formatScanTime(scanState.start_time), 'scan-runtime', `data-start-time="${scanState.start_time || ''}"`,
                            'Status', 'Stopping', '')}
             ` : isScanning ? `
-                ${selectEl(true)}
                 ${hudBtn('Stop Scan', 'stop-scan-btn', 'stopScan()', true)}
                 ${divider}
                 ${statsRow('Scans', scanState.scan_count || 0,
                            'Runtime', formatScanTime(scanState.start_time), 'scan-runtime', `data-start-time="${scanState.start_time || ''}"`,
                            'Status', 'Active', 'color:#10b981;')}
             ` : `
-                ${selectEl(false)}
-                ${hudBtn('Start Scan', 'start-scan-btn', 'startScan()', !!selectedNetwork)}
                 ${divider}
                 ${statsRow('Scans', scanState.scan_count || scanState.total_scans || 0,
                            'Runtime', '00:00:00', '', '',
@@ -216,11 +214,22 @@ function loadScanControl(showSpinner = true) {
             if (typeof data === 'object') {
                 const html = renderScanControlFromData(data);
                 scanControlContainer.innerHTML = html;
-                // Auto-persist single network selection server-side
                 const networks = data.networks || [];
                 const scanState = data.scanState || {};
+                const isScanning = scanState.is_running && !scanState.is_stopping;
+                const isStopping = scanState.is_stopping;
+
+                // Auto-persist single network selection server-side
                 if (!scanState.selected_network && !scanState.current_network && networks.length === 1) {
                     selectNetwork(networks[0].id);
+                }
+
+                // Auto-start scan on initial page load when not already running
+                if (showSpinner && !isScanning && !isStopping && networks.length > 0) {
+                    const networkId = autoSelectNetwork(networks, scanState);
+                    if (networkId) {
+                        setTimeout(() => startScan(networkId), 300);
+                    }
                 }
             } else {
                 scanControlContainer.innerHTML = data;
@@ -278,17 +287,35 @@ function selectNetworkOption(element) {
     });
 }
 
+function autoSelectNetwork(networks, scanState) {
+    if (scanState.current_network) {
+        const n = scanState.current_network;
+        return typeof n === 'object' ? n.id : n;
+    }
+    if (scanState.selected_network) {
+        const n = scanState.selected_network;
+        return typeof n === 'object' ? n.id : n;
+    }
+    if (networks.length === 1) return networks[0].id;
+    if (window.detectedNetworks && window.detectedNetworks.length > 0) {
+        const match = networks.find(n => n.cidr === window.detectedNetworks[0].cidr);
+        if (match) return match.id;
+    }
+    return networks[0] ? networks[0].id : null;
+}
+window.autoSelectNetwork = autoSelectNetwork;
+
 // Scan control functions - moved from template to ensure they're always available
-function startScan() {
-    const networkSelector = document.getElementById('network-selector');
-    
-    if (!networkSelector || !networkSelector.value) {
-        alert('Please select a network first');
+function startScan(networkId) {
+    const id = networkId || (document.getElementById('network-selector') ? document.getElementById('network-selector').value : '');
+
+    if (!id) {
+        console.warn('No network available to start scan');
         return;
     }
-    
+
     const formData = new FormData();
-    formData.append('network-selector', networkSelector.value);
+    formData.append('network-selector', id);
     
     fetch('/api/scan/start', {
         method: 'POST',
