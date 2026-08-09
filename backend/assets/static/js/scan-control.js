@@ -128,7 +128,7 @@ function renderScanControlFromData(data) {
                            'Status', 'Active', 'color:#10b981;')}
             ` : `
                 ${divider}
-                ${statsRow('Scans', scanState.scan_count || scanState.total_scans || 0,
+                ${statsRow('Scans', scanState.scan_count || 0,
                            'Runtime', '00:00:00', '', '',
                            'Last', scanState.last_scan_time ? 'Recent' : 'Never', '')}
             `}

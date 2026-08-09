@@ -822,6 +822,19 @@ func (r *SQLiteEventLogRepository) FindLatest(ctx context.Context, limit int) ([
 	return logs, nil
 }
 
+// CountCompletedByType counts events of a type that carry a duration, i.e.
+// operations that ran to completion rather than being started or aborted.
+func (r *SQLiteEventLogRepository) CountCompletedByType(ctx context.Context, eventType models.EEventLogType) (int, error) {
+	query := `SELECT COUNT(*) FROM event_logs WHERE type = ? AND duration_seconds IS NOT NULL`
+
+	var count int
+	if err := r.db.QueryRowContext(ctx, query, eventType).Scan(&count); err != nil {
+		return 0, fmt.Errorf("error counting completed %s events: %w", eventType, err)
+	}
+
+	return count, nil
+}
+
 // FindAllByDeviceID finds all event logs for a device
 func (r *SQLiteEventLogRepository) FindAllByDeviceID(ctx context.Context, deviceID string) ([]*models.EventLog, error) {
 	query := `SELECT type, description, device_id, created_at, updated_at

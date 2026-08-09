@@ -52,30 +52,26 @@ func (sm *ScanManager) GetState() ScanState {
 	sm.mutex.RLock()
 	state := sm.state
 	sm.mutex.RUnlock()
-	
-	// If not currently running, get last scan time from database
+
+	// The completed-sweep count in the database is the single source of truth.
+	// The in-memory counter only tracks the current session, so reporting it
+	// while running and the database total while stopped made the number jump
+	// whenever a scan started or stopped.
+	state.ScanCount = sm.getTotalScanCount()
+
 	if !state.IsRunning {
-		state.ScanCount = sm.getTotalScanCount()
 		state.LastScanTime = sm.getLastScanTime()
 	}
-	
+
 	return state
 }
 
-// getTotalScanCount gets the total number of ping sweeps from the database
+// getTotalScanCount gets the total number of completed ping sweeps
 func (sm *ScanManager) getTotalScanCount() int {
-	// Get recent ping sweep events to count scans
-	events, err := sm.pingSweepService.EventLogService.GetAll(100)
+	count, err := sm.pingSweepService.EventLogService.CountCompleted(models.PingSweep)
 	if err != nil {
+		log.Printf("Error counting completed ping sweeps: %v", err)
 		return 0
-	}
-	
-	count := 0
-	for _, event := range events {
-		if event.Type == models.PingSweep && event.DurationSeconds != nil {
-			// Only count completed ping sweeps (those with duration)
-			count++
-		}
 	}
 	return count
 }
@@ -282,6 +278,11 @@ func (sm *ScanManager) runSingleScan() {
 		return
 	}
 
+	// Time this sweep, not the session. state.StartTime is set once when the
+	// scan starts and never reset, so measuring against it reports total
+	// uptime and grows by the ticker interval on every iteration.
+	sweepStart := time.Now()
+
 	log.Printf("Running scan on network: %s", network.CIDR)
 
 	// Check for stop signal before starting sweep
@@ -357,10 +358,11 @@ func (sm *ScanManager) runSingleScan() {
 	now := time.Now()
 	sm.state.LastScanTime = &now
 	sm.state.ScanCount++
+	iteration := sm.state.ScanCount
 	sm.mutex.Unlock()
 
-	duration := time.Since(*sm.state.StartTime)
-	log.Printf("Completed scan iteration %d for network %s. Found %d devices.", sm.state.ScanCount, network.CIDR, len(devices))
+	duration := time.Since(sweepStart)
+	log.Printf("Completed scan iteration %d for network %s in %s. Found %d devices.", iteration, network.CIDR, duration.Round(time.Millisecond), len(devices))
 
 	// Create event log for ping sweep completion
 	durationInSeconds := float64(duration.Seconds())

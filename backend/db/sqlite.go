@@ -141,6 +141,24 @@ func InitializeSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create event_logs table: %w", err)
 	}
 
+	// event_logs grows without bound and is read on every UI poll. Without
+	// these, "latest N events" is a full scan into a temp B-tree and the
+	// completed-sweep count scans the whole table.
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_event_logs_created_at ON event_logs(created_at DESC)`)
+	if err != nil {
+		return fmt.Errorf("failed to create event_logs created_at index: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_event_logs_type ON event_logs(type)`)
+	if err != nil {
+		return fmt.Errorf("failed to create event_logs type index: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_event_logs_device_id ON event_logs(device_id)`)
+	if err != nil {
+		return fmt.Errorf("failed to create event_logs device_id index: %w", err)
+	}
+
 	// Create system_status table
 	_, err = db.Exec(`
 	CREATE TABLE IF NOT EXISTS system_status (

@@ -40,6 +40,14 @@ func (s *EventLogService) GetAll(limitSize int64) ([]models.EventLog, error) {
 	return eventLogs, nil
 }
 
+// CountCompleted returns how many events of the given type ran to completion,
+// counted in the database rather than by filtering a fixed-size page of recent
+// events — a busy scan emits enough device and port-scan events to push every
+// ping sweep out of any such window.
+func (s *EventLogService) CountCompleted(eventType models.EEventLogType) (int, error) {
+	return s.repository.CountCompletedByType(context.Background(), eventType)
+}
+
 func (s *EventLogService) generateDescription(eventLog models.EventLog) string {
 	deviceInfo := "unknown device"
 	if eventLog.DeviceID != nil {

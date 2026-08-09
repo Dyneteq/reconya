@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"reconya/models"
@@ -71,6 +72,10 @@ func (s *NativeScanner) ScanNetwork(network string) ([]models.Device, error) {
 	// Generate all IPs in the network
 	ips := s.generateIPList(ipNet)
 	log.Printf("Scanning %d IP addresses", len(ips))
+
+	// Start from a fresh ARP snapshot so a sweep never opens against entries
+	// left over from a previous network.
+	invalidateARPCache()
 
 	// Create channels for work distribution
 	ipChan := make(chan string, len(ips))
@@ -138,24 +143,40 @@ func (s *NativeScanner) worker(ipChan <-chan string, resultChan chan<- ScanResul
 	}
 }
 
-// scanIP performs various checks on a single IP address
+// scanIP performs various checks on a single IP address.
+//
+// A host counts as online only when something corroborates it: an ICMP echo
+// reply that we matched to this address, or a resolved MAC. A bare TCP
+// handshake is not enough on link, because anything that SYN-ACKs unassigned
+// addresses (a userspace VPN, a transparent proxy, a captive portal) makes
+// every address in the range look alive — which is exactly how a /24 ends up
+// with 254 "devices". Off link ARP cannot reach the host, so TCP stays
+// authoritative there.
 func (s *NativeScanner) scanIP(ip string) ScanResult {
 	result := ScanResult{IP: ip}
 
-	// Try multiple detection methods
-	online, rtt := s.tryPing(ip)
-	if !online {
-		online, rtt = s.tryTCPConnect(ip)
+	icmpOK, rtt := s.tryPing(ip)
+
+	// The MAC lookup feeds the liveness decision, so it has to run before we
+	// know whether the host is online. It short-circuits on the first ARP hit.
+	var mac, vendor string
+	if s.enableMACLookup {
+		mac, vendor = s.getMACInfo(ip)
 	}
+
+	tcpOK := false
+	if !icmpOK && mac == "" {
+		tcpOK, rtt = s.tryTCPConnect(ip)
+	}
+
+	online := icmpOK || mac != "" || (tcpOK && !isOnLink(ip))
 
 	result.Online = online
 	result.RTT = rtt
 
 	if online {
-		// Try to get additional information based on configuration
-		if s.enableMACLookup {
-			result.MAC, result.Vendor = s.getMACInfo(ip)
-		}
+		result.MAC = mac
+		result.Vendor = vendor
 		if s.enableHostnameLookup {
 			result.Hostname = s.getHostname(ip)
 		}
@@ -164,34 +185,52 @@ func (s *NativeScanner) scanIP(ip string) ScanResult {
 	return result
 }
 
-// tryPing attempts to ping an IP address using ICMP
+// protocolICMP is the IANA protocol number for ICMPv4. golang.org/x/net's own
+// iana constant lives in an internal package, so it cannot be imported.
+const protocolICMP = 1
+
+// icmpSeq hands out a distinct sequence number per probe so concurrent workers
+// can tell their own replies apart.
+var icmpSeq atomic.Uint32
+
+// tryPing attempts to ping an IP address using ICMP.
+//
+// A raw ICMP socket receives a copy of every ICMP packet the host sees, not
+// just the replies to our own echo, and this scanner runs 50 probes at once.
+// So a reply only counts when it comes from the address we probed and carries
+// back the echo ID and sequence we sent.
 func (s *NativeScanner) tryPing(ip string) (bool, time.Duration) {
-	// Note: ICMP ping requires raw sockets on most systems (root privileges)
-	// For a more portable solution, we might want to use TCP connect instead
-
-	start := time.Now()
-
-	// Try to resolve the address first
 	addr, err := net.ResolveIPAddr("ip4", ip)
 	if err != nil {
 		return false, 0
 	}
 
-	// Create ICMP connection (requires privileges on most systems)
-	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
+	// Datagram ICMP works unprivileged on macOS and on Linux when
+	// net.ipv4.ping_group_range permits it; the raw socket needs root. Try the
+	// unprivileged one first so a non-root run still pings instead of silently
+	// falling back to TCP.
+	conn, err := icmp.ListenPacket("udp4", "0.0.0.0")
+	dgram := err == nil
 	if err != nil {
-		// Fallback to TCP connect if ICMP fails
-		return s.tryTCPConnect(ip)
+		conn, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
+		if err != nil {
+			return false, 0
+		}
+		dgram = false
 	}
 	defer conn.Close()
 
-	// Create ICMP message
+	id := os.Getpid() & 0xffff
+	seq := int(icmpSeq.Add(1) & 0xffff)
+
+	// A datagram-ICMP socket rewrites the echo ID to the kernel-assigned port,
+	// so only the sequence number survives to identify our probe there.
 	message := &icmp.Message{
 		Type: ipv4.ICMPTypeEcho,
 		Code: 0,
 		Body: &icmp.Echo{
-			ID:   1,
-			Seq:  1,
+			ID:   id,
+			Seq:  seq,
 			Data: []byte("reconYa ping"),
 		},
 	}
@@ -201,35 +240,62 @@ func (s *NativeScanner) tryPing(ip string) (bool, time.Duration) {
 		return false, 0
 	}
 
-	// Set timeout
-	conn.SetDeadline(time.Now().Add(s.timeout))
+	var dst net.Addr = addr
+	if dgram {
+		dst = &net.UDPAddr{IP: addr.IP}
+	}
 
-	// Send ICMP packet
-	_, err = conn.WriteTo(data, addr)
-	if err != nil {
+	start := time.Now()
+	deadline := start.Add(s.timeout)
+	if err := conn.SetDeadline(deadline); err != nil {
 		return false, 0
 	}
 
-	// Read response
+	if _, err = conn.WriteTo(data, dst); err != nil {
+		return false, 0
+	}
+
 	reply := make([]byte, 1500)
-	n, _, err := conn.ReadFrom(reply)
-	if err != nil {
-		return false, 0
+	for {
+		n, peer, err := conn.ReadFrom(reply)
+		if err != nil {
+			// Deadline reached, or the socket failed. Either way, no answer.
+			return false, 0
+		}
+
+		if !sameHost(peer, addr.IP) {
+			continue // someone else's traffic on a shared socket
+		}
+
+		rm, err := icmp.ParseMessage(protocolICMP, reply[:n])
+		if err != nil {
+			continue
+		}
+
+		echo, ok := rm.Body.(*icmp.Echo)
+		if !ok || rm.Type != ipv4.ICMPTypeEchoReply {
+			continue
+		}
+		if echo.Seq != seq || (!dgram && echo.ID != id) {
+			continue // a reply to a different probe
+		}
+
+		return true, time.Since(start)
 	}
+}
 
-	rtt := time.Since(start)
-
-	// Parse ICMP reply
-	rm, err := icmp.ParseMessage(int(ipv4.ICMPTypeEchoReply), reply[:n])
-	if err != nil {
-		return false, 0
+// sameHost reports whether an address returned by ReadFrom refers to want. The
+// concrete type differs between raw ICMP (*net.IPAddr) and datagram ICMP
+// (*net.UDPAddr) sockets.
+func sameHost(peer net.Addr, want net.IP) bool {
+	switch p := peer.(type) {
+	case *net.IPAddr:
+		return p.IP.Equal(want)
+	case *net.UDPAddr:
+		return p.IP.Equal(want)
+	default:
+		return false
 	}
-
-	if rm.Type == ipv4.ICMPTypeEchoReply {
-		return true, rtt
-	}
-
-	return false, 0
 }
 
 // tryTCPConnect attempts to connect to common ports to detect if host is alive
@@ -298,99 +364,13 @@ func (s *NativeScanner) getMACInfo(ip string) (string, string) {
 	return "", ""
 }
 
-// getARPInfo looks up MAC address from ARP table (cross-platform)
+// getARPInfo looks up MAC address from the cached ARP table (cross-platform)
 func (s *NativeScanner) getARPInfo(ip string) (string, string) {
-	var mac string
-
-	switch runtime.GOOS {
-	case "linux":
-		mac = s.getARPLinux(ip)
-	case "darwin":
-		mac = s.getARPMacOS(ip)
-	case "windows":
-		mac = s.getARPWindows(ip)
-	default:
+	mac := arpTable()[ip]
+	if mac == "" {
 		return "", ""
 	}
-
-	if mac != "" {
-		vendor := s.lookupVendor(mac)
-		return mac, vendor
-	}
-
-	return "", ""
-}
-
-// getARPLinux reads /proc/net/arp on Linux
-func (s *NativeScanner) getARPLinux(ip string) string {
-	content, err := os.ReadFile("/proc/net/arp")
-	if err != nil {
-		return ""
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines[1:] { // Skip header
-		fields := strings.Fields(line)
-		if len(fields) >= 4 && fields[0] == ip {
-			mac := fields[3]
-			if mac != "00:00:00:00:00:00" && mac != "<incomplete>" {
-				return strings.ToUpper(mac)
-			}
-		}
-	}
-	return ""
-}
-
-// getARPMacOS uses arp command on macOS
-func (s *NativeScanner) getARPMacOS(ip string) string {
-	cmd := exec.Command("arp", "-n", ip)
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		if strings.Contains(line, ip) {
-			// Parse line like: "192.168.1.1 (192.168.1.1) at aa:bb:cc:dd:ee:ff on en0 ifscope [ethernet]"
-			parts := strings.Fields(line)
-			for i, part := range parts {
-				if part == "at" && i+1 < len(parts) {
-					mac := parts[i+1]
-					if len(mac) == 17 && strings.Count(mac, ":") == 5 {
-						return strings.ToUpper(mac)
-					}
-				}
-			}
-		}
-	}
-	return ""
-}
-
-// getARPWindows uses arp command on Windows
-func (s *NativeScanner) getARPWindows(ip string) string {
-	cmd := exec.Command("arp", "-a", ip)
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		if strings.Contains(line, ip) {
-			// Parse line like: "  192.168.1.1           aa-bb-cc-dd-ee-ff     dynamic"
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
-				mac := parts[1]
-				// Convert Windows format (aa-bb-cc-dd-ee-ff) to standard format
-				mac = strings.ReplaceAll(mac, "-", ":")
-				if len(mac) == 17 && strings.Count(mac, ":") == 5 {
-					return strings.ToUpper(mac)
-				}
-			}
-		}
-	}
-	return ""
+	return mac, s.lookupVendor(mac)
 }
 
 // triggerARPAndLookup sends a packet to trigger ARP resolution

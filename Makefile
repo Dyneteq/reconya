@@ -1,4 +1,4 @@
-.PHONY: start start-dev stop status logs logs-follow logs-errors logs-clear build deps clean help install release
+.PHONY: start start-dev stop status logs logs-follow logs-errors logs-clear build deps clean help install release prune-phantoms
 
 # Project paths
 PROJECT_ROOT := $(shell pwd)
@@ -168,6 +168,27 @@ install:
 	@echo "$(GREEN)[SUCCESS]$(NC) Installation complete!"
 	@echo "Run 'make start' to start reconYa"
 
+## Delete uncorroborated offline device rows left over by the pre-fix scanner.
+## Only removes rows with no MAC, no hostname, and no port-scan/port history —
+## real devices that were merely offline are untouched. Dry-run by default;
+## pass CONFIRM=1 to actually delete. Override DB= to point at another file.
+DB ?= $(BACKEND_DIR)/data/reconya-dev.db
+PRUNE_PHANTOMS_SQL := DELETE FROM devices WHERE status='offline' AND (mac IS NULL OR mac='') AND (hostname IS NULL OR hostname='') AND port_scan_started_at IS NULL AND id NOT IN (SELECT device_id FROM ports);
+prune-phantoms:
+	@if [ ! -f "$(DB)" ]; then \
+		echo "$(RED)[ERROR]$(NC) No database at $(DB). Pass DB=path/to/reconya.db."; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)[INFO]$(NC) Database: $(DB)"
+	@echo "$(BLUE)[INFO]$(NC) Rows that would be deleted:"
+	@sqlite3 "$(DB)" "SELECT COUNT(*) FROM devices WHERE status='offline' AND (mac IS NULL OR mac='') AND (hostname IS NULL OR hostname='') AND port_scan_started_at IS NULL AND id NOT IN (SELECT device_id FROM ports);"
+	@if [ "$(CONFIRM)" != "1" ]; then \
+		echo "$(YELLOW)[DRY RUN]$(NC) Nothing deleted. Re-run with CONFIRM=1 to delete."; \
+	else \
+		sqlite3 "$(DB)" "$(PRUNE_PHANTOMS_SQL)"; \
+		echo "$(GREEN)[SUCCESS]$(NC) Phantom device rows deleted."; \
+	fi
+
 ## Bump version, tag, and show push instructions. Usage: make release V=0.25.0
 release:
 	@if [ -z "$(V)" ]; then \
@@ -205,6 +226,9 @@ help:
 	@echo ""
 	@echo "Setup targets:"
 	@echo "  install      Initial setup"
+	@echo ""
+	@echo "Maintenance targets:"
+	@echo "  prune-phantoms  Remove uncorroborated offline device rows (dry-run; CONFIRM=1 to delete)"
 	@echo ""
 	@echo "Release targets:"
 	@echo "  release V=x.y.z  Bump version, commit, tag (then git push origin vx.y.z)"

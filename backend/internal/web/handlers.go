@@ -1323,6 +1323,20 @@ func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Scope to the active network on the server. Device rows accumulate across
+	// every network the host has ever been attached to, and those stay useful
+	// when roaming — but sending all of them and filtering in the browser leaks
+	// other networks' inventory into every response.
+	if activeNetwork := h.scanManager.GetSelectedOrCurrentNetwork(); activeNetwork != nil {
+		scoped := make([]*models.Device, 0, len(devices))
+		for _, device := range devices {
+			if device.NetworkID == activeNetwork.ID {
+				scoped = append(scoped, device)
+			}
+		}
+		devices = scoped
+	}
+
 	// Get user's screenshot setting
 	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
 

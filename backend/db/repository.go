@@ -47,6 +47,7 @@ type EventLogRepository interface {
 	Create(ctx context.Context, eventLog *models.EventLog) error
 	FindLatest(ctx context.Context, limit int) ([]*models.EventLog, error)
 	FindAllByDeviceID(ctx context.Context, deviceID string) ([]*models.EventLog, error)
+	CountCompletedByType(ctx context.Context, eventType models.EEventLogType) (int, error)
 }
 
 // SystemStatusRepository defines the interface for system status operations
