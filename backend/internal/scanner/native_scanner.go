@@ -42,11 +42,14 @@ type ScanResult struct {
 
 func NewNativeScanner() *NativeScanner {
 	return &NativeScanner{
-		timeout:                  time.Second * 3,
-		concurrent:               50, // Concurrent goroutines for scanning
-		enableMACLookup:          true,
-		enableHostnameLookup:     true,
-		enableOnlineVendorLookup: true, // Allow online vendor lookups
+		timeout:              time.Second * 3,
+		concurrent:           50, // Concurrent goroutines for scanning
+		enableMACLookup:      true,
+		enableHostnameLookup: true,
+		// Vendor lookup falls back to api.macvendors.com for any MAC not in
+		// the built-in OUI table, sending it there for every discovered
+		// device. Off by default; callers opt in via EnableOnlineVendorLookup.
+		enableOnlineVendorLookup: false,
 	}
 }
 
@@ -57,6 +60,12 @@ func (s *NativeScanner) SetOptions(timeout time.Duration, concurrent int, enable
 	s.enableMACLookup = enableMAC
 	s.enableHostnameLookup = enableHostname
 	s.enableOnlineVendorLookup = enableOnlineVendor
+}
+
+// EnableOnlineVendorLookup opts this scanner in to querying
+// api.macvendors.com for OUIs not found in the built-in vendor table.
+func (s *NativeScanner) EnableOnlineVendorLookup() {
+	s.enableOnlineVendorLookup = true
 }
 
 // ScanNetwork performs a ping sweep on the given CIDR network

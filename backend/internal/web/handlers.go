@@ -94,261 +94,7 @@ func NewWebHandler(
 	staticFS fs.FS,
 	version string,
 ) *WebHandler {
-	// Initialize template functions
-	funcMap := template.FuncMap{
-		"formatTime": func(t time.Time) string {
-			if t.IsZero() {
-				return "Never"
-			}
-			return t.Format("2006-01-02 15:04:05")
-		},
-		"formatTimeAgo": func(t time.Time) string {
-			if t.IsZero() {
-				return "Never"
-			}
-			duration := time.Since(t)
-			switch {
-			case duration < time.Minute:
-				return fmt.Sprintf("%ds ago", int(duration.Seconds()))
-			case duration < time.Hour:
-				return fmt.Sprintf("%dm ago", int(duration.Minutes()))
-			case duration < 24*time.Hour:
-				return fmt.Sprintf("%dh ago", int(duration.Hours()))
-			default:
-				return fmt.Sprintf("%dd ago", int(duration.Hours()/24))
-			}
-		},
-		"formatFileSize": func(bytes interface{}) string {
-			var size float64
-			switch v := bytes.(type) {
-			case int:
-				size = float64(v)
-			case int64:
-				size = float64(v)
-			case float64:
-				size = v
-			default:
-				return "N/A"
-			}
-
-			if size == 0 {
-				return "N/A"
-			}
-
-			kb := size / 1024
-			if kb < 1024 {
-				return fmt.Sprintf("%.1f KB", kb)
-			}
-			mb := kb / 1024
-			return fmt.Sprintf("%.1f MB", mb)
-		},
-		"upper": func(s string) string {
-			return strings.ToUpper(s)
-		},
-		"deref": func(ptr interface{}) interface{} {
-			if ptr == nil {
-				return "-"
-			}
-			switch v := ptr.(type) {
-			case *string:
-				if v == nil {
-					return "-"
-				}
-				return *v
-			case *time.Time:
-				if v == nil {
-					return time.Time{}
-				}
-				return *v
-			default:
-				return ptr
-			}
-		},
-		"formatEventType": func(eventType string) string {
-			return strings.ReplaceAll(strings.Title(strings.ReplaceAll(eventType, "_", " ")), "_", " ")
-		},
-		"slice": func(items interface{}, start, end int) interface{} {
-			switch v := items.(type) {
-			case []*models.Port:
-				if start >= len(v) {
-					return []*models.Port{}
-				}
-				if end > len(v) {
-					end = len(v)
-				}
-				return v[start:end]
-			}
-			return items
-		},
-		"eq": func(a, b interface{}) bool {
-			return a == b
-		},
-		"len": func(items interface{}) int {
-			switch v := items.(type) {
-			case []*models.Device:
-				return len(v)
-			case []*models.Port:
-				return len(v)
-			case []*models.WebService:
-				return len(v)
-			case []*models.EventLog:
-				return len(v)
-			}
-			return 0
-		},
-		"or": func(args ...interface{}) interface{} {
-			for _, arg := range args {
-				if arg != nil && arg != "" {
-					return arg
-				}
-			}
-			if len(args) > 0 {
-				return args[len(args)-1]
-			}
-			return nil
-		},
-		"where": func(slice interface{}, field, value string) interface{} {
-			switch v := slice.(type) {
-			case []*models.Device:
-				var result []*models.Device
-				for _, item := range v {
-					var fieldValue string
-					switch field {
-					case "Status":
-						fieldValue = string(item.Status)
-					case "IPv4":
-						fieldValue = item.IPv4
-					}
-					if fieldValue == value {
-						result = append(result, item)
-					}
-				}
-				return result
-			}
-			return slice
-		},
-		"split": func(s, sep string) []string {
-			return strings.Split(s, sep)
-		},
-		"last": func(slice []string) string {
-			if len(slice) == 0 {
-				return ""
-			}
-			return slice[len(slice)-1]
-		},
-		"add": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					return av + bv
-				}
-				if bv, ok := b.(float64); ok {
-					return float64(av) + bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					return av + bv
-				}
-				if bv, ok := b.(int); ok {
-					return av + float64(bv)
-				}
-			}
-			return a
-		},
-		"mul": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					return av * bv
-				}
-				if bv, ok := b.(float64); ok {
-					return float64(av) * bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					return av * bv
-				}
-				if bv, ok := b.(int); ok {
-					return av * float64(bv)
-				}
-			}
-			return a
-		},
-		"div": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					if bv == 0 {
-						return 0
-					}
-					return av / bv
-				}
-				if bv, ok := b.(float64); ok {
-					if bv == 0 {
-						return 0.0
-					}
-					return float64(av) / bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					if bv == 0 {
-						return 0.0
-					}
-					return av / bv
-				}
-				if bv, ok := b.(int); ok {
-					if bv == 0 {
-						return 0.0
-					}
-					return av / float64(bv)
-				}
-			}
-			return a
-		},
-		"sub": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					return av - bv
-				}
-				if bv, ok := b.(float64); ok {
-					return float64(av) - bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					return av - bv
-				}
-				if bv, ok := b.(int); ok {
-					return av - float64(bv)
-				}
-			}
-			return a
-		},
-		"cos": func(angle float64) float64 {
-			return math.Cos(angle)
-		},
-		"sin": func(angle float64) float64 {
-			return math.Sin(angle)
-		},
-		"replace": func(s, old, new string) string {
-			return strings.ReplaceAll(s, old, new)
-		},
-		"contains": func(s, substr string) bool {
-			return strings.Contains(s, substr)
-		},
-		"string": func(v interface{}) string {
-			switch val := v.(type) {
-			case models.DeviceType:
-				return string(val)
-			case models.DeviceStatus:
-				return string(val)
-			case string:
-				return val
-			default:
-				return fmt.Sprintf("%v", val)
-			}
-		},
-	}
+	funcMap := templateFuncMap()
 
 	// Parse templates from embedded filesystem
 	tmpl := template.New("").Funcs(funcMap)
@@ -2095,14 +1841,14 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 
 	// Get system status for public IP and location
 	status, err := h.systemStatusService.GetLatest()
-	var publicIP string = "N/A"
+	var publicIP string
 	var location string = ""
 	if err == nil && status != nil && status.PublicIP != nil {
 		publicIP = *status.PublicIP
 		log.Printf("DEBUG: Got public IP: %s", publicIP)
 
 		// If geolocation is missing, try to fetch it now
-		if status.Geolocation == nil {
+		if status.Geolocation == nil && h.config.GeolocationEnabled {
 			log.Printf("DEBUG: Geolocation is nil, attempting to fetch for IP %s", publicIP)
 			geo, geoErr := h.systemStatusService.FetchGeolocation(publicIP)
 			if geoErr == nil && geo != nil {
@@ -2373,3 +2119,257 @@ func (h *WebHandler) getVersion() string {
 	return h.version
 }
 
+
+
+// templateFuncMap returns the helpers available to the HTML templates.
+// Extracted from NewWebHandler so the helpers can be unit-tested directly.
+func templateFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"formatTime": func(t time.Time) string {
+			if t.IsZero() {
+				return "Never"
+			}
+			return t.Format("2006-01-02 15:04:05")
+		},
+		"formatTimeAgo": func(t time.Time) string {
+			if t.IsZero() {
+				return "Never"
+			}
+			duration := time.Since(t)
+			switch {
+			case duration < time.Minute:
+				return fmt.Sprintf("%ds ago", int(duration.Seconds()))
+			case duration < time.Hour:
+				return fmt.Sprintf("%dm ago", int(duration.Minutes()))
+			case duration < 24*time.Hour:
+				return fmt.Sprintf("%dh ago", int(duration.Hours()))
+			default:
+				return fmt.Sprintf("%dd ago", int(duration.Hours()/24))
+			}
+		},
+		"formatFileSize": func(bytes interface{}) string {
+			var size float64
+			switch v := bytes.(type) {
+			case int:
+				size = float64(v)
+			case int64:
+				size = float64(v)
+			case float64:
+				size = v
+			default:
+				return "N/A"
+			}
+
+			if size == 0 {
+				return "N/A"
+			}
+
+			kb := size / 1024
+			if kb < 1024 {
+				return fmt.Sprintf("%.1f KB", kb)
+			}
+			mb := kb / 1024
+			return fmt.Sprintf("%.1f MB", mb)
+		},
+		"upper": func(s string) string {
+			return strings.ToUpper(s)
+		},
+		"deref": func(ptr interface{}) interface{} {
+			if ptr == nil {
+				return "-"
+			}
+			switch v := ptr.(type) {
+			case *string:
+				if v == nil {
+					return "-"
+				}
+				return *v
+			case *time.Time:
+				if v == nil {
+					return time.Time{}
+				}
+				return *v
+			default:
+				return ptr
+			}
+		},
+		"formatEventType": func(eventType string) string {
+			return strings.ReplaceAll(strings.Title(strings.ReplaceAll(eventType, "_", " ")), "_", " ")
+		},
+		"slice": func(items interface{}, start, end int) interface{} {
+			switch v := items.(type) {
+			case []*models.Port:
+				if start >= len(v) {
+					return []*models.Port{}
+				}
+				if end > len(v) {
+					end = len(v)
+				}
+				return v[start:end]
+			}
+			return items
+		},
+		"len": func(items interface{}) int {
+			switch v := items.(type) {
+			case []*models.Device:
+				return len(v)
+			case []*models.Port:
+				return len(v)
+			case []*models.WebService:
+				return len(v)
+			case []*models.EventLog:
+				return len(v)
+			}
+			return 0
+		},
+		// NOTE: "or" and "eq" are deliberately NOT defined here. Overriding
+		// them shadows the correct text/template builtins:
+		//   - the old "or" returned the first arg that was neither nil nor "",
+		//     so with boolean args it returned `false` whenever the first
+		//     condition was false, regardless of the rest.
+		//   - the old "eq" was `a == b` over interface{}, which compares
+		//     dynamic type as well as value, so `eq .Status "online"` was
+		//     always false for named string types like models.DeviceStatus.
+		"where": func(slice interface{}, field, value string) interface{} {
+			switch v := slice.(type) {
+			case []*models.Device:
+				var result []*models.Device
+				for _, item := range v {
+					var fieldValue string
+					switch field {
+					case "Status":
+						fieldValue = string(item.Status)
+					case "IPv4":
+						fieldValue = item.IPv4
+					}
+					if fieldValue == value {
+						result = append(result, item)
+					}
+				}
+				return result
+			}
+			return slice
+		},
+		"split": func(s, sep string) []string {
+			return strings.Split(s, sep)
+		},
+		"last": func(slice []string) string {
+			if len(slice) == 0 {
+				return ""
+			}
+			return slice[len(slice)-1]
+		},
+		"add": func(a, b interface{}) interface{} {
+			switch av := a.(type) {
+			case int:
+				if bv, ok := b.(int); ok {
+					return av + bv
+				}
+				if bv, ok := b.(float64); ok {
+					return float64(av) + bv
+				}
+			case float64:
+				if bv, ok := b.(float64); ok {
+					return av + bv
+				}
+				if bv, ok := b.(int); ok {
+					return av + float64(bv)
+				}
+			}
+			return a
+		},
+		"mul": func(a, b interface{}) interface{} {
+			switch av := a.(type) {
+			case int:
+				if bv, ok := b.(int); ok {
+					return av * bv
+				}
+				if bv, ok := b.(float64); ok {
+					return float64(av) * bv
+				}
+			case float64:
+				if bv, ok := b.(float64); ok {
+					return av * bv
+				}
+				if bv, ok := b.(int); ok {
+					return av * float64(bv)
+				}
+			}
+			return a
+		},
+		"div": func(a, b interface{}) interface{} {
+			switch av := a.(type) {
+			case int:
+				if bv, ok := b.(int); ok {
+					if bv == 0 {
+						return 0
+					}
+					return av / bv
+				}
+				if bv, ok := b.(float64); ok {
+					if bv == 0 {
+						return 0.0
+					}
+					return float64(av) / bv
+				}
+			case float64:
+				if bv, ok := b.(float64); ok {
+					if bv == 0 {
+						return 0.0
+					}
+					return av / bv
+				}
+				if bv, ok := b.(int); ok {
+					if bv == 0 {
+						return 0.0
+					}
+					return av / float64(bv)
+				}
+			}
+			return a
+		},
+		"sub": func(a, b interface{}) interface{} {
+			switch av := a.(type) {
+			case int:
+				if bv, ok := b.(int); ok {
+					return av - bv
+				}
+				if bv, ok := b.(float64); ok {
+					return float64(av) - bv
+				}
+			case float64:
+				if bv, ok := b.(float64); ok {
+					return av - bv
+				}
+				if bv, ok := b.(int); ok {
+					return av - float64(bv)
+				}
+			}
+			return a
+		},
+		"cos": func(angle float64) float64 {
+			return math.Cos(angle)
+		},
+		"sin": func(angle float64) float64 {
+			return math.Sin(angle)
+		},
+		"replace": func(s, old, new string) string {
+			return strings.ReplaceAll(s, old, new)
+		},
+		"contains": func(s, substr string) bool {
+			return strings.Contains(s, substr)
+		},
+		"string": func(v interface{}) string {
+			switch val := v.(type) {
+			case models.DeviceType:
+				return string(val)
+			case models.DeviceStatus:
+				return string(val)
+			case string:
+				return val
+			default:
+				return fmt.Sprintf("%v", val)
+			}
+		},
+	}
+}

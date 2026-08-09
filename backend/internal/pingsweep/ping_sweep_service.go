@@ -79,6 +79,9 @@ func (s *PingSweepService) tryNativeScanner(network string) ([]models.Device, er
 	log.Printf("Trying native Go scanner on network: %s", network)
 
 	nativeScanner := scanner.NewNativeScanner()
+	if s.Config != nil && s.Config.VendorLookupEnabled {
+		nativeScanner.EnableOnlineVendorLookup()
+	}
 	devices, err := nativeScanner.ScanNetwork(network)
 	if err != nil {
 		return nil, err

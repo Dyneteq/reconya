@@ -212,7 +212,7 @@ func main() {
 	dbManager := db.NewDBManager()
 
 	ouiDataPath := filepath.Join(filepath.Dir(cfg.SQLitePath), "oui")
-	ouiService := oui.NewOUIService(ouiDataPath)
+	ouiService := oui.NewOUIService(ouiDataPath, cfg.OUIDownloadEnabled)
 	infoLogger.Println("Initializing OUI service...")
 	if err := ouiService.Initialize(); err != nil {
 		infoLogger.Printf("Warning: Failed to initialize OUI service: %v", err)

@@ -15,16 +15,21 @@ import (
 
 // OUIService handles MAC address to vendor lookup using IEEE OUI database
 type OUIService struct {
-	ouiMap   map[string]string
-	mutex    sync.RWMutex
-	dataPath string
+	ouiMap          map[string]string
+	mutex           sync.RWMutex
+	dataPath        string
+	downloadEnabled bool
 }
 
-// NewOUIService creates a new OUI service instance
-func NewOUIService(dataPath string) *OUIService {
+// NewOUIService creates a new OUI service instance. downloadEnabled controls
+// whether Initialize is allowed to fetch standards-oui.ieee.org over plain
+// HTTP; when false, Initialize only loads whatever oui.txt already exists on
+// disk (there is none on a fresh install, so vendor lookup is simply limited).
+func NewOUIService(dataPath string, downloadEnabled bool) *OUIService {
 	return &OUIService{
-		ouiMap:   make(map[string]string),
-		dataPath: dataPath,
+		ouiMap:          make(map[string]string),
+		dataPath:        dataPath,
+		downloadEnabled: downloadEnabled,
 	}
 }
 
@@ -36,9 +41,11 @@ func (s *OUIService) Initialize() error {
 	}
 
 	ouiFile := filepath.Join(s.dataPath, "oui.txt")
-	
+
 	// Check if we need to download/update the OUI database
-	if s.shouldUpdateOUI(ouiFile) {
+	if !s.downloadEnabled {
+		log.Println("OUI database download disabled (OUI_DOWNLOAD_ENABLED=false) - using existing file if present")
+	} else if s.shouldUpdateOUI(ouiFile) {
 		log.Println("Downloading IEEE OUI database...")
 		if err := s.downloadOUIDatabase(ouiFile); err != nil {
 			log.Printf("Failed to download OUI database: %v", err)

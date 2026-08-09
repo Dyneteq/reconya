@@ -82,8 +82,13 @@
         <div id="main-content" class="flex-1 transition-all duration-300">
             <!-- Content Area -->
             <main id="content">
-                {{if ne .Page "dashboard"}}
-                <!-- Fixed nav button for non-dashboard pages -->
+                {{if or (eq .Page "devices") (eq .Page "networks") (eq .Page "alerts") (eq .Page "logs") (eq .Page "settings")}}
+                <!-- Fixed nav button for pages with no HUD stack of their own.
+                     Dashboard and about render their own nav inside the HUD
+                     stack below, so this condition has to stay the exact
+                     complement of the final else-branch in the page switch
+                     further down. It used to be "Page is not dashboard",
+                     which also matched "about" and rendered both navs. -->
                 <div id="global-nav-menu" style="position:fixed;top:89px;left:16px;z-index:25;">
                     <div style="position:relative;">
                         <div id="nav-menu-btn" onclick="toggleNavMenu(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">

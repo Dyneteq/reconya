@@ -42,7 +42,6 @@ func GetTestConfig() *config.Config {
 		DatabaseType: config.SQLite,
 		SQLitePath:   ":memory:",
 		DatabaseName: "reconya_test",
-		JwtKey:       []byte("test_jwt_secret_key_for_testing_only"),
 		Username:     "test_admin",
 		Password:     "test_password",
 	}

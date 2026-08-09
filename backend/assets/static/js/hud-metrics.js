@@ -22,7 +22,9 @@ function updateDashboardMetrics(data) {
 
     // Update public IP with location as tooltip if available
     if (publicIpEl) {
-        publicIpEl.textContent = data.publicIP || 'N/A';
+        // Empty when public IP lookup is disabled (the default) — match the
+        // template's own placeholder rather than showing a bare "N/A".
+        publicIpEl.textContent = data.publicIP || '—';
         if (data.location) {
             publicIpEl.setAttribute('title', data.location);
             publicIpEl.style.cursor = 'help';

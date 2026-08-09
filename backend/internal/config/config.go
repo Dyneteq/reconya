@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -15,13 +16,31 @@ const (
 )
 
 type Config struct {
-	JwtKey       []byte
 	Port         string
 	DatabaseType DatabaseType
 	SQLitePath   string
 	Username     string
 	Password     string
 	DatabaseName string
+
+	// Every one of these defaults to false. reconYa's positioning is that
+	// scan data never leaves the network it runs on; each of these flags
+	// enables one outbound call to a third party and has to be turned on
+	// explicitly rather than shipping on by default.
+	PublicIPLookupEnabled bool // nic_identifier_service.go -> api.ipify.org
+	GeolocationEnabled    bool // system_status_service.go  -> ip-api.com (plain HTTP)
+	VendorLookupEnabled   bool // native_scanner.go         -> api.macvendors.com, per discovered MAC
+	OUIDownloadEnabled    bool // oui_service.go             -> standards-oui.ieee.org (plain HTTP)
+}
+
+// envBool reads a boolean env var, defaulting to false so that an unset,
+// empty, or unparsable value never silently enables an outbound call.
+func envBool(name string) bool {
+	val, err := strconv.ParseBool(os.Getenv(name))
+	if err != nil {
+		return false
+	}
+	return val
 }
 
 func LoadConfig() (*Config, error) {
@@ -38,11 +57,6 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("LOGIN_USERNAME or LOGIN_PASSWORD environment variables are not set")
 	}
 
-	jwtSecret := os.Getenv("JWT_SECRET_KEY")
-	if jwtSecret == "" {
-		return nil, fmt.Errorf("JWT_SECRET_KEY environment variable is not set")
-	}
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3008"
@@ -51,12 +65,16 @@ func LoadConfig() (*Config, error) {
 	dbType := string(SQLite)
 
 	config := &Config{
-		JwtKey:       []byte(jwtSecret),
 		Port:         port,
 		DatabaseType: DatabaseType(dbType),
 		Username:     username,
 		Password:     password,
 		DatabaseName: databaseName,
+
+		PublicIPLookupEnabled: envBool("PUBLIC_IP_LOOKUP_ENABLED"),
+		GeolocationEnabled:    envBool("GEOLOCATION_ENABLED"),
+		VendorLookupEnabled:   envBool("VENDOR_LOOKUP_ONLINE_ENABLED"),
+		OUIDownloadEnabled:    envBool("OUI_DOWNLOAD_ENABLED"),
 	}
 
 	sqlitePath := os.Getenv("SQLITE_PATH")

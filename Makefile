@@ -156,7 +156,6 @@ install:
 			echo 'LOGIN_USERNAME=admin' > $(BACKEND_DIR)/.env; \
 			echo 'LOGIN_PASSWORD=password' >> $(BACKEND_DIR)/.env; \
 			echo 'DATABASE_NAME="reconya-dev"' >> $(BACKEND_DIR)/.env; \
-			echo "JWT_SECRET_KEY=\"$$(openssl rand -base64 32)\"" >> $(BACKEND_DIR)/.env; \
 			echo 'SQLITE_PATH="data/reconya-dev.db"' >> $(BACKEND_DIR)/.env; \
 		fi; \
 		echo "$(GREEN)[SUCCESS]$(NC) .env file created"; \

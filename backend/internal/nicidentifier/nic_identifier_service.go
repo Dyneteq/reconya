@@ -46,12 +46,16 @@ func (s *NicIdentifierService) Identify() {
 	// Check for new networks and suggest creation
 	s.CheckForNewNetworks()
 
-	publicIP, err := s.getPublicIp()
-	if err != nil {
-		log.Printf("Failed to get public IP: %v", err)
-		// Continue - still create SystemStatus with available info
-	} else {
-		log.Printf("Public IP Address found: [%v]", publicIP)
+	var publicIP string
+	var err error
+	if s.Config != nil && s.Config.PublicIPLookupEnabled {
+		publicIP, err = s.getPublicIp()
+		if err != nil {
+			log.Printf("Failed to get public IP: %v", err)
+			// Continue - still create SystemStatus with available info
+		} else {
+			log.Printf("Public IP Address found: [%v]", publicIP)
+		}
 	}
 
 	// Try to find an existing network for the primary NIC for system status
@@ -122,7 +126,7 @@ func (s *NicIdentifierService) Identify() {
 	}
 
 	// Fetch geolocation for public IP
-	if publicIP != "" {
+	if publicIP != "" && s.Config != nil && s.Config.GeolocationEnabled {
 		geo, err := s.SystemStatusService.FetchGeolocation(publicIP)
 		if err == nil && geo != nil {
 			systemStatus.Geolocation = geo

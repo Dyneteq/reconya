@@ -89,6 +89,22 @@ make help        # Show all commands
 Then open your browser to: `http://localhost:3008`
 Default login: `admin` / `password`
 
+### Optional build tags
+
+**`chromedp`** — links in an in-process Chrome DevTools Protocol driver for
+web-service screenshots:
+
+```bash
+cd backend && go build -tags chromedp ./cmd
+```
+
+It is **off by default** because it costs 71 of 293 packages (24% of the
+dependency graph) and ~2MB of the 11.5MB release binary, for a feature that
+already works without it. With the tag off, screenshots fall back to whichever
+of `chrome`/`chromium`, `firefox`, `wkhtmltoimage`, or `webkit2png` is
+installed on the host — and chromedp itself also needed a browser on the host,
+so the practical requirement is unchanged.
+
 ### Manual Installation
 
 If you prefer to install manually:
@@ -172,7 +188,6 @@ Edit the `backend/.env` file to customize:
 LOGIN_USERNAME=admin
 LOGIN_PASSWORD=your_secure_password
 DATABASE_NAME="reconya-dev"
-JWT_SECRET_KEY="your_jwt_secret"
 SQLITE_PATH="data/reconya-dev.db"
 
 # IPv6 Monitoring Configuration
@@ -181,7 +196,40 @@ IPV6_MONITOR_INTERFACES=
 IPV6_MONITOR_INTERVAL=30
 IPV6_LINK_LOCAL_MONITORING=true
 IPV6_MULTICAST_MONITORING=false
+
+# Outbound lookups (see "Network Isolation" below) — all default to false
+PUBLIC_IP_LOOKUP_ENABLED=false
+GEOLOCATION_ENABLED=false
+VENDOR_LOOKUP_ONLINE_ENABLED=false
+OUI_DOWNLOAD_ENABLED=false
 ```
+
+## Network Isolation
+
+reconYa's backend makes **zero outbound network connections by default**.
+Scanning, device tracking, and the HUD all work entirely from data reconYa
+gathers on the local network itself.
+
+Four features call out to a third party, and every one of them is opt-in
+(set the corresponding env var to `true` to enable):
+
+| Env var | Calls | Purpose |
+|---|---|---|
+| `PUBLIC_IP_LOOKUP_ENABLED` | `api.ipify.org` (HTTPS) | Shows your public IP in the HUD |
+| `GEOLOCATION_ENABLED` | `ip-api.com` (plain HTTP) | Resolves that public IP to a city/country |
+| `VENDOR_LOOKUP_ONLINE_ENABLED` | `api.macvendors.com` (HTTPS) | Looks up a device's manufacturer when its MAC isn't in the built-in OUI table — sent per discovered device |
+| `OUI_DOWNLOAD_ENABLED` | `standards-oui.ieee.org` (plain HTTP) | Refreshes the local MAC-vendor table monthly |
+
+With all four left at their default (`false`), the Public IP HUD tile shows
+`—` instead of erroring, and vendor lookups are limited to the OUI table
+already bundled with reconYa.
+
+One caveat worth being upfront about: the **web UI itself** loads Tailwind,
+htmx, Tabler Icons, and Google Fonts from public CDNs in the browser
+(`cdn.tailwindcss.com`, `unpkg.com`, `fonts.googleapis.com`). That's a
+browser-side asset load, not a call the reconYa backend makes with your scan
+data — but it does mean the UI does not currently work fully offline/air-gapped.
+Vendoring those assets is tracked as future work.
 
 ## Architecture
 
