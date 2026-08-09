@@ -19,7 +19,6 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	r.HandleFunc("/alerts", h.ServePage("alerts")).Methods("GET")
 	r.HandleFunc("/settings", h.ServePage("settings")).Methods("GET")
 	r.HandleFunc("/about", h.ServePage("about")).Methods("GET")
-	r.HandleFunc("/targets", h.ServePage("targets")).Methods("GET")
 
 	// Authentication
 	r.HandleFunc("/login", h.Login).Methods("GET", "POST")
@@ -33,15 +32,12 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 	api.HandleFunc("/devices/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}", h.APIDeleteDevice).Methods("DELETE")
 	api.HandleFunc("/devices/{id:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}/rescan", h.APIRescanDevice).Methods("POST")
 	api.HandleFunc("/devices/new-scan", h.APINewScan).Methods("GET")
-	api.HandleFunc("/test-ipv6", h.APITestIPv6).Methods("POST")
-	api.HandleFunc("/targets", h.APITargets).Methods("GET")
 	api.HandleFunc("/system-status", h.APISystemStatus).Methods("GET")
 	api.HandleFunc("/ping-internet", h.APIPingInternet).Methods("GET")
 	api.HandleFunc("/dashboard-metrics", h.APIDashboardMetrics).Methods("GET")
 	api.HandleFunc("/event-logs", h.APIEventLogs).Methods("GET")
 	api.HandleFunc("/event-logs-table", h.APIEventLogsTable).Methods("GET")
 	api.HandleFunc("/network-map", h.APINetworkMap).Methods("GET")
-	api.HandleFunc("/traffic-core", h.APITrafficCore).Methods("GET")
 	api.HandleFunc("/device-list", h.APIDeviceList).Methods("GET")
 	api.HandleFunc("/devices/cleanup-names", h.APICleanupDeviceNames).Methods("POST")
 	api.HandleFunc("/devices/cleanup-network-broadcast", h.APICleanupNetworkBroadcastDevices).Methods("POST")
@@ -69,8 +65,6 @@ func (h *WebHandler) SetupRoutes() *mux.Router {
 
 	// Network detection endpoints
 	api.HandleFunc("/detected-networks", h.APIDetectedNetworks).Methods("GET")
-	api.HandleFunc("/detected-networks-debug", h.APIDetectedNetworksDebug).Methods("GET")
-	api.HandleFunc("/networks-debug", h.APINetworksDebug).Methods("GET")
 	api.HandleFunc("/network-suggestion", h.APINetworkSuggestion).Methods("POST")
 
 	// Static file serving from embedded filesystem

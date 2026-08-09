@@ -7,18 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Core functionality -->
-    <script src="/static/js/sidebar.js"></script>
     <script src="/static/js/modal.js"></script>
-    
+
     <!-- Feature modules -->
     <script src="/static/js/devices.js"></script>
-    <script src="/static/js/network-map.js"></script>
     <script src="/static/js/network-list.js"></script>
     <script src="/static/js/network-suggestions.js"></script>
     <script src="/static/js/scan-control.js"></script>
     <script src="/static/js/settings.js"></script>
-    <script src="/static/js/dashboard.js"></script>
-    
+    <script src="/static/js/hud-metrics.js"></script>
+
     <script src="/static/js/network-viz.js"></script>
     <!-- Main initialization (load last) -->
     <script src="/static/js/main.js"></script>
@@ -347,11 +345,6 @@
                     <div class="hud-panel" style="position:fixed;top:89px;right:16px;z-index:20;width:260px;">
                         <div id="scan-control-container"></div>
                     </div>
-
-                    <!-- Hidden stubs for JS that checks these containers -->
-                    <div id="activity-log"        style="display:none;"></div>
-                    <div id="network-map-content" style="display:none;"></div>
-                    <div id="devices-container"   style="display:none;"></div>
                 {{end}}
             </main>
         </div>
@@ -973,35 +966,16 @@
                 if (typeof loadScanControl === 'function') {
                     loadScanControl();
                 }
-                if (typeof loadRecentActivity === 'function') {
-                    loadRecentActivity();
-                }
                 if (typeof loadDashboardMetrics === 'function') {
                     loadDashboardMetrics();
                 }
-                if (typeof startNetworkMapUpdates === 'function') {
-                    startNetworkMapUpdates();
-                }
-                if (typeof loadDevices === 'function') {
-                    loadDevices();
-                }
-                
+
                 // Set up periodic updates for dashboard
                 setInterval(() => {
                     if (typeof loadDashboardMetrics === 'function') {
                         loadDashboardMetrics();
                     }
                 }, 15000);
-                setInterval(() => {
-                    if (typeof loadRecentActivity === 'function') {
-                        loadRecentActivity();
-                    }
-                }, 30000);
-                setInterval(() => {
-                    if (typeof loadDevices === 'function') {
-                        loadDevices(false); // false = no spinner on refresh
-                    }
-                }, 10000);
             }
         }
         

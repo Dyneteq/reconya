@@ -1,235 +1,4 @@
 // Device functionality
-function loadDevices(showSpinner = true) {
-    console.log('loadDevices called with showSpinner:', showSpinner);
-    const devicesContainer = document.getElementById('devices-container');
-    if (!devicesContainer) {
-        console.log('devices-container not found');
-        return;
-    }
-    
-    if (showSpinner) {
-        devicesContainer.innerHTML = `
-            <div class="flex justify-center items-center h-25">
-                <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent">
-                    <span class="sr-only">Loading devices...</span>
-                </div>
-            </div>
-        `;
-    }
-    
-    console.log('Making fetch request to /api/devices');
-    fetch('/api/devices', { credentials: 'include' })
-        .then(response => {
-            console.log('Response status:', response.status);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Devices data received:', data);
-            renderDeviceGrid(data.devices || []);
-        })
-        .catch(error => {
-            console.error('Error loading devices:', error);
-            devicesContainer.innerHTML = '<div class="text-red-500 text-center py-4">Failed to load devices</div>';
-        });
-}
-
-function showNoNetworkSelected() {
-    const devicesContainer = document.getElementById('devices-container');
-    if (!devicesContainer) return;
-    
-    devicesContainer.innerHTML = `
-        <div class="text-center py-8 text-gray-400">
-            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
-            </svg>
-            <p class="text-sm">Select a network to view devices</p>
-        </div>
-    `;
-}
-
-function renderDeviceGrid(devices) {
-    console.log('renderDeviceGrid called with devices:', devices);
-    const devicesContainer = document.getElementById('devices-container');
-    if (!devicesContainer) {
-        console.log('devices-container not found in renderDeviceGrid');
-        return;
-    }
-
-    // Debug: log first device to see all fields
-    if (devices && devices.length > 0) {
-        console.log('Sample device data (first device):', JSON.stringify(devices[0], null, 2));
-    }
-
-    console.log('Devices length:', devices ? devices.length : 'null/undefined');
-    if (!devices || devices.length === 0) {
-        console.log('No devices found, showing empty message');
-        devicesContainer.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-                <i class="ti ti-router text-4xl mb-2 block"></i>
-                <p>No devices found</p>
-                <p class="text-sm text-gray-500">Start a network scan to discover devices</p>
-            </div>
-        `;
-        return;
-    }
-
-    // Filter devices:
-    // 1. Must have been seen online at least once
-    // 2. If offline, must have been seen within the last hour
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-    const onlineDevices = devices.filter(device => {
-        // Try different field name variations
-        const lastSeenOnline = device.LastSeenOnlineAt || device.last_seen_online_at;
-
-        // Must have been seen online at least once
-        if (!lastSeenOnline && device.status !== 'online') {
-            return false;
-        }
-
-        // If device is offline, check if it was seen within last hour
-        if (device.status === 'offline') {
-            if (!lastSeenOnline) {
-                return false; // No last seen timestamp, hide it
-            }
-            const lastSeen = new Date(lastSeenOnline);
-            if (lastSeen < oneHourAgo) {
-                console.log(`Hiding offline device ${device.ipv4}, last seen ${lastSeen.toLocaleString()}`);
-                return false; // Offline for more than 1 hour, hide it
-            }
-        }
-
-        return true;
-    });
-
-    console.log('Filtered to', onlineDevices.length, 'devices that have been online (from', devices.length, 'total)');
-
-    if (onlineDevices.length === 0) {
-        console.log('No online devices found, showing empty message');
-        devicesContainer.innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-                <i class="ti ti-router text-4xl mb-2 block"></i>
-                <p>No devices have been seen online</p>
-                <p class="text-sm text-gray-500">Start a network scan to discover devices</p>
-            </div>
-        `;
-        return;
-    }
-
-    console.log('Rendering', onlineDevices.length, 'online devices');
-
-    let gridHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">';
-
-    onlineDevices.forEach(device => {
-        // Count ports
-        let openPorts = 0;
-        let filteredPorts = 0;
-        if (device.ports && Array.isArray(device.ports)) {
-            device.ports.forEach(port => {
-                if (port.state === 'open') openPorts++;
-                else if (port.state === 'filtered') filteredPorts++;
-            });
-        }
-
-        // Check if device is currently being port scanned
-        const portScanStarted = device.port_scan_started_at || device.PortScanStartedAt;
-        const portScanEnded = device.port_scan_ended_at || device.PortScanEndedAt;
-        const isPortScanning = portScanStarted && !portScanEnded;
-
-        // Device icon based on type or OS
-        const deviceIcon = getDeviceIcon(device);
-
-        // Status
-        const isOnline = device.status === 'online';
-        const statusColor = isOnline ? '#10b981' : (device.status === 'idle' ? '#eab308' : '#6b7280');
-        const statusLabel = device.status || 'unknown';
-
-        // Vendor / hostname / name
-        const vendor = device.vendor || '';
-        const hostname = device.hostname || device.name || '';
-        const mac = device.mac || '';
-
-        // Last seen
-        const lastSeen = device.last_seen_online_at || device.LastSeenOnlineAt;
-        const lastSeenText = lastSeen ? getTimeAgo(lastSeen) : '';
-
-        // Port summary parts
-        const portParts = [];
-        if (openPorts > 0) portParts.push(`<span class="text-red-400">${openPorts} open</span>`);
-        if (filteredPorts > 0) portParts.push(`<span class="text-yellow-500">${filteredPorts} filtered</span>`);
-
-        gridHTML += `
-            <div class="rounded-lg cursor-pointer transition-all duration-150 flex flex-col overflow-hidden"
-                 style="background: var(--bg-secondary); border: 1px solid transparent;"
-                 onmouseover="this.style.background='var(--bg-tertiary)'; this.style.borderColor='rgba(16,185,129,0.3)'"
-                 onmouseout="this.style.background='var(--bg-secondary)'; this.style.borderColor='transparent'"
-                 onclick="loadDeviceModal('${device.id}')">
-
-                <div class="px-4 pt-3 pb-2">
-                    <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <span class="text-gray-400 text-lg flex-shrink-0" title="${statusLabel}">${deviceIcon}</span>
-                            <span class="font-mono font-semibold text-white text-sm truncate">${device.ipv4}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                            ${isPortScanning ? '<i class="ti ti-scan text-blue-400 text-sm animate-pulse" title="Port scanning..."></i>' : ''}
-                            <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${statusColor}" title="${statusLabel}"></span>
-                        </div>
-                    </div>
-                    ${hostname ? `<div class="text-xs text-gray-400 truncate mb-0.5" title="${hostname}">${hostname}</div>` : ''}
-                    ${vendor ? `<div class="text-xs text-gray-500 truncate" title="${vendor}">${vendor}</div>` : ''}
-                </div>
-
-                <div class="mt-auto px-4 pb-3 pt-1" style="border-top: 1px solid rgba(75,85,99,0.3);">
-                    <div class="flex items-center justify-between">
-                        <div class="text-xs">
-                            ${portParts.length > 0 ? portParts.join('<span class="text-gray-600 mx-1">&middot;</span>') : (mac ? `<span class="text-gray-600">${mac}</span>` : '<span class="text-gray-600">No ports scanned</span>')}
-                        </div>
-                        ${lastSeenText ? `<span class="text-xs text-gray-600 whitespace-nowrap ml-2">${lastSeenText}</span>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    gridHTML += '</div>';
-    devicesContainer.innerHTML = gridHTML;
-}
-
-function getDeviceIcon(device) {
-    // By device type
-    const dt = (device.device_type || device.DeviceType || '').toLowerCase();
-    if (dt === 'router') return '<i class="ti ti-router"></i>';
-    if (dt === 'switch') return '<i class="ti ti-network"></i>';
-    if (dt === 'access_point') return '<i class="ti ti-access-point"></i>';
-    if (dt === 'printer') return '<i class="ti ti-printer"></i>';
-    if (dt === 'camera') return '<i class="ti ti-camera"></i>';
-    if (dt === 'nas' || dt === 'server') return '<i class="ti ti-server"></i>';
-    if (dt === 'firewall') return '<i class="ti ti-shield"></i>';
-    if (dt === 'mobile') return '<i class="ti ti-device-mobile"></i>';
-    if (dt === 'laptop') return '<i class="ti ti-device-laptop"></i>';
-    if (dt === 'workstation') return '<i class="ti ti-device-desktop"></i>';
-    if (dt === 'iot') return '<i class="ti ti-cpu"></i>';
-
-    // By OS
-    const os = device.os || device.OS;
-    if (os && os.name) {
-        const osName = os.name.toLowerCase();
-        if (osName.includes('windows')) return '<i class="ti ti-brand-windows"></i>';
-        if (osName.includes('linux') || osName.includes('ubuntu') || osName.includes('debian')) return '<i class="ti ti-brand-ubuntu"></i>';
-        if (osName.includes('macos') || osName.includes('mac os') || osName.includes('apple')) return '<i class="ti ti-brand-apple"></i>';
-        if (osName.includes('android')) return '<i class="ti ti-brand-android"></i>';
-        if (osName.includes('ios')) return '<i class="ti ti-device-mobile"></i>';
-    }
-
-    // Fallback
-    return '<i class="ti ti-device-desktop-analytics"></i>';
-}
-
 function loadDeviceModal(deviceId) {
     fetch(`/api/devices/${deviceId}/modal`, { credentials: 'include' })
         .then(response => response.json())
@@ -519,9 +288,7 @@ function renderDeviceTable(devices, networkMap) {
 }
 
 // Make functions available globally
-window.loadDevices = loadDevices;
 window.loadDeviceList = loadDeviceList;
-window.renderDeviceGrid = renderDeviceGrid;
 window.renderDeviceTable = renderDeviceTable;
 window.loadDeviceModal = loadDeviceModal;
 window.renderDeviceModal = renderDeviceModal;
@@ -542,19 +309,18 @@ function showNodeDropdown(deviceId, clientX, clientY) {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var d = data.device;
-            var light  = document.documentElement.getAttribute('data-theme') === 'light';
-            var green  = light ? '#059669'  : '#10b981';
-            var muted  = light ? '#9ca3af'  : '#6b7280';
-            var dim    = light ? '#374151'  : '#9ca3af';
-            var bg     = light ? 'rgba(242,250,246,0.98)' : 'rgba(7,13,23,0.97)';
-            var border = light ? 'rgba(5,150,105,0.45)'   : 'rgba(16,185,129,0.30)';
-            var body   = light ? '#111827'  : '#d1fae5';
-            var red    = light ? '#dc2626'  : '#ef4444';
-            var inputBg = light ? '#fff'    : 'rgba(255,255,255,0.05)';
+            var green  = '#10b981';
+            var muted  = '#6b7280';
+            var dim    = '#9ca3af';
+            var bg     = 'rgba(7,13,23,0.97)';
+            var border = 'rgba(16,185,129,0.30)';
+            var body   = '#d1fae5';
+            var red    = '#ef4444';
+            var inputBg = 'rgba(255,255,255,0.05)';
 
             var openPorts = (d.ports || []).filter(function(p) { return p.state === 'open'; }).length;
             var statusColor = d.status === 'online' ? green
-                            : d.status === 'idle'   ? (light ? '#d97706' : '#eab308')
+                            : d.status === 'idle'   ? '#eab308'
                             : muted;
 
             function ago(ts) {

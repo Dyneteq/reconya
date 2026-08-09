@@ -870,36 +870,6 @@ func (h *WebHandler) APIDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// Test endpoint to add IPv6 data to a device (for debugging)
-func (h *WebHandler) APITestIPv6(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	deviceID := r.FormValue("device_id")
-	if deviceID == "" {
-		http.Error(w, "device_id is required", http.StatusBadRequest)
-		return
-	}
-
-	// Add test IPv6 data to the device
-	ipv6Addresses := map[string]string{
-		"link_local":    "fe80::1234:5678:90ab:cdef",
-		"unique_local":  "fd00::1234:5678:90ab:cdef",
-		"global":        "2001:db8::1234:5678:90ab:cdef",
-	}
-
-	err := h.deviceService.UpdateDeviceIPv6Addresses(deviceID, ipv6Addresses)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to update device IPv6: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("IPv6 addresses added successfully"))
-}
-
 func (h *WebHandler) APISystemStatus(w http.ResponseWriter, r *http.Request) {
 	log.Println("APISystemStatus called")
 	session, _ := h.sessionStore.Get(r, "reconya-session")
@@ -1242,60 +1212,6 @@ func (h *WebHandler) parseNetworkCIDR(cidr string) (string, []int) {
 	}
 
 	return baseIP, ipRange
-}
-
-func (h *WebHandler) APITargets(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Same as APIDevices - targets are devices
-	devices, err := h.deviceService.FindAll()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Get user's screenshot setting
-	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
-
-	viewMode := r.URL.Query().Get("view")
-	data := struct {
-		Devices            []*models.Device `json:"devices"`
-		ViewMode           string           `json:"viewMode"`
-		ScreenshotsEnabled bool             `json:"screenshotsEnabled"`
-	}{
-		Devices:            devices,
-		ViewMode:           viewMode,
-		ScreenshotsEnabled: screenshotsEnabled,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func (h *WebHandler) APITrafficCore(w http.ResponseWriter, r *http.Request) {
-	devices, err := h.deviceService.FindAll()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data := struct {
-		Devices []*models.Device `json:"devices"`
-	}{
-		Devices: devices,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 }
 
 func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
@@ -2451,40 +2367,6 @@ func (h *WebHandler) APINetworkSuggestion(w http.ResponseWriter, r *http.Request
 		"network": network,
 		"message": fmt.Sprintf("Network %s created successfully", cidr),
 	})
-}
-
-// APIDetectedNetworksDebug returns detected networks without authentication (for testing)
-func (h *WebHandler) APIDetectedNetworksDebug(w http.ResponseWriter, r *http.Request) {
-	detectedNetworks := h.nicIdentifierService.GetDetectedNetworks()
-	
-	w.Header().Set("Content-Type", "application/json")
-	response := map[string]interface{}{
-		"detected_networks": detectedNetworks,
-		"count":            len(detectedNetworks),
-	}
-	
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode detected networks", http.StatusInternalServerError)
-	}
-}
-
-// APINetworksDebug returns all networks in database (for testing)
-func (h *WebHandler) APINetworksDebug(w http.ResponseWriter, r *http.Request) {
-	networks, err := h.networkService.FindAll()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to get networks: %v", err), http.StatusInternalServerError)
-		return
-	}
-	
-	w.Header().Set("Content-Type", "application/json")
-	response := map[string]interface{}{
-		"existing_networks": networks,
-		"count":            len(networks),
-	}
-	
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode networks", http.StatusInternalServerError)
-	}
 }
 
 func (h *WebHandler) getVersion() string {

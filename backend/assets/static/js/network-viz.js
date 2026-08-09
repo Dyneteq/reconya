@@ -27,67 +27,38 @@
     var C = {};
 
     function updateColors() {
-        var light = document.documentElement.getAttribute('data-theme') === 'light';
-        if (light) {
-            C.bg         = '#f2faf6';
-            C.green      = '#059669';
-            C.gridDot    = 'rgba(5,150,105,0.12)';
-            C.vigOuter   = 'rgba(180,210,195,0.40)';
-            C.orbitInner = 'rgba(5,150,105,0.20)';
-            C.orbitOuter = 'rgba(5,150,105,0.11)';
-            C.edgeActive = 'rgba(5,150,105,0.68)';
-            C.edgeInact  = 'rgba(100,116,139,0.38)';
-            C.packetBase = 'rgba(5,150,105,';
-            C.pulseBase  = 'rgba(5,150,105,';
-            C.glowInner  = 'rgba(5,150,105,0.35)';
-            C.glowMid    = 'rgba(5,150,105,0.10)';
-            C.hexOuter   = 'rgba(5,150,105,0.55)';
-            C.gwLabel    = 'rgba(5,150,105,0.70)';
-            C.nodeGlow   = 'rgba(5,150,105,0.18)';
-            C.ipOnline   = 'rgba(5,150,105,0.95)';
-            C.ipOffline  = 'rgba(100,116,139,0.75)';
-            C.bracket    = 'rgba(5,150,105,0.22)';
-            C.statTotal  = 'rgba(5,150,105,0.65)';
-            C.statOff    = 'rgba(100,116,139,0.80)';
-            C.emptyText  = 'rgba(100,116,139,0.50)';
-            C.warnRedFill = 'rgba(220,38,38,';
-            C.warnRedEdge = 'rgba(220,38,38,0.55)';
-            C.warnRedSolid = '#dc2626';
-        } else {
-            C.bg         = '#070d17';
-            C.green      = '#10b981';
-            C.gridDot    = 'rgba(16,185,129,0.09)';
-            C.vigOuter   = 'rgba(0,0,0,0.55)';
-            C.orbitInner = 'rgba(16,185,129,0.22)';
-            C.orbitOuter = 'rgba(16,185,129,0.13)';
-            C.edgeActive = 'rgba(16,185,129,0.75)';
-            C.edgeInact  = 'rgba(75,85,99,0.45)';
-            C.packetBase = 'rgba(110,231,183,';
-            C.pulseBase  = 'rgba(16,185,129,';
-            C.glowInner  = 'rgba(16,185,129,0.65)';
-            C.glowMid    = 'rgba(16,185,129,0.18)';
-            C.hexOuter   = 'rgba(16,185,129,0.65)';
-            C.gwLabel    = 'rgba(16,185,129,0.65)';
-            C.nodeGlow   = 'rgba(16,185,129,0.28)';
-            C.ipOnline   = 'rgba(16,185,129,0.95)';
-            C.ipOffline  = 'rgba(107,114,128,0.70)';
-            C.bracket    = 'rgba(16,185,129,0.22)';
-            C.statTotal  = 'rgba(16,185,129,0.55)';
-            C.statOff    = 'rgba(107,114,128,0.75)';
-            C.emptyText  = 'rgba(107,114,128,0.40)';
-            C.warnRedFill = 'rgba(239,68,68,';
-            C.warnRedEdge = 'rgba(239,68,68,0.60)';
-            C.warnRedSolid = '#ef4444';
-        }
+        C.bg         = '#070d17';
+        C.green      = '#10b981';
+        C.gridDot    = 'rgba(16,185,129,0.09)';
+        C.vigOuter   = 'rgba(0,0,0,0.55)';
+        C.orbitInner = 'rgba(16,185,129,0.22)';
+        C.orbitOuter = 'rgba(16,185,129,0.13)';
+        C.edgeActive = 'rgba(16,185,129,0.75)';
+        C.edgeInact  = 'rgba(75,85,99,0.45)';
+        C.packetBase = 'rgba(110,231,183,';
+        C.pulseBase  = 'rgba(16,185,129,';
+        C.glowInner  = 'rgba(16,185,129,0.65)';
+        C.glowMid    = 'rgba(16,185,129,0.18)';
+        C.hexOuter   = 'rgba(16,185,129,0.65)';
+        C.gwLabel    = 'rgba(16,185,129,0.65)';
+        C.nodeGlow   = 'rgba(16,185,129,0.28)';
+        C.ipOnline   = 'rgba(16,185,129,0.95)';
+        C.ipOffline  = 'rgba(107,114,128,0.70)';
+        C.bracket    = 'rgba(16,185,129,0.22)';
+        C.statTotal  = 'rgba(16,185,129,0.55)';
+        C.statOff    = 'rgba(107,114,128,0.75)';
+        C.emptyText  = 'rgba(107,114,128,0.40)';
+        C.warnRedFill = 'rgba(239,68,68,';
+        C.warnRedEdge = 'rgba(239,68,68,0.60)';
+        C.warnRedSolid = '#ef4444';
     }
 
     function sc(s) {
-        var light = document.documentElement.getAttribute('data-theme') === 'light';
         switch ((s || '').toLowerCase()) {
-            case 'online':  return light ? '#059669' : '#10b981';
-            case 'idle':    return light ? '#d97706' : '#eab308';
-            case 'offline': return light ? '#9ca3af' : '#374151';
-            default:        return light ? '#6b7280' : '#4b5563';
+            case 'online':  return '#10b981';
+            case 'idle':    return '#eab308';
+            case 'offline': return '#374151';
+            default:        return '#4b5563';
         }
     }
 
@@ -743,20 +714,19 @@
         if (!tip) return;
         if (i < 0) { tip.style.display = 'none'; return; }
 
-        var light = document.documentElement.getAttribute('data-theme') === 'light';
         var n = nodes[i];
         var pl = (mx + 14 + 190 > lw) ? mx - 200 : mx + 14;
         tip.style.cssText = 'display:block;position:absolute;pointer-events:none;' +
             'left:' + pl + 'px;top:' + (my - 12) + 'px;' +
-            'background:' + (light ? 'rgba(242,250,246,0.98)' : 'rgba(7,13,23,0.97)') + ';' +
-            'border:1px solid ' + (light ? 'rgba(5,150,105,0.35)' : 'rgba(16,185,129,0.30)') + ';' +
+            'background:rgba(7,13,23,0.97);' +
+            'border:1px solid rgba(16,185,129,0.30);' +
             'border-radius:4px;padding:8px 10px;z-index:100;max-width:190px;line-height:1.5;';
 
         tip.textContent = '';
 
-        var ipColor = light ? '#059669' : '#10b981';
-        var nameColor = light ? '#111827' : '#d1d5db';
-        var macColor  = light ? '#6b7280' : '#6b7280';
+        var ipColor = '#10b981';
+        var nameColor = '#d1d5db';
+        var macColor  = '#6b7280';
 
         tip.appendChild(makeEl('div', { font: 'bold 10px Orbitron,monospace', color: ipColor }, n.ip));
         if (n.label) tip.appendChild(makeEl('div', { font: "11px 'Roboto Condensed',sans-serif", color: nameColor, marginTop: '2px' }, n.label));
