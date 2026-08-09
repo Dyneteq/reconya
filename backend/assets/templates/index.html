@@ -50,7 +50,7 @@
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                         </svg>
-                        Welcome, human
+                        <span style="font-family:'Orbitron',monospace;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;">{{if and .User .User.Username}}{{.User.Username}}{{else}}Operator{{end}}</span>
                         <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
@@ -311,6 +311,11 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Offline device filter -->
+                        <div id="show-offline-btn" onclick="toggleShowOffline(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+                            <span class="hud-label" style="margin-bottom:0;">Show Offline</span>
+                            <span id="show-offline-state" style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:0.08em;color:#6b7280;">OFF</span>
+                        </div>
                         <!-- Nav menu button -->
                         <div style="position:relative;">
                             <div id="nav-menu-btn" onclick="toggleNavMenu(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">
@@ -503,6 +508,25 @@
             var open = d.style.display !== 'none';
             d.style.display = open ? 'none' : 'block';
             if (c) c.style.transform = open ? '' : 'rotate(180deg)';
+        }
+
+        // Offline devices are hidden from the topology by default. The choice
+        // is remembered per browser so it survives the dashboard's reloads.
+        var _showOffline = localStorage.getItem('reconya.showOffline') === 'true';
+        function renderShowOfflineState() {
+            var s = document.getElementById('show-offline-state');
+            if (!s) return;
+            s.textContent = _showOffline ? 'ON' : 'OFF';
+            s.style.color = _showOffline ? '#10b981' : '#6b7280';
+        }
+        function toggleShowOffline(e) {
+            if (e) e.stopPropagation();
+            _showOffline = !_showOffline;
+            localStorage.setItem('reconya.showOffline', _showOffline ? 'true' : 'false');
+            renderShowOfflineState();
+            if (typeof window.setNetworkVizShowOffline === 'function') {
+                window.setNetworkVizShowOffline(_showOffline);
+            }
         }
         document.addEventListener('click', function(e) {
             if (!e.target.closest('#nav-menu-btn') && !e.target.closest('#nav-menu-dropdown')) {
@@ -967,6 +991,12 @@
                 // Initialize main dashboard widgets
                 if (typeof initNetworkViz === 'function') {
                     initNetworkViz();
+                }
+                // Apply the remembered offline-visibility choice to both the
+                // HUD label and the canvas before the first poll lands.
+                renderShowOfflineState();
+                if (typeof window.setNetworkVizShowOffline === 'function') {
+                    window.setNetworkVizShowOffline(_showOffline);
                 }
                 if (typeof loadScanControl === 'function') {
                     loadScanControl();

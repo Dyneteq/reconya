@@ -12,6 +12,11 @@
     var MAX_NODES = 50;
     var ENTRY_MS  = 1200;
 
+    // Full device set for the active network, before the offline filter.
+    var allDevices = [];
+    var showOffline = false;
+    var hiddenOfflineCount = 0;
+
     // Zoom / pan
     var zoom = 1, panX = 0, panY = 0;
     var ZOOM_MIN = 0.4, ZOOM_MAX = 4;
@@ -153,8 +158,33 @@
     function fetchActivity() {
         fetch('/api/event-logs', { credentials: 'include' })
             .then(function (r) { return r.json(); })
-            .then(function (d) { activityEvents = (d.logs || []).slice(0, 8); })
+            .then(function (d) { activityEvents = collapseEvents(d.logs || []).slice(0, 8); })
             .catch(function () {});
+    }
+
+    // A scan writes one event per sweep plus one per device it sees, so the
+    // raw feed is long runs of the same event type. Collapse each consecutive
+    // run into a single row carrying its count; the run's newest timestamp
+    // wins, since that is what the "how fresh is this" column means.
+    function collapseEvents(logs) {
+        var out = [];
+        for (var i = 0; i < logs.length; i++) {
+            var ev   = logs[i];
+            var type = ev.Type || ev.type || '';
+            var prev = out[out.length - 1];
+
+            if (prev && prev.type === type) {
+                prev.count++;
+                continue;
+            }
+            out.push({
+                type: type,
+                count: 1,
+                description: ev.Description || ev.description || type,
+                createdAt: ev.CreatedAt || ev.created_at || ''
+            });
+        }
+        return out;
     }
 
     function timeAgo(ts) {
@@ -183,8 +213,11 @@
 
         for (var i = activityEvents.length - 1; i >= 0; i--) {
             var ev   = activityEvents[i];
-            var desc = ev.description || ev.Description || '';
-            var ts   = ev.created_at  || ev.CreatedAt   || '';
+            var ts   = ev.createdAt || '';
+            // A collapsed run is labelled by its type ("Ping sweep ×8"); a
+            // lone event keeps its full description, which carries detail the
+            // type name does not (durations, IPs).
+            var desc = ev.count > 1 ? (ev.type + ' ×' + ev.count) : (ev.description || '');
             if (desc.length > maxDesc) desc = desc.slice(0, maxDesc) + '…';
 
             var row = yBase - (activityEvents.length - 1 - i) * lineH;
@@ -215,9 +248,36 @@
                         return dev.network_id === activeNetworkId;
                     });
                 }
-                setDevices(devices);
+                allDevices = devices;
+                applyDeviceFilter();
             })
             .catch(function () {});
+    }
+
+    function isActiveStatus(status) {
+        return status === 'online' || status === 'idle';
+    }
+
+    // Offline devices are hidden by default: a subnet's worth of them renders
+    // as an undifferentiated fan of identical glyphs and buries the hosts that
+    // are actually up. The full list stays in allDevices so toggling back on
+    // costs nothing and does not wait for the next poll.
+    function applyDeviceFilter() {
+        hiddenOfflineCount = showOffline
+            ? 0
+            : allDevices.filter(function (d) { return !isActiveStatus(d.status); }).length;
+
+        var visible = showOffline
+            ? allDevices
+            : allDevices.filter(function (d) { return isActiveStatus(d.status); });
+
+        setDevices(visible);
+    }
+
+    // Called by the HUD toggle in index.html.
+    function setShowOffline(next) {
+        showOffline = !!next;
+        applyDeviceFilter();
     }
 
     function positionNodes() {
@@ -613,8 +673,9 @@
 
     function drawStats() {
         var on  = nodes.filter(function (n) { return n.status === 'online'; }).length;
-        var off = nodes.filter(function (n) { return n.status === 'offline'; }).length;
-        var tot = nodes.length;
+        var idle = nodes.filter(function (n) { return n.status === 'idle'; }).length;
+        var off = nodes.filter(function (n) { return n.status === 'offline'; }).length + hiddenOfflineCount;
+        var tot = nodes.length + hiddenOfflineCount;
 
         if (tot === 0) {
             ctx.fillStyle = C.emptyText;
@@ -624,13 +685,27 @@
             return;
         }
 
+        // Everything on this network is offline and therefore filtered out —
+        // say so, rather than showing an empty canvas that reads as "no data".
+        if (nodes.length === 0) {
+            ctx.fillStyle = C.emptyText;
+            ctx.font = '9px "Roboto Mono", monospace';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('NO DEVICES ONLINE — ' + hiddenOfflineCount + ' OFFLINE HIDDEN', lw / 2, lh - 32);
+        }
+
         // x/y positioned below the glass navbar (73px) and inside the bracket inset
         var x = 30, y = 90;
         ctx.font = '9px "Orbitron", monospace';
         ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         ctx.fillStyle = C.statTotal; ctx.fillText('TOTAL:   ' + tot, x, y);
         ctx.fillStyle = C.green;     ctx.fillText('ONLINE:  ' + on,  x, y + 15);
-        ctx.fillStyle = C.statOff;   ctx.fillText('OFFLINE: ' + off, x, y + 30);
+        if (idle > 0) {
+            ctx.fillStyle = '#eab308'; ctx.fillText('IDLE:    ' + idle, x, y + 30);
+            ctx.fillStyle = C.statOff; ctx.fillText('OFFLINE: ' + off + (showOffline ? '' : ' (hidden)'), x, y + 45);
+        } else {
+            ctx.fillStyle = C.statOff; ctx.fillText('OFFLINE: ' + off + (showOffline ? '' : ' (hidden)'), x, y + 30);
+        }
     }
 
     // Convert screen coords → world coords
@@ -756,5 +831,11 @@
     }
 
     window.initNetworkViz   = initNetworkViz;
-    window.updateNetworkViz = function (devices) { setDevices(devices); };
+    // Goes through applyDeviceFilter rather than setDevices directly, so an
+    // externally-pushed device list still honours the offline filter.
+    window.updateNetworkViz = function (devices) {
+        allDevices = devices || [];
+        applyDeviceFilter();
+    };
+    window.setNetworkVizShowOffline = setShowOffline;
 })();
