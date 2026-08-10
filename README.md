@@ -213,4 +213,3 @@ Creative Commons Attribution-NonCommercial 4.0 International. Commercial use req
 
 - **[tududi](https://tududi.com)** - self-hosted task management with hierarchical organization, multi-language support, and Telegram integration
 - **[BreachHarbor](https://breachharbor.com)** - cybersecurity suite for digital asset protection
-- **[Hevetra](https://hevetra.com)** - digital tracking for child health milestones
