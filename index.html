@@ -13,812 +13,835 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa - Network Reconnaissance Tool</title>
-    <meta name="description" content="A powerful network reconnaissance and asset discovery tool built with Go and HTMX">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Roboto+Condensed:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="description" content="Self-hosted network reconnaissance and asset discovery. reconYa sweeps your subnet, fingerprints what answers, and keeps a live map of it.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
     <style>
-        :root {
-            --primary-color: #0f7f00;
-            --primary-dark: #085e00;
-            --secondary-color: #222;
-            --text-color: #f8f9fc;
-            --background-color: #0a0a0a;
-            --card-bg: #151515;
-            --muted-text: #b0b0b0;
-        }
+        :root { --acc: #24d17a; }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+        html, body { margin: 0; padding: 0; background: #060806; }
         body {
-            font-family: 'Roboto Condensed', sans-serif;
-            font-size: 0.9rem;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            line-height: 1.6;
-            letter-spacing: 0.2px;
+            -webkit-font-smoothing: antialiased;
+            color: #d6ded8;
+            font-family: 'Barlow', sans-serif;
+            min-height: 100vh;
             overflow-x: hidden;
-            position: relative;
         }
-        h1, h2, h3, h4, h5, h6, .navbar-brand, .nav-link, .btn, .section-title {
-            font-family: 'Orbitron', sans-serif;
+        a { color: var(--acc); text-decoration: none; }
+        a:hover { color: #6ff0ac; }
+        ::selection { background: rgba(36,209,122,.28); }
+        *:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+        @keyframes recon-blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
+        details summary::-webkit-details-marker { display: none; }
+
+        /* ===== Nav ===== */
+        .nav {
+            position: sticky; top: 0; z-index: 20;
+            display: flex; align-items: center; justify-content: space-between; gap: 32px;
+            padding: 14px 40px;
+            background: rgba(6,8,6,.86);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(36,209,122,.14);
         }
-        .navbar {
-            background-color: rgba(0, 0, 0, 0.9) !important;
-            border-bottom: 1px solid rgba(15, 127, 0, 0.2);
+        .logo-mark {
+            display: block; width: 143px; height: 21px;
+            background: var(--acc);
+            -webkit-mask: url(assets/reconya-logo.png) left center / contain no-repeat;
+            mask: url(assets/reconya-logo.png) left center / contain no-repeat;
         }
-        .navbar-brand {
-            color: var(--primary-color) !important;
-            font-weight: 700;
-            letter-spacing: 2px;
+        .logo-mark:hover { background: #6ff0ac; }
+        .nav-links {
+            display: flex; align-items: center; gap: 28px;
+            font-family: 'Chakra Petch', sans-serif; font-size: 14px;
+            letter-spacing: .08em; text-transform: uppercase;
         }
-        .nav-link {
-            color: var(--text-color) !important;
-            font-weight: 500;
-            transition: color 0.3s ease;
-            letter-spacing: 1px;
+        .nlink { color: #9aa79e; }
+        .nlink:hover { color: #eef4ef; }
+        .btn-gh {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 16px;
+            background: var(--acc); color: #04140b;
+            font-weight: 700; letter-spacing: .06em;
         }
-        .nav-link:hover {
-            color: var(--primary-color) !important;
-        }
+        .btn-gh:hover { background: #4ee295; color: #04140b; }
+
+        /* ===== Hero ===== */
         .hero {
-            min-height: 100vh;
-            background-color: transparent;
-            color: white;
-            padding: 8rem 0;
             position: relative;
-            overflow: hidden;
-            z-index: 5;
+            padding: 96px 40px 88px;
+            border-bottom: 1px solid rgba(36,209,122,.14);
+            background-image:
+                radial-gradient(ellipse 900px 420px at 12% 0%, rgba(36,209,122,.09), transparent 70%),
+                linear-gradient(rgba(36,209,122,.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(36,209,122,.035) 1px, transparent 1px);
+            background-size: auto, 100% 44px, 44px 100%;
         }
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 700;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-bottom: 2rem;
-            text-shadow: 0 0 10px rgba(15, 127, 0, 0.5);
-        }
-        .hero p {
-            letter-spacing: 0.2px;
-            color: var(--muted-text);
-            font-size: 1.2rem;
-            font-weight: 400;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .feature-icon {
-            font-size: 2.5rem;
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-        }
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid rgba(15, 127, 0, 0.2);
-            border-radius: 8px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            margin-bottom: 2rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            font-weight: 300;
-            line-height: 1.6;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(15, 127, 0, 0.2);
-            border: 1px solid rgba(15, 127, 0, 0.5);
-        }
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            color: white;
-            font-weight: 600;
-            letter-spacing: 1px;
-            box-shadow: 0 0 10px rgba(15, 127, 0, 0.3);
-        }
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            border-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(15, 127, 0, 0.5);
-        }
-        .btn-outline-primary {
-            color: var(--primary-color);
-            border-color: var(--primary-color);
-            font-weight: 600;
-            letter-spacing: 1px;
-        }
-        .btn-outline-primary:hover {
-            background-color: var(--primary-color);
-            color: white;
-            box-shadow: 0 5px 15px rgba(15, 127, 0, 0.3);
-        }
-        .section {
-            padding: 5rem 0;
-            position: relative;
-        }
-        .section-title {
-            font-weight: 600;
-            letter-spacing: 2px;
-            margin-bottom: 3rem;
-            text-transform: uppercase;
-            color: var(--primary-color);
-            position: relative;
-        }
-        .section-title:after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 0;
-            width: 50px;
-            height: 3px;
-            background-color: var(--primary-color);
-        }
-        footer {
-            background-color: rgba(0, 0, 0, 0.95);
-            color: white;
-            padding: 3rem 0;
-            border-top: 1px solid rgba(15, 127, 0, 0.2);
-        }
-        .social-link {
-            font-size: 1.5rem;
-            margin-right: 1rem;
-            color: var(--muted-text);
-            transition: color 0.3s ease;
-        }
-        .social-link:hover {
-            color: var(--primary-color);
-        }
-        .screenshot {
-            border-radius: 8px;
-            box-shadow: 0 15px 30px rgba(15, 127, 0, 0.2);
-            max-width: 100%;
-            border: 1px solid rgba(15, 127, 0, 0.2);
-        }
-        .scroll-to-top {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            color: white;
-            display: flex;
-            justify-content: center;
+        .hero-inner {
+            max-width: 1280px; margin: 0 auto;
+            display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 56px;
             align-items: center;
-            text-decoration: none;
-            transition: background-color 0.3s, transform 0.3s;
-            z-index: 1000;
         }
-        .scroll-to-top:hover {
-            background-color: var(--primary-dark);
-            color: white;
-            transform: translateY(-5px);
+        .badge {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 6px 12px;
+            border: 1px solid rgba(36,209,122,.35);
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            letter-spacing: .14em; color: var(--acc); text-transform: uppercase;
         }
-        .code-block {
-            background-color: #1a1a1a;
-            border-radius: 5px;
-            padding: 1rem;
-            margin: 1rem 0;
-            overflow-x: auto;
-            font-family: monospace;
-            border-left: 3px solid var(--primary-color);
-        }
-        code {
-            color: var(--primary-color);
-        }
-        
-        /* Particle animation background */
-        #particles-js {
-            position: absolute;
-            width: 100%;
-            height: 100vh;
-            top: 0;
-            left: 0;
-            z-index: 0;
-            opacity: 1;
-            overflow: hidden;
-        }
-        
-        .hero-section {
-            position: relative;
-            overflow: hidden;
-            min-height: 100vh;
-            background-color: rgba(0, 0, 0, 0.6);
-        }
-        
-        .hero-particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-        .content-wrapper {
-            position: relative;
-            z-index: 2;
-        }
+        .badge-dot { width: 6px; height: 6px; background: var(--acc); border-radius: 50%; }
         .hero h1 {
-            text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+            margin: 22px 0 0;
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 68px; line-height: .96; font-weight: 700;
+            letter-spacing: -.01em; color: #f2f7f3; text-wrap: balance;
         }
-        
-        /* Dark Section */
-        .bg-darker {
-            background-color: #101010;
+        .hero-copy {
+            margin: 22px 0 0; max-width: 46ch;
+            font-size: 18px; line-height: 1.6; color: #9aa79e; text-wrap: pretty;
         }
-        
-        /* List items */
-        .tech-list li {
-            margin-bottom: 1rem;
-            transition: transform 0.3s;
+        .hero-ctas { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 34px; }
+        .btn-primary {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 24px;
+            background: var(--acc); color: #04140b;
+            font-family: 'Chakra Petch', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: .04em;
+            box-shadow: 0 0 0 1px rgba(36,209,122,.5), 0 0 34px rgba(36,209,122,.22);
         }
-        .tech-list li:hover {
-            transform: translateX(5px);
-            color: var(--primary-color);
+        .btn-primary:hover { background: #4ee295; color: #04140b; }
+        .btn-outline {
+            padding: 14px 24px;
+            border: 1px solid rgba(36,209,122,.4); color: #cfe0d5;
+            font-family: 'Chakra Petch', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: .04em;
         }
-        
-        /* Media Queries */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
-                letter-spacing: 2px;
-            }
-            .section-title {
-                font-size: 1.6rem;
-                letter-spacing: 1.5px;
-            }
-            h3, .h3, h4, .h4, h5, .h5 {
-                letter-spacing: 1px;
-            }
-            .hero-particles {
-                opacity: 0.9;
-            }
+        .btn-outline:hover { background: rgba(36,209,122,.1); color: #eef4ef; }
+        .btn-dashed {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 22px;
+            border: 1px dashed rgba(36,209,122,.4); color: #9aa79e;
+            font-family: 'Chakra Petch', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: .04em;
+        }
+        .btn-dashed:hover { border-color: rgba(36,209,122,.8); color: #eef4ef; }
+        .btn-dashed .price { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--acc); }
+        .hero-note {
+            margin: 16px 0 0;
+            font-family: 'JetBrains Mono', monospace; font-size: 12px;
+            letter-spacing: .04em; color: #6d7a71;
+        }
+        .hero-tags {
+            display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 30px;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            letter-spacing: .1em; color: #6d7a71; text-transform: uppercase;
+        }
+
+        /* ===== Hero terminal frame ===== */
+        .crt { position: relative; margin: 0; padding: 0 26px; }
+        .rail {
+            position: absolute; top: 34px; bottom: 34px; width: 14px;
+            background: linear-gradient(180deg, rgba(36,209,122,.5), rgba(36,209,122,.08) 40%, rgba(36,209,122,.08) 60%, rgba(36,209,122,.5));
+        }
+        .rail-l { left: 0; clip-path: polygon(0 8px, 100% 0, 100% 100%, 0 calc(100% - 8px)); }
+        .rail-r { right: 0; clip-path: polygon(0 0, 100% 8px, 100% calc(100% - 8px), 0 100%); }
+        .ticks { position: absolute; top: 50%; transform: translateY(-50%); display: grid; gap: 5px; }
+        .ticks-l { left: 3px; }
+        .ticks-r { right: 3px; }
+        .ticks span { display: block; width: 8px; height: 3px; background: rgba(36,209,122,.35); }
+        .ticks span.on { background: var(--acc); }
+        .crt-frame {
+            position: relative; padding: 2px;
+            background: linear-gradient(150deg, rgba(36,209,122,.75), rgba(36,209,122,.14) 35%, rgba(36,209,122,.1) 65%, rgba(36,209,122,.6));
+            clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+            box-shadow: 0 0 90px rgba(36,209,122,.16);
+        }
+        .crt-inner {
+            position: relative; background: #070a08;
+            clip-path: polygon(21px 0, 100% 0, 100% calc(100% - 21px), calc(100% - 21px) 100%, 0 100%, 0 21px);
+        }
+        .crt-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            padding: 11px 22px 11px 34px;
+            border-bottom: 1px solid rgba(36,209,122,.22);
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            letter-spacing: .12em; color: #6d7a71; text-transform: uppercase;
+        }
+        .crt-head .id { display: flex; align-items: center; gap: 10px; }
+        .crt-head .dots { display: flex; gap: 4px; }
+        .crt-head .dots span { display: block; width: 5px; height: 5px; background: rgba(36,209,122,.4); }
+        .crt-head .dots span.on { background: var(--acc); }
+        .crt-head .rule { flex: 1; height: 1px; background: repeating-linear-gradient(90deg, rgba(36,209,122,.4) 0 4px, transparent 4px 9px); }
+        .crt-head .live { display: flex; align-items: center; gap: 7px; color: var(--acc); }
+        .crt-head .live i { display: block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+        .crt-body { position: relative; padding: 14px; }
+        .crt-body video {
+            display: block; width: 100%; height: auto;
+            clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+        }
+        .scanlines {
+            position: absolute; inset: 14px; pointer-events: none;
+            background: repeating-linear-gradient(180deg, rgba(36,209,122,.055) 0 1px, transparent 1px 3px);
+            mix-blend-mode: screen;
+        }
+        .vignette {
+            position: absolute; inset: 14px; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
+        }
+        .corner { position: absolute; width: 16px; height: 16px; }
+        .corner-tl { top: 8px; left: 8px; border-top: 1px solid var(--acc); border-left: 1px solid var(--acc); }
+        .corner-tr { top: 8px; right: 8px; border-top: 1px solid var(--acc); border-right: 1px solid var(--acc); }
+        .corner-bl { bottom: 8px; left: 8px; border-bottom: 1px solid var(--acc); border-left: 1px solid var(--acc); }
+        .corner-br { bottom: 8px; right: 8px; border-bottom: 1px solid var(--acc); border-right: 1px solid var(--acc); }
+        .crt-foot {
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+            padding: 10px 22px 12px 34px;
+            border-top: 1px solid rgba(36,209,122,.22);
+            font-family: 'JetBrains Mono', monospace; font-size: 10px;
+            letter-spacing: .14em; color: #55625a; text-transform: uppercase;
+        }
+        .crt-foot .pwr { display: flex; align-items: center; gap: 6px; }
+        .crt-foot .bars { display: flex; gap: 3px; }
+        .crt-foot .bars span { display: block; width: 3px; height: 9px; background: var(--acc); }
+        .crt-foot .bars span.off { background: rgba(36,209,122,.25); }
+        .crt-glow {
+            position: absolute; left: 50%; bottom: -13px; transform: translateX(-50%);
+            width: 120px; height: 6px;
+            background: linear-gradient(90deg, transparent, rgba(36,209,122,.55), transparent);
+        }
+
+        /* ===== Sections ===== */
+        .section { padding: 92px 40px; border-bottom: 1px solid rgba(36,209,122,.14); }
+        .section.alt { background: #080a08; }
+        .wrap { max-width: 1280px; margin: 0 auto; }
+        .sec-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 12px; }
+        .sec-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .18em; color: var(--acc); }
+        .sec-head h2 {
+            margin: 0;
+            font-family: 'Chakra Petch', sans-serif; font-size: 40px; font-weight: 700;
+            letter-spacing: .01em; color: #f2f7f3; text-transform: uppercase;
+        }
+        .sec-sub { margin: 0 0 46px; max-width: 58ch; font-size: 17px; line-height: 1.6; color: #8d9a92; }
+
+        /* ===== Features ===== */
+        .feat-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+            background: rgba(36,209,122,.16); border: 1px solid rgba(36,209,122,.16);
+        }
+        .feat-card { position: relative; padding: 34px 30px 38px; background: #090c0a; }
+        .feat-card:hover { background: #0c110e; }
+        .feat-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+        .feat-top .icon { color: var(--acc); }
+        .feat-top .tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .12em; color: #55625a; }
+        .feat-card h3 { margin: 0 0 10px; font-family: 'Chakra Petch', sans-serif; font-size: 22px; font-weight: 600; color: #eef4ef; }
+        .feat-card p { margin: 0; font-size: 15px; line-height: 1.6; color: #8d9a92; text-wrap: pretty; }
+
+        /* ===== How it works ===== */
+        .steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+        .step { position: relative; padding: 32px 28px 34px; border: 1px solid rgba(36,209,122,.2); }
+        .step-n {
+            position: absolute; top: -1px; left: -1px; padding: 5px 12px;
+            background: var(--acc); color: #04140b;
+            font-family: 'Chakra Petch', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: .1em;
+        }
+        .step h3 { margin: 34px 0 10px; font-family: 'Chakra Petch', sans-serif; font-size: 24px; font-weight: 600; color: #eef4ef; }
+        .step p { margin: 0 0 18px; font-size: 15px; line-height: 1.6; color: #8d9a92; text-wrap: pretty; }
+        .step-code {
+            padding: 10px 12px; background: #060806;
+            border-left: 2px solid rgba(36,209,122,.5);
+            font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--acc);
+            overflow-x: auto; white-space: nowrap;
+        }
+
+        /* ===== Install ===== */
+        .install-grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 34px; align-items: start; }
+        .tabs { display: flex; gap: 0; border-bottom: 1px solid rgba(36,209,122,.2); }
+        .tab {
+            position: relative; padding: 12px 22px;
+            background: none; border: 0; cursor: pointer;
+            font-family: 'Chakra Petch', sans-serif; font-size: 14px; font-weight: 600;
+            letter-spacing: .1em; text-transform: uppercase; color: #8d9a92;
+        }
+        .tab.active::after {
+            content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+            background: var(--acc);
+        }
+        .cmd-row {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 22px;
+            border: 1px solid rgba(36,209,122,.2); border-top: 0;
+            background: #090c0a;
+        }
+        .cmd-row .prompt { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #55625a; padding-top: 1px; }
+        .cmd-row code { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7; color: var(--acc); word-break: break-all; }
+        .copy-btn {
+            flex: none; padding: 6px 12px;
+            background: none; border: 1px solid rgba(36,209,122,.35); cursor: pointer;
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            letter-spacing: .1em; text-transform: uppercase; color: #9aa79e;
+        }
+        .copy-btn:hover { background: rgba(36,209,122,.12); color: #eef4ef; }
+        .install-note { margin: 18px 0 0; font-size: 15px; line-height: 1.7; color: #8d9a92; }
+        .install-meta { margin-top: 22px; display: grid; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8d9a92; }
+        .install-meta .cred { color: var(--acc); }
+        .install-meta .dim { color: #55625a; }
+        .panel { position: relative; padding: 30px 28px 32px; border: 1px solid rgba(36,209,122,.24); background: #090c0a; }
+        .panel h3 { margin: 0 0 20px; font-family: 'Chakra Petch', sans-serif; font-size: 22px; font-weight: 600; color: #eef4ef; }
+        .panel ol { margin: 0 0 24px; padding-left: 20px; display: grid; gap: 12px; font-size: 15px; line-height: 1.55; color: #8d9a92; }
+        .panel .fine { margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #6d7a71; }
+        .panel-cta {
+            display: block; padding: 13px; text-align: center;
+            background: var(--acc); color: #04140b;
+            font-family: 'Chakra Petch', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: .06em;
+        }
+        .panel-cta:hover { background: #4ee295; color: #04140b; }
+
+        /* ===== Pricing ===== */
+        .price-grid { display: grid; grid-template-columns: 1fr 1.75fr; gap: 24px; align-items: stretch; }
+        .plan { position: relative; display: flex; flex-direction: column; padding: 36px 30px 38px; border: 1px solid rgba(36,209,122,.18); background: #080a08; }
+        .plan-kicker { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .18em; color: #55625a; text-transform: uppercase; }
+        .plan-price { display: flex; align-items: baseline; gap: 10px; margin: 18px 0 8px; }
+        .plan-price .big { font-family: 'Chakra Petch', sans-serif; font-size: 44px; font-weight: 700; line-height: 1; color: #cfe0d5; }
+        .plan-price .per { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #55625a; }
+        .plan > p { margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #8d9a92; }
+        .plan-feats { display: grid; gap: 11px; margin-bottom: 28px; font-size: 14px; color: #8d9a92; }
+        .plan-feats div { display: flex; gap: 10px; }
+        .plan-feats .m { color: #55625a; }
+        .plan-cta {
+            margin-top: auto; display: block; padding: 12px; text-align: center;
+            border: 1px solid rgba(36,209,122,.3); color: #cfe0d5;
+            font-family: 'Chakra Petch', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: .06em;
+        }
+        .plan-cta:hover { background: rgba(36,209,122,.1); color: #eef4ef; }
+        .plan-biz {
+            padding: 44px 44px 46px;
+            border: 1px solid rgba(36,209,122,.45);
+            background: linear-gradient(155deg, rgba(36,209,122,.09), #090c0a 60%);
+            box-shadow: 0 0 70px rgba(36,209,122,.08);
+        }
+        .plan-ribbon {
+            position: absolute; top: -1px; right: -1px; padding: 6px 14px;
+            background: var(--acc); color: #04140b;
+            font-family: 'JetBrains Mono', monospace; font-size: 10px; font-style: normal;
+            letter-spacing: .14em; text-transform: uppercase;
+        }
+        .plan-biz .plan-kicker { color: var(--acc); }
+        .plan-biz .plan-price { align-items: flex-end; gap: 16px; margin: 20px 0 8px; }
+        .plan-biz .plan-price .big { font-size: 80px; line-height: .9; color: #f2f7f3; }
+        .plan-biz .plan-price .per { font-size: 13px; line-height: 1.5; color: #6d7a71; padding-bottom: 8px; }
+        .plan-biz > p { margin: 0 0 30px; max-width: 52ch; font-size: 16px; color: #9aa79e; }
+        .plan-biz .plan-feats { grid-template-columns: 1fr 1fr; gap: 14px 28px; margin-bottom: 34px; font-size: 15px; color: #9aa79e; }
+        .plan-biz .plan-feats div { gap: 12px; }
+        .plan-biz .plan-feats .m { color: var(--acc); }
+        .plan-biz-cta { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+        .plan-biz-cta a {
+            padding: 15px 30px;
+            background: var(--acc); color: #04140b;
+            font-family: 'Chakra Petch', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: .06em;
+        }
+        .plan-biz-cta a:hover { background: #4ee295; color: #04140b; }
+        .plan-biz-cta .mail { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #6d7a71; }
+
+        /* ===== FAQ ===== */
+        .faq-wrap { max-width: 980px; margin: 0 auto; }
+        .faq-wrap .sec-head { margin-bottom: 40px; }
+        .faq-list { border-top: 1px solid rgba(36,209,122,.16); }
+        .faq { border-bottom: 1px solid rgba(36,209,122,.16); }
+        .faq summary {
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+            padding: 20px 4px; cursor: pointer; list-style: none;
+            font-family: 'Chakra Petch', sans-serif; font-size: 19px; font-weight: 600; color: #eef4ef;
+        }
+        .faq summary:hover { color: var(--acc); }
+        .faq summary .plus { flex: none; font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--acc); }
+        .faq p { margin: 0 0 22px; padding-right: 60px; font-size: 16px; line-height: 1.65; color: #8d9a92; text-wrap: pretty; }
+
+        /* ===== Support ===== */
+        .support-wrap { text-align: center; }
+        .support-wrap h2 {
+            margin: 0 0 16px;
+            font-family: 'Chakra Petch', sans-serif; font-size: 40px; font-weight: 700;
+            color: #f2f7f3; text-transform: uppercase;
+        }
+        .support-wrap > p { margin: 0 auto 44px; max-width: 56ch; font-size: 17px; line-height: 1.6; color: #8d9a92; }
+        .sponsor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; max-width: 900px; margin: 0 auto; }
+        .sponsor {
+            display: flex; flex-direction: column; align-items: center; gap: 14px;
+            padding: 28px 16px;
+            border: 1px solid rgba(36,209,122,.22); background: #090c0a;
+            font-family: 'Chakra Petch', sans-serif; font-size: 15px; font-weight: 600; color: #cfe0d5;
+        }
+        .sponsor:hover { background: rgba(36,209,122,.09); color: #eef4ef; }
+        .sponsor .icon { color: var(--acc); }
+
+        /* ===== Footer ===== */
+        footer { padding: 62px 40px 34px; }
+        .foot-grid { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 48px; }
+        .foot-about p { margin: 14px 0 0; max-width: 42ch; font-size: 15px; line-height: 1.6; color: #6d7a71; }
+        .foot-about .lic { font-size: 14px; color: #8d9a92; }
+        .foot-label {
+            font-family: 'JetBrains Mono', monospace; font-size: 11px;
+            letter-spacing: .18em; color: #55625a; text-transform: uppercase; margin-bottom: 16px;
+        }
+        .foot-links { display: grid; gap: 10px; font-size: 15px; }
+        .foot-links a { color: #9aa79e; }
+        .foot-links a:hover { color: #eef4ef; }
+        .foot-bottom {
+            max-width: 1280px; margin: 44px auto 0; padding-top: 22px;
+            border-top: 1px solid rgba(36,209,122,.14);
+            display: flex; justify-content: space-between; gap: 20px;
+            font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7d8a82;
+        }
+        .cursor { animation: recon-blink 1.1s steps(1) infinite; color: var(--acc); }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1080px) {
+            .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+            .hero h1 { font-size: 52px; }
+            .feat-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps-grid { grid-template-columns: 1fr; }
+            .install-grid { grid-template-columns: 1fr; }
+            .price-grid { grid-template-columns: 1fr; }
+            .foot-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 760px) {
+            .nav { padding: 14px 20px; }
+            .nlink { display: none; }
+            .hero { padding: 64px 20px 60px; }
+            .hero h1 { font-size: 40px; }
+            .section { padding: 64px 20px; }
+            footer { padding: 48px 20px 28px; }
+            .sec-head h2, .support-wrap h2 { font-size: 30px; }
+            .feat-grid { grid-template-columns: 1fr; }
+            .sponsor-grid { grid-template-columns: repeat(2, 1fr); }
+            .foot-grid { grid-template-columns: 1fr; gap: 34px; }
+            .faq p { padding-right: 0; }
+            .plan-biz { padding: 36px 26px 38px; }
+            .plan-biz .plan-price .big { font-size: 56px; }
+            .plan-biz .plan-feats { grid-template-columns: 1fr; }
+            .foot-bottom { flex-direction: column; gap: 8px; }
         }
     </style>
 </head>
 <body>
-    <div class="content-wrapper">
-        <!-- Navigation -->
-        <nav class="navbar navbar-expand-lg navbar-dark fixed-top shadow-sm">
-            <div class="container">
-                <a class="navbar-brand" href="#">reconYa</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="#features">Features</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#installation">Setup</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#support">Support</a>
-                        </li>
-                        <li class="nav-item ms-lg-3">
-                            <a class="btn btn-primary" href="https://github.com/Dyneteq/reconya" target="_blank">
-                                <i class="bi bi-github me-1"></i> GitHub
-                            </a>
-                        </li>
-                    </ul>
+
+    <nav class="nav">
+        <a href="#top" aria-label="reconYa" class="logo-mark"></a>
+        <div class="nav-links">
+            <a href="#features" class="nlink">Features</a>
+            <a href="#how" class="nlink">How it works</a>
+            <a href="#install" class="nlink">Install</a>
+            <a href="#pricing" class="nlink">Pricing</a>
+            <a href="#faq" class="nlink">FAQ</a>
+            <a href="https://github.com/Dyneteq/reconya" class="btn-gh" target="_blank" rel="noopener">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.6 5.6.6 11.9c0 5 3.3 9.3 7.8 10.8.6.1.8-.2.8-.6v-2c-3.2.7-3.8-1.5-3.8-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 1.7 2.7 1.2 3.3.9.1-.7.4-1.2.7-1.5-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.2 4.6 18.2 5 18.2 5c.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.8C23.4 5.6 18.3.5 12 .5z"></path></svg>
+                Star on GitHub
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section id="top" class="hero">
+        <div class="hero-inner">
+            <div>
+                <div class="badge">
+                    <span class="badge-dot"></span>
+                    v2 / rebuilt from the socket up
                 </div>
-            </div>
-        </nav>
-
-        <!-- Hero Section with Particles -->
-        <section class="hero-section">
-            <div id="particles-js" class="hero-particles"></div>
-            <section class="hero d-flex align-items-center">
-                <div class="container text-center">
-                    <h1>reconYa</h1>
-                    <p class="lead mb-5 col-md-10 mx-auto">
-                        A powerful network reconnaissance and asset discovery tool built with Go and HTMX, designed to help map and monitor network devices with precision and elegance.
-                    </p>
-                    <div>
-                        <a href="#installation" class="btn btn-primary btn-lg px-4 me-md-2">Get Started</a>
-                        <a href="#features" class="btn btn-outline-primary btn-lg px-4">Learn More</a>
-                    </div>
-                </div>
-            </section>
-        </section>
-
-        <!-- Screenshot Section -->
-        <section class="section bg-darker">
-            <div class="container text-center">
-                <img src="screenshots/dashboard.png" alt="reconYa Dashboard" class="screenshot img-fluid" style="max-width: 85%;">
-            </div>
-        </section>
-
-        <!-- Features Section -->
-        <section id="features" class="section">
-            <div class="container">
-                <h2 class="section-title">Key Features</h2>
-                <div class="row g-4 py-3">
-                    <div class="col-md-4">
-                        <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-search"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Advanced Scanning</h3>
-                            <p>Comprehensive port scanning and ping sweeping to discover all devices on your network quickly and efficiently.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-puzzle"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Device Identification</h3>
-                            <p>Accurate identification and classification of network devices to help you understand your network infrastructure.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-diagram-3"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Network Visualization</h3>
-                            <p>Clear and interactive network topology mapping for a comprehensive view of your entire network.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-graph-up"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Event Monitoring</h3>
-                            <p>Real-time logging and monitoring of network events to stay informed about changes and potential issues.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-display"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Modern Dashboard</h3>
-                            <p>Sleek, responsive web interface for all devices, making network management accessible from anywhere.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card h-100 p-4">
-                            <div class="feature-icon">
-                                <i class="bi bi-shield-check"></i>
-                            </div>
-                            <h3 class="fw-bold h5">Security Focused</h3>
-                            <p>Built with security in mind, helping you identify potential vulnerabilities in your network infrastructure.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Installation Section -->
-        <section id="installation" class="section bg-darker">
-            <style>
-                .install-command-wrapper {
-                    position: relative;
-                    background-color: #1a1a1a;
-                    border-radius: 8px;
-                    border: 1px solid rgba(15, 127, 0, 0.3);
-                    padding: 1.25rem 3.5rem 1.25rem 1.25rem;
-                    margin: 1.5rem 0;
-                    overflow-x: auto;
-                }
-                .install-command-wrapper code {
-                    font-family: 'Roboto Mono', monospace;
-                    font-size: 0.85rem;
-                    color: var(--primary-color);
-                    word-break: break-all;
-                    white-space: pre-wrap;
-                }
-                .copy-btn {
-                    position: absolute;
-                    top: 0.75rem;
-                    right: 0.75rem;
-                    background: rgba(15, 127, 0, 0.2);
-                    border: 1px solid rgba(15, 127, 0, 0.4);
-                    color: var(--primary-color);
-                    border-radius: 6px;
-                    padding: 0.35rem 0.6rem;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    font-size: 1rem;
-                }
-                .copy-btn:hover {
-                    background: rgba(15, 127, 0, 0.4);
-                    border-color: var(--primary-color);
-                }
-                .copy-btn.copied {
-                    background: rgba(15, 127, 0, 0.5);
-                    color: white;
-                }
-                .install-tabs {
-                    display: flex;
-                    gap: 0;
-                    margin-bottom: 0;
-                }
-                .install-tab {
-                    padding: 0.5rem 1.25rem;
-                    background: transparent;
-                    border: 1px solid rgba(15, 127, 0, 0.2);
-                    border-bottom: none;
-                    color: var(--muted-text);
-                    cursor: pointer;
-                    font-family: 'Orbitron', sans-serif;
-                    font-size: 0.75rem;
-                    letter-spacing: 1px;
-                    transition: all 0.2s ease;
-                    border-radius: 6px 6px 0 0;
-                }
-                .install-tab:hover {
-                    color: var(--primary-color);
-                }
-                .install-tab.active {
-                    background: #1a1a1a;
-                    color: var(--primary-color);
-                    border-color: rgba(15, 127, 0, 0.3);
-                }
-                .install-tab-content {
-                    display: none;
-                }
-                .install-tab-content.active {
-                    display: block;
-                }
-            </style>
-            <div class="container">
-                <h2 class="section-title">Installation</h2>
-                <div class="row g-4">
-                    <div class="col-lg-7">
-                        <div class="install-tabs">
-                            <button class="install-tab active" onclick="switchInstallTab('binary')">Binary</button>
-                            <button class="install-tab" onclick="switchInstallTab('source')">From Source</button>
-                        </div>
-
-                        <div id="install-binary" class="install-tab-content active">
-                            <div class="install-command-wrapper" style="border-radius: 0 8px 8px 8px;">
-                                <button class="copy-btn" onclick="copyBinaryCommand(this)" title="Copy to clipboard">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                                <code>curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh</code>
-                            </div>
-                            <p style="color: var(--muted-text);">Auto-detects your OS and architecture. Available for <strong class="text-light">Linux</strong> (x86_64, ARM64) and <strong class="text-light">macOS</strong> (Intel, Apple Silicon).</p>
-                        </div>
-
-                        <div id="install-source" class="install-tab-content">
-                            <div class="install-command-wrapper" style="border-radius: 0 8px 8px 8px;">
-                                <button class="copy-btn" onclick="copySourceCommand(this)" title="Copy to clipboard">
-                                    <i class="bi bi-clipboard"></i>
-                                </button>
-                                <code>git clone https://github.com/Dyneteq/reconya.git && cd reconya && make install && make start</code>
-                            </div>
-                            <p style="color: var(--muted-text);">Requires <strong class="text-light">Go 1.21+</strong> and <strong class="text-light">make</strong>.</p>
-                        </div>
-
-                        <p class="mt-3">Access the dashboard at <code>http://localhost:3008</code><br>
-                        <span style="color: var(--muted-text);">Default login: <code>admin</code> / <code>password</code></span></p>
-                    </div>
-                    <div class="col-lg-5">
-                        <div class="card h-100 p-4">
-                            <h3 class="h4 fw-bold mb-3">After Installing</h3>
-                            <ol class="text-light mb-4">
-                                <li class="mb-2">Open <code>http://localhost:3008</code></li>
-                                <li class="mb-2">Log in with default credentials</li>
-                                <li class="mb-2">Set up a network to scan</li>
-                                <li>Devices appear as they're discovered</li>
-                            </ol>
-                            <p style="color: var(--muted-text); font-size: 0.85rem;">Network scanning requires root/sudo for ARP and ICMP access.</p>
-                            <a href="https://github.com/Dyneteq/reconya#quick-install-pre-built-binary" class="btn btn-primary mt-auto" target="_blank">
-                                Full Documentation <i class="bi bi-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Support Section -->
-        <section id="support" class="section bg-darker">
-            <style>
-                .sponsor-grid {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 20px;
-                    max-width: 800px;
-                    margin: 0 auto;
-                }
-                .sponsor-link {
-                    background: rgba(15, 127, 0, 0.1);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(15, 127, 0, 0.3);
-                    border-radius: 15px;
-                    padding: 20px 15px;
-                    text-align: center;
-                    text-decoration: none;
-                    color: var(--text-color);
-                    font-weight: 600;
-                    font-size: 0.95rem;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 10px;
-                }
-                .sponsor-link:hover {
-                    transform: translateY(-5px) scale(1.02);
-                    background: rgba(15, 127, 0, 0.2);
-                    border-color: rgba(15, 127, 0, 0.6);
-                    box-shadow: 0 10px 30px rgba(15, 127, 0, 0.2);
-                    color: var(--primary-color);
-                }
-                .sponsor-link i {
-                    font-size: 1.8rem;
-                    color: var(--primary-color);
-                }
-                @media (max-width: 768px) {
-                    .sponsor-grid {
-                        grid-template-columns: repeat(2, 1fr);
-                        gap: 15px;
-                    }
-                    .sponsor-link {
-                        padding: 15px 10px;
-                    }
-                    .sponsor-link i {
-                        font-size: 1.5rem;
-                    }
-                }
-            </style>
-            <div class="container text-center">
-                <h2 class="section-title" style="display: inline-block;">Support reconYa</h2>
-                <p class="col-md-8 mx-auto mb-5" style="color: var(--muted-text); font-size: 1.1rem;">
-                    <strong>reconYa</strong> is free and open-source. If you find it useful, consider supporting its development — every contribution keeps the project alive and growing.
-                </p>
-                <div class="sponsor-grid">
-                    <a href="https://github.com/sponsors/chrisvel" class="sponsor-link" target="_blank">
-                        <i class="bi bi-github"></i>
-                        <span>GitHub Sponsors</span>
+                <h1>Know every box<br>on your network.</h1>
+                <p class="hero-copy">reconYa sweeps your subnet, fingerprints what answers, and keeps a live map of it, so the thing that appeared on your LAN at 3am doesn't stay a mystery until morning.</p>
+                <div class="hero-ctas">
+                    <a href="https://github.com/Dyneteq/reconya" class="btn-primary" target="_blank" rel="noopener">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.7.5.6 5.6.6 11.9c0 5 3.3 9.3 7.8 10.8.6.1.8-.2.8-.6v-2c-3.2.7-3.8-1.5-3.8-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 1.7 2.7 1.2 3.3.9.1-.7.4-1.2.7-1.5-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.2 4.6 18.2 5 18.2 5c.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .4.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.8C23.4 5.6 18.3.5 12 .5z"></path></svg>
+                        Star it on GitHub
                     </a>
-                    <a href="https://www.patreon.com/ChrisVeleris" class="sponsor-link" target="_blank">
-                        <i class="bi bi-cash-stack"></i>
-                        <span>Patreon</span>
-                    </a>
-                    <a href="https://coff.ee/chrisveleris" class="sponsor-link" target="_blank">
-                        <i class="bi bi-cup-hot"></i>
-                        <span>Buy Me a Coffee</span>
-                    </a>
-                    <a href="https://www.paypal.com/donate/?hosted_button_id=QEQCKLXPB6XAE" class="sponsor-link" target="_blank">
-                        <i class="bi bi-paypal"></i>
-                        <span>PayPal</span>
+                    <a href="#install" class="btn-outline">One-line install</a>
+                    <a href="#pricing" class="btn-dashed">
+                        Commercial licence
+                        <span class="price">$249/yr</span>
                     </a>
                 </div>
+                <p class="hero-note">Free for personal and homelab use. Businesses need a licence.</p>
+                <div class="hero-tags">
+                    <span>Linux</span><span>macOS</span><span>x86_64 / ARM</span><span>self-hosted</span><span>CC BY-NC 4.0</span>
+                </div>
             </div>
-        </section>
 
-        <!-- Footer -->
-        <footer>
-            <div class="container">
-                <div class="row">
-                    <div class="col-lg-6">
-                        <h3 class="h4 mb-4">reconYa</h3>
-                        <p>A powerful network reconnaissance and asset discovery tool built with Go and HTMX.</p>
-                        <p>This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License.</p>
-                    </div>
-                    <div class="col-lg-3">
-                        <h4 class="h5 mb-4">LINKS</h4>
-                        <ul class="list-unstyled tech-list">
-                            <li><a href="#features" class="text-light">FEATURES</a></li>
-                            <li><a href="#installation" class="text-light">INSTALLATION</a></li>
-                            <li><a href="#support" class="text-light">SUPPORT</a></li>
-                        </ul>
-                    </div>
-                    <div class="col-lg-3">
-                        <h4 class="h5 mb-4">CONNECT</h4>
-                        <div class="mb-3">
-                            <a href="https://github.com/Dyneteq/reconya" class="social-link" target="_blank">
-                                <i class="bi bi-github"></i>
-                            </a>
-                            <a href="https://discord.gg/JW7VtBnNXp" class="social-link" target="_blank">
-                                <i class="bi bi-discord"></i>
-                            </a>
-                            <a href="https://www.reddit.com/r/reconya/" class="social-link" target="_blank">
-                                <i class="bi bi-reddit"></i>
-                            </a>
+            <figure class="crt">
+                <div class="rail rail-l"></div>
+                <div class="rail rail-r"></div>
+                <div class="ticks ticks-l">
+                    <span class="on"></span><span></span><span></span>
+                </div>
+                <div class="ticks ticks-r">
+                    <span></span><span class="on"></span><span></span>
+                </div>
+
+                <div class="crt-frame">
+                    <div class="crt-inner">
+                        <div class="crt-head">
+                            <span class="id">
+                                <span class="dots"><span class="on"></span><span></span><span></span></span>
+                                recon//unit-01
+                            </span>
+                            <span class="rule"></span>
+                            <span class="live"><i></i>LIVE</span>
                         </div>
-                        <p>Found an issue? <a href="https://github.com/Dyneteq/reconya/issues" class="text-light">Report it</a></p>
+
+                        <div class="crt-body">
+                            <video id="demo-video" src="screenshots/demo-30s.mp4" poster="screenshots/dashboard.png" autoplay muted loop playsinline></video>
+                            <div class="scanlines"></div>
+                            <div class="vignette"></div>
+                            <i class="corner corner-tl"></i>
+                            <i class="corner corner-tr"></i>
+                            <i class="corner corner-bl"></i>
+                            <i class="corner corner-br"></i>
+                        </div>
+
+                        <div class="crt-foot">
+                            <span>iface eth0</span>
+                            <span>arp &middot; icmp &middot; tcp</span>
+                            <span class="pwr">
+                                pwr
+                                <span class="bars"><span></span><span></span><span></span><span class="off"></span></span>
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <hr class="mt-4 mb-4 border-secondary">
-                <div class="text-center">
-                    <p>&copy; 2025 reconYa. All rights reserved.</p>
+
+                <div class="crt-glow"></div>
+            </figure>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="section">
+        <div class="wrap">
+            <div class="sec-head">
+                <span class="sec-num">01</span>
+                <h2>What it does</h2>
+            </div>
+            <p class="sec-sub">Six jobs, done properly. No agents to install on anything, no cloud account, no telemetry phoning home.</p>
+            <div class="feat-grid">
+                <article class="feat-card">
+                    <div class="feat-top">
+                        <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/><circle cx="8" cy="5" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="11" cy="19" r="1.6"/></svg></span>
+                        <span class="tag">TCP</span>
+                    </div>
+                    <h3>Port scanning</h3>
+                    <p>Sweeps the ports that matter and tells you what is actually listening, not what should be.</p>
+                </article>
+                <article class="feat-card">
+                    <div class="feat-top">
+                        <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4l2-5 3 10 3-7 2 2h6"/></svg></span>
+                        <span class="tag">ICMP</span>
+                    </div>
+                    <h3>Host discovery</h3>
+                    <p>Ping sweeps the range to find every box that is awake, including the ones nobody documented.</p>
+                </article>
+                <article class="feat-card">
+                    <div class="feat-top">
+                        <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20a8 8 0 0 0 0-16"/><path d="M12 16a4 4 0 0 0 0-8"/><circle cx="12" cy="12" r="1.4"/></svg></span>
+                        <span class="tag">ARP</span>
+                    </div>
+                    <h3>Passive monitoring</h3>
+                    <p>Watches ARP chatter between scans, so a device that joins quietly still gets caught.</p>
+                </article>
+                <article class="feat-card">
+                    <div class="feat-top">
+                        <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h3"/></svg></span>
+                        <span class="tag">ID</span>
+                    </div>
+                    <h3>Device fingerprinting</h3>
+                    <p>Guesses the OS from how a host answers and resolves the MAC to a vendor. Printer or intruder: usually clear.</p>
+                </article>
+                <article class="feat-card">
+                    <div class="feat-top">
+                        <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6v6H4z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6H4z"/><path d="M14 14h6v6h-6z"/></svg></span>
+                        <span class="tag">MAP</span>
+                    </div>
+                    <h3>Live network map</h3>
+                    <p>The whole subnet as a grid. Occupied cells light up, gaps stay dark. Your LAN at a glance.</p>
+                </article>
+                <article class="feat-card">
+                    <div class="feat-top">
+                        <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></svg></span>
+                        <span class="tag">LOG</span>
+                    </div>
+                    <h3>Event timeline</h3>
+                    <p>Every sweep, every appearance, every disappearance, timestamped, so you can answer "when did that show up?"</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" class="section alt">
+        <div class="wrap">
+            <div class="sec-head">
+                <span class="sec-num">02</span>
+                <h2>How it works</h2>
+            </div>
+            <p class="sec-sub">Three moves from install to a live map.</p>
+            <div class="steps-grid">
+                <div class="step">
+                    <div class="step-n">01</div>
+                    <h3>Point it somewhere</h3>
+                    <p>Give it a subnet. It pre-fills the one you are on. No inventory file to write first.</p>
+                    <div class="step-code">target: 192.168.1.0/24</div>
+                </div>
+                <div class="step">
+                    <div class="step-n">02</div>
+                    <h3>Let it sweep</h3>
+                    <p>Ping sweep, then port scans and fingerprinting on whatever answers. ARP watching runs alongside.</p>
+                    <div class="step-code">ping sweep &rarr; 44 hosts up</div>
+                </div>
+                <div class="step">
+                    <div class="step-n">03</div>
+                    <h3>Watch it fill in</h3>
+                    <p>The map and device grid populate live while the event log narrates. Nothing to refresh.</p>
+                    <div class="step-code">live device [192.168.1.180] found</div>
                 </div>
             </div>
-        </footer>
+        </div>
+    </section>
 
-        <!-- Scroll to top button -->
-        <a href="#" class="scroll-to-top">
-            <i class="bi bi-arrow-up"></i>
-        </a>
-    </div>
+    <!-- Install -->
+    <section id="install" class="section">
+        <div class="wrap">
+            <div class="sec-head">
+                <span class="sec-num">03</span>
+                <h2>Install</h2>
+            </div>
+            <p class="sec-sub" style="margin-bottom: 44px;">Paste one line. Be scanning before the kettle boils.</p>
+            <div class="install-grid">
+                <div>
+                    <div class="tabs">
+                        <button type="button" class="tab active" data-tab="binary">Binary</button>
+                        <button type="button" class="tab" data-tab="source">From source</button>
+                    </div>
+                    <div class="cmd-row">
+                        <span class="prompt">$</span>
+                        <code id="install-cmd">curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh</code>
+                        <button type="button" class="copy-btn" id="copy-btn">copy</button>
+                    </div>
+                    <p class="install-note" id="install-note">Detects your OS and architecture, then drops the right build in place. Linux (x86_64, ARM64) and macOS (Intel, Apple Silicon).</p>
+                    <div class="install-meta">
+                        <div>dashboard &rarr; <a href="http://localhost:3008">http://localhost:3008</a></div>
+                        <div>login &rarr; <span class="cred">admin</span> / <span class="cred">password</span> <span class="dim">(change it, obviously)</span></div>
+                    </div>
+                </div>
+                <aside class="panel">
+                    <h3>Then what?</h3>
+                    <ol>
+                        <li>Open the dashboard.</li>
+                        <li>Point it at a subnet. It guesses yours first.</li>
+                        <li>Hit scan and watch the grid light up.</li>
+                        <li>Name the boxes you recognise. Investigate the ones you don't.</li>
+                    </ol>
+                    <p class="fine">Needs root/sudo for ARP and ICMP. That's the price of seeing devices that would rather not be seen.</p>
+                    <a href="https://github.com/Dyneteq/reconya#readme" class="panel-cta" target="_blank" rel="noopener">Read the docs &rarr;</a>
+                </aside>
+            </div>
+        </div>
+    </section>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <!-- Pricing -->
+    <section id="pricing" class="section alt">
+        <div class="wrap">
+            <div class="sec-head">
+                <span class="sec-num">04</span>
+                <h2>Licensing</h2>
+            </div>
+            <p class="sec-sub" style="max-width: 62ch;">If reconYa runs on a network someone is being paid to look after, that is a commercial licence. Everything else stays free.</p>
+            <div class="price-grid">
+
+                <article class="plan">
+                    <div class="plan-kicker">Personal</div>
+                    <div class="plan-price">
+                        <span class="big">Free</span>
+                        <span class="per">forever</span>
+                    </div>
+                    <p>Homelab, flat, side project. Non-commercial use under CC BY-NC 4.0, with every feature and no device cap.</p>
+                    <div class="plan-feats">
+                        <div><span class="m">&#9656;</span> Full source, self-hosted</div>
+                        <div><span class="m">&#9656;</span> Community support on GitHub</div>
+                        <div><span class="m">&#9656;</span> No account, no telemetry</div>
+                    </div>
+                    <a href="#install" class="plan-cta">Install it now</a>
+                </article>
+
+                <article class="plan plan-biz">
+                    <i class="plan-ribbon">For business</i>
+                    <div class="plan-kicker">Commercial licence</div>
+                    <div class="plan-price">
+                        <span class="big">$249</span>
+                        <span class="per">per year<br>per organisation</span>
+                    </div>
+                    <p>Covers every employee, every host and every subnet you run it on. Consultancies and MSPs included: scan your clients under the same licence.</p>
+                    <div class="plan-feats">
+                        <div><span class="m">&#9656;</span> Commercial and client work permitted</div>
+                        <div><span class="m">&#9656;</span> Unlimited seats, hosts and networks</div>
+                        <div><span class="m">&#9656;</span> Priority on bugs and issues</div>
+                        <div><span class="m">&#9656;</span> Invoice and VAT details on request</div>
+                        <div><span class="m">&#9656;</span> Site and multi-year terms available</div>
+                        <div><span class="m">&#9656;</span> Redistribution terms on request</div>
+                    </div>
+                    <div class="plan-biz-cta">
+                        <a href="mailto:dyneteq@gmail.com?subject=reconYa%20commercial%20licence">Request a licence</a>
+                        <span class="mail">dyneteq@gmail.com</span>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq" class="section">
+        <div class="faq-wrap">
+            <div class="sec-head">
+                <span class="sec-num">05</span>
+                <h2>Questions</h2>
+            </div>
+            <div class="faq-list">
+                <details class="faq">
+                    <summary>Is it legal to scan?<span class="plus">+</span></summary>
+                    <p>On networks you own or administer, yes. Pointed at someone else&rsquo;s, scanning ranges from rude to prosecutable depending on where you live. Scan your own kit.</p>
+                </details>
+                <details class="faq">
+                    <summary>Why does it want root?<span class="plus">+</span></summary>
+                    <p>ARP requests and ICMP echoes need raw sockets, and raw sockets need privileges. Nothing else in reconYa asks for them.</p>
+                </details>
+                <details class="faq">
+                    <summary>How is this different from nmap?<span class="plus">+</span></summary>
+                    <p>nmap is a scalpel you run when you have a question. reconYa is the thing that keeps watching so you know a question exists: persistent inventory, a live map and a timeline, rather than one-shot output.</p>
+                </details>
+                <details class="faq">
+                    <summary>Does any data leave my network?<span class="plus">+</span></summary>
+                    <p>No. It runs on your box, stores results on your box, and has nothing to phone home to. No accounts, no telemetry.</p>
+                </details>
+                <details class="faq">
+                    <summary>Can I run it in Docker?<span class="plus">+</span></summary>
+                    <p>Not yet. Container support is being researched, but scanning from inside a container needs host networking to reach the LAN, and that is not fully solved. Run the binary on the host for now.</p>
+                </details>
+                <details class="faq">
+                    <summary>Which platforms are supported?<span class="plus">+</span></summary>
+                    <p>Linux on x86_64 and ARM64, and macOS on both Intel and Apple Silicon. A Raspberry Pi is a perfectly good permanent home for it.</p>
+                </details>
+                <details class="faq">
+                    <summary>Can it watch more than one subnet?<span class="plus">+</span></summary>
+                    <p>You can define multiple target networks and scan them in turn, as long as the host it runs on can actually route to each one.</p>
+                </details>
+                <details class="faq">
+                    <summary>Is it really free?<span class="plus">+</span></summary>
+                    <p>Yes, free, open-source, and non-commercially licensed. Sponsorship is welcome and buys nothing but faster fixes and more coffee.</p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Support -->
+    <section class="section">
+        <div class="wrap support-wrap">
+            <h2>Support reconYa</h2>
+            <p>Free, open-source, and maintained on evenings and coffee. A star costs nothing; the rest keeps the coffee coming.</p>
+            <div class="sponsor-grid">
+                <a href="https://github.com/sponsors/chrisvel" class="sponsor" target="_blank" rel="noopener">
+                    <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 21l8.8-8.3a5 5 0 0 0 0-7.1Z"/></svg></span>
+                    GitHub Sponsors
+                </a>
+                <a href="https://www.patreon.com/ChrisVeleris" class="sponsor" target="_blank" rel="noopener">
+                    <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3v18"/><circle cx="15" cy="9.5" r="5.5"/></svg></span>
+                    Patreon
+                </a>
+                <a href="https://coff.ee/chrisveleris" class="sponsor" target="_blank" rel="noopener">
+                    <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M7 4.5v1"/><path d="M11 4.5v1"/></svg></span>
+                    Buy Me a Coffee
+                </a>
+                <a href="https://www.paypal.com/donate/?hosted_button_id=QEQCKLXPB6XAE" class="sponsor" target="_blank" rel="noopener">
+                    <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20l2.2-14h5.3a3.6 3.6 0 0 1 0 7.2H9.6"/><path d="M11 20h2.3l.6-4"/></svg></span>
+                    PayPal
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="foot-grid">
+            <div class="foot-about">
+                <div aria-label="reconYa" role="img" class="logo-mark" style="width: 156px; height: 23px;"></div>
+                <p>Self-hosted network reconnaissance and asset discovery. Your LAN, your data, your box.</p>
+                <p class="lic">Licensed under Creative Commons Attribution-NonCommercial 4.0 International.</p>
+            </div>
+            <div>
+                <div class="foot-label">Links</div>
+                <div class="foot-links">
+                    <a href="#features">Features</a>
+                    <a href="#how">How it works</a>
+                    <a href="#install">Install</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="#faq">FAQ</a>
+                    <a href="mailto:dyneteq@gmail.com">Commercial licence</a>
+                </div>
+            </div>
+            <div>
+                <div class="foot-label">Connect</div>
+                <div class="foot-links">
+                    <a href="https://github.com/Dyneteq/reconya" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://github.com/Dyneteq/reconya/issues" target="_blank" rel="noopener">Report an issue</a>
+                    <a href="https://discord.gg/JW7VtBnNXp" target="_blank" rel="noopener">Discord</a>
+                    <a href="https://www.reddit.com/r/reconya/" target="_blank" rel="noopener">Reddit</a>
+                </div>
+            </div>
+        </div>
+        <div class="foot-bottom">
+            <span>&copy; 2026 reconYa</span>
+            <span>scan responsibly<span class="cursor">_</span></span>
+        </div>
+    </footer>
+
     <script>
-        // Particle.js configuration
-        particlesJS("particles-js", {
-            "particles": {
-                "number": {
-                    "value": 150,
-                    "density": {
-                        "enable": true,
-                        "value_area": 800
-                    }
-                },
-                "color": {
-                    "value": "#0f7f00"
-                },
-                "shape": {
-                    "type": "circle",
-                    "stroke": {
-                        "width": 0,
-                        "color": "#000000"
-                    },
-                    "polygon": {
-                        "nb_sides": 5
-                    }
-                },
-                "opacity": {
-                    "value": 0.9,
-                    "random": true,
-                    "anim": {
-                        "enable": true,
-                        "speed": 1,
-                        "opacity_min": 0.5,
-                        "sync": false
-                    }
-                },
-                "size": {
-                    "value": 5,
-                    "random": true,
-                    "anim": {
-                        "enable": true,
-                        "speed": 6,
-                        "size_min": 0.3,
-                        "sync": false
-                    }
-                },
-                "line_linked": {
-                    "enable": true,
-                    "distance": 150,
-                    "color": "#0f7f00",
-                    "opacity": 0.7,
-                    "width": 1.5
-                },
-                "move": {
-                    "enable": true,
-                    "speed": 2,
-                    "direction": "none",
-                    "random": true,
-                    "straight": false,
-                    "out_mode": "out",
-                    "bounce": false,
-                    "attract": {
-                        "enable": true,
-                        "rotateX": 600,
-                        "rotateY": 1200
-                    }
-                }
-            },
-            "interactivity": {
-                "detect_on": "canvas",
-                "events": {
-                    "onhover": {
-                        "enable": true,
-                        "mode": "grab"
-                    },
-                    "onclick": {
-                        "enable": true,
-                        "mode": "push"
-                    },
-                    "resize": true
-                },
-                "modes": {
-                    "grab": {
-                        "distance": 140,
-                        "line_linked": {
-                            "opacity": 1
-                        }
-                    },
-                    "bubble": {
-                        "distance": 400,
-                        "size": 40,
-                        "duration": 2,
-                        "opacity": 8,
-                        "speed": 3
-                    },
-                    "repulse": {
-                        "distance": 200,
-                        "duration": 0.4
-                    },
-                    "push": {
-                        "particles_nb": 4
-                    },
-                    "remove": {
-                        "particles_nb": 2
-                    }
-                }
-            },
-            "retina_detect": true
-        });
+        // Install tabs + copy
+        var commands = {
+            binary: 'curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh',
+            source: 'git clone https://github.com/Dyneteq/reconya.git && cd reconya && make install && make start'
+        };
+        var notes = {
+            binary: 'Detects your OS and architecture, then drops the right build in place. Linux (x86_64, ARM64) and macOS (Intel, Apple Silicon).',
+            source: 'Needs Go 1.21+ and make on the box. Slower to start, but you get to read every line first, which for a scanner is a fair instinct.'
+        };
+        var currentTab = 'binary';
+        var cmdEl = document.getElementById('install-cmd');
+        var noteEl = document.getElementById('install-note');
+        var copyBtn = document.getElementById('copy-btn');
+        var copyTimer;
 
-        // Scroll to top button
-        const scrollToTopBtn = document.querySelector('.scroll-to-top');
-        
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 300) {
-                scrollToTopBtn.style.display = 'flex';
-            } else {
-                scrollToTopBtn.style.display = 'none';
-            }
-        });
-        
-        scrollToTopBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
+        document.querySelectorAll('.tab').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                currentTab = btn.dataset.tab;
+                document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+                btn.classList.add('active');
+                cmdEl.textContent = commands[currentTab];
+                noteEl.textContent = notes[currentTab];
+                copyBtn.textContent = 'copy';
+                clearTimeout(copyTimer);
             });
         });
 
-        // Install command copy and tab switching
-        function showCopied(btn) {
-            var icon = btn.querySelector('i');
-            icon.className = 'bi bi-check-lg';
-            btn.classList.add('copied');
-            setTimeout(function() {
-                icon.className = 'bi bi-clipboard';
-                btn.classList.remove('copied');
-            }, 2000);
-        }
-
-        function copyCommand(btn, cmd) {
-            navigator.clipboard.writeText(cmd).then(function() { showCopied(btn); });
-        }
-
-        function copyBinaryCommand(btn) {
-            copyCommand(btn, 'curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh');
-        }
-
-        function copySourceCommand(btn) {
-            copyCommand(btn, 'git clone https://github.com/Dyneteq/reconya.git && cd reconya && make install && make start');
-        }
-
-        function switchInstallTab(tab) {
-            var mainTabs = document.getElementById('install-binary').previousElementSibling;
-            mainTabs.querySelectorAll('.install-tab').forEach(function(t) { t.classList.remove('active'); });
-            document.querySelectorAll('.install-tab-content').forEach(function(c) { c.classList.remove('active'); });
-            document.getElementById('install-' + tab).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        // Smooth scrolling for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    const navbarHeight = document.querySelector('.navbar').offsetHeight;
-                    const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - navbarHeight;
-                    
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                }
-            });
+        copyBtn.addEventListener('click', function () {
+            if (navigator.clipboard) navigator.clipboard.writeText(commands[currentTab]).catch(function () {});
+            copyBtn.textContent = 'copied';
+            clearTimeout(copyTimer);
+            copyTimer = setTimeout(function () { copyBtn.textContent = 'copy'; }, 1600);
         });
+
+        // Make sure the demo video autoplays even when the browser is picky
+        var v = document.getElementById('demo-video');
+        if (v) {
+            v.muted = true;
+            v.defaultMuted = true;
+            var go = function () { var p = v.play(); if (p && p.catch) p.catch(function () {}); };
+            if (v.readyState >= 2) go(); else v.addEventListener('loadeddata', go, { once: true });
+        }
     </script>
 </body>
 </html>
