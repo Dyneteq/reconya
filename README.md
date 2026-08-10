@@ -1,188 +1,101 @@
-# Reconya
+# reconYa
 
-Network reconnaissance and asset discovery tool built with Go and HTMX.
+Network reconnaissance and asset discovery tool, built in Go.
 
-![Dashboard Screenshot](screenshots/dashboard.png)
+reconYa discovers and monitors devices on your local network with real-time updates - for network administrators, security professionals, and home users.
 
-## Overview
+![Console demo](screenshots/demo-30s.gif)
 
-Reconya discovers and monitors devices on your network with real-time updates. Suitable for network administrators, security professionals, and home users.
+## Features
 
-### Features
-
-- **IPv4 Network Scanning** - Comprehensive device discovery with native Go implementation
-- **IPv6 Passive Monitoring** - Detects IPv6 devices through neighbor discovery and interface monitoring
-- **Device Identification** - MAC addresses, vendor detection, hostnames, and device types
-- **Dual-Stack Support** - Full IPv4 and IPv6 address display and management
-- **Real-time Monitoring** - Live device status updates and event logging
-- **Web-based Dashboard** - Modern HTMX-powered interface with dark theme
-- **Device Fingerprinting** - Automatic OS and device type detection
-- **Network Management** - Multi-network support with CIDR configuration
+- **IPv4 network scanning** - device discovery with a native Go implementation (ICMP sweeps, TCP probes, ARP)
+- **IPv6 passive monitoring** - detects IPv6 devices through neighbor discovery and interface monitoring, no traffic generated
+- **Device identification** - MAC addresses, vendor lookup, hostnames, OS fingerprints, and device type classification
+- **Port scanning** - top-ports scans with service detection and banner grabbing, run by background workers
+- **Alerting** - new devices, new or risky open ports, unreachable hosts, duplicate MACs, and unidentified hosts raise acknowledgeable alerts
+- **Web console** - server-rendered dashboard with topology map, host list, and live event log
+- **Multi-network support** - manage several networks with CIDR configuration
+- **Zero outbound calls by default** - all external lookups are opt-in (see [Network isolation](#network-isolation))
 
 ## Community
 
-Join our community for support, discussions, and updates:
+Join the community for support, discussions, and updates:
 
-[![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/JW7VtBnNXp)  
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/JW7VtBnNXp)
 [![Reddit](https://img.shields.io/badge/Reddit-r/reconya-ff4500?style=for-the-badge&logo=reddit&logoColor=white)](https://www.reddit.com/r/reconya/)
 
-## Important Notice: Docker Implementation Status
+## Installation
 
-⚠️ **Docker networking has been moved to experimental status due to fundamental limitations.**
-
-The fundamental limitation is Docker's network architecture. Even with comprehensive MAC discovery methods, privileged mode, and enhanced capabilities, Docker containers cannot reliably access Layer 2 (MAC address) information across different network segments.
-
-**For full functionality, including complete MAC address discovery, please use the local installation method below.**
-
-Docker files have been moved to the `experimental/` directory for those who want to experiment with containerized deployment, but local installation is the recommended approach.
-
-## Quick Install (Pre-built Binary)
-
-Download and set up reconYa with a single command:
+### Quick install (pre-built binary)
 
 ```bash
 curl -sL https://raw.githubusercontent.com/Dyneteq/reconya/master/install.sh | sh
 ```
 
-This auto-detects your OS and architecture, downloads the correct binary, and sets up the config.
+This auto-detects your OS and architecture, downloads the correct binary, and sets up the config. Available for Linux (x86_64, ARM64) and macOS (Intel, Apple Silicon).
 
-**Available platforms:** Linux (x86_64, ARM64), macOS (Intel, Apple Silicon)
-
-After installing, start reconYa:
+Then start reconYa:
 
 ```bash
 cd reconya && sudo ./reconya-*
 ```
 
-Then open your browser to: `http://localhost:3008`
-Default login: `admin` / `password`
+Open `http://localhost:3008` and log in with `admin` / `password` (change this in `.env`).
 
-## Build from Source
+### Build from source
 
-If you prefer to build from source, you'll need:
-
-- **Go 1.21 or later** - [Download Go](https://golang.org/dl/)
-- **make** - Build tool (pre-installed on most Unix systems)
-
-### One-Command Installation
+Requires **Go 1.25+** and **make**.
 
 ```bash
 git clone https://github.com/Dyneteq/reconya.git
 cd reconya
-make install
+make install     # downloads dependencies, creates a default .env
+make start       # start reconYa as a daemon
 ```
 
-This will:
-- Download Go dependencies
-- Create default `.env` configuration file
+Useful commands:
 
-**After installation, use these commands:**
 ```bash
-make start       # Start reconYa as daemon
-make start-dev   # Start in foreground (dev mode)
-make stop        # Stop reconYa
-make status      # Check service status
-make logs        # View logs
-make help        # Show all commands
+make start-dev   # run in the foreground (dev mode)
+make stop        # stop reconYa
+make status      # check service status
+make logs        # view logs
+make help        # show all commands
 ```
 
-Then open your browser to: `http://localhost:3008`
-Default login: `admin` / `password`
+### Manual setup
 
-### Optional build tags
+```bash
+git clone https://github.com/Dyneteq/reconya.git
+cd reconya/backend
+cp .env.example .env   # edit to set your credentials
+go mod download
+go run ./cmd
+```
 
-**`chromedp`** — links in an in-process Chrome DevTools Protocol driver for
-web-service screenshots:
+**Windows note:** the SQLite driver needs cgo. If you see a CGO error, run with `CGO_ENABLED=1` and make sure a C compiler (TDM-GCC or Visual Studio Build Tools) is installed.
+
+### Optional build tag: `chromedp`
+
+Links in an in-process Chrome DevTools Protocol driver for web-service screenshots:
 
 ```bash
 cd backend && go build -tags chromedp ./cmd
 ```
 
-It is **off by default** because it costs 71 of 293 packages (24% of the
-dependency graph) and ~2MB of the 11.5MB release binary, for a feature that
-already works without it. With the tag off, screenshots fall back to whichever
-of `chrome`/`chromium`, `firefox`, `wkhtmltoimage`, or `webkit2png` is
-installed on the host — and chromedp itself also needed a browser on the host,
-so the practical requirement is unchanged.
+It is off by default because it adds ~24% of the dependency graph and ~2MB to the binary for a feature that already works without it: with the tag off, screenshots fall back to whichever of `chrome`/`chromium`, `firefox`, `wkhtmltoimage`, or `webkit2png` is installed on the host. Since chromedp also needs a browser on the host, the practical requirement is unchanged.
 
-### Manual Installation
+## Usage
 
-If you prefer to install manually:
-
-#### Prerequisites
-
-1. **Install Go** (1.21 or later): https://golang.org/dl/
-
-#### Setup & Run
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Dyneteq/reconya.git
-   cd reconya
-   ```
-
-2. **Setup backend:**
-   ```bash
-   cd backend
-   cp .env.example .env
-   # Edit .env file to set your credentials
-   go mod download
-   ```
-
-3. **Start the application:**
-   ```bash
-   cd backend
-   go run ./cmd
-   ```
-
-   **Windows users:** If you encounter SQLite CGO errors, use:
-   ```bash
-   cd backend
-   CGO_ENABLED=1 go run ./cmd
-   ```
-
-4. **Access the application:**
-   - Open your browser to: `http://localhost:3008`
-   - Default login: `admin` / `password` (check your `.env` file for custom credentials)
-
-## How to Use
-
-1. Login with your credentials (default: `admin` / `password`)
-2. Set up a new network
-3. Choose the network from the dropdown and start scan
-4. Devices will automatically appear as they're discovered on your network
-5. Click on devices to see details including:
-   - MAC addresses and vendor information
-   - Open ports and running services
-   - Operating system fingerprints
-   - Device screenshots (for web services)
-6. Use the network map to visualize device locations
-7. Monitor the event log for network activity
-
-## IPv6 Passive Monitoring
-
-reconYa includes advanced IPv6 passive monitoring capabilities that activate automatically during network scans:
-
-### How It Works
-- **Neighbor Discovery Protocol (NDP)** - Monitors IPv6 neighbor cache for active devices
-- **Interface Monitoring** - Detects IPv6 addresses on network interfaces
-- **Automatic Classification** - Identifies Link-Local, Unique Local, and Global addresses
-- **Dual-Stack Integration** - Links IPv6 addresses to existing IPv4 devices via MAC addresses
-
-### IPv6 Address Types
-- **Link-Local** (`fe80::/10`) - Local network segment addresses
-- **Unique Local** (`fc00::/7`) - Private network addresses  
-- **Global** (`2000::/3`) - Internet-routable addresses
-
-### Features
-- **Passive Detection** - No network traffic generated, only monitors existing traffic
-- **Real-time Updates** - IPv6 addresses appear in device list and details
-- **Cross-Platform** - Works on Linux, macOS, and Windows
-- **Automatic Activation** - Starts with scanning, stops when idle
+1. Log in with your credentials
+2. Set up a network, select it from the dropdown, and start a scan
+3. Devices appear automatically as they are discovered
+4. Click a device for details: MAC address and vendor, open ports and services, OS fingerprint, and screenshots of web services
+5. Use the topology map to visualize the network, watch the event log for activity, and work the alert feed as findings come in
 
 ## Configuration
 
-Edit the `backend/.env` file to customize:
+Edit `backend/.env` to customize:
 
 ```bash
 LOGIN_USERNAME=admin
@@ -190,127 +103,89 @@ LOGIN_PASSWORD=your_secure_password
 DATABASE_NAME="reconya-dev"
 SQLITE_PATH="data/reconya-dev.db"
 
-# IPv6 Monitoring Configuration
+# IPv6 monitoring
 IPV6_MONITORING_ENABLED=true
 IPV6_MONITOR_INTERFACES=
 IPV6_MONITOR_INTERVAL=30
 IPV6_LINK_LOCAL_MONITORING=true
 IPV6_MULTICAST_MONITORING=false
 
-# Outbound lookups (see "Network Isolation" below) — all default to false
+# Outbound lookups (see "Network isolation" below) - all default to false
 PUBLIC_IP_LOOKUP_ENABLED=false
 GEOLOCATION_ENABLED=false
 VENDOR_LOOKUP_ONLINE_ENABLED=false
 OUI_DOWNLOAD_ENABLED=false
 ```
 
-## Network Isolation
+## Network isolation
 
-reconYa's backend makes **zero outbound network connections by default**.
-Scanning, device tracking, and the HUD all work entirely from data reconYa
-gathers on the local network itself.
+reconYa's backend makes **zero outbound network connections by default**. Scanning, device tracking, and the console all work entirely from data reconYa gathers on the local network itself.
 
-Four features call out to a third party, and every one of them is opt-in
-(set the corresponding env var to `true` to enable):
+Four features call out to a third party, and every one of them is opt-in (set the corresponding env var to `true` to enable):
 
 | Env var | Calls | Purpose |
 |---|---|---|
 | `PUBLIC_IP_LOOKUP_ENABLED` | `api.ipify.org` (HTTPS) | Shows your public IP in the HUD |
 | `GEOLOCATION_ENABLED` | `ip-api.com` (plain HTTP) | Resolves that public IP to a city/country |
-| `VENDOR_LOOKUP_ONLINE_ENABLED` | `api.macvendors.com` (HTTPS) | Looks up a device's manufacturer when its MAC isn't in the built-in OUI table — sent per discovered device |
+| `VENDOR_LOOKUP_ONLINE_ENABLED` | `api.macvendors.com` (HTTPS) | Looks up a device's manufacturer when its MAC isn't in the built-in OUI table - sent per discovered device |
 | `OUI_DOWNLOAD_ENABLED` | `standards-oui.ieee.org` (plain HTTP) | Refreshes the local MAC-vendor table monthly |
 
-With all four left at their default (`false`), the Public IP HUD tile shows
-`—` instead of erroring, and vendor lookups are limited to the OUI table
-already bundled with reconYa.
+With all four left at their default (`false`), the Public IP tile shows a placeholder dash instead of erroring, and vendor lookups are limited to the OUI table already bundled with reconYa.
 
-One caveat worth being upfront about: the **web UI itself** loads Tailwind,
-htmx, Tabler Icons, and Google Fonts from public CDNs in the browser
-(`cdn.tailwindcss.com`, `unpkg.com`, `fonts.googleapis.com`). That's a
-browser-side asset load, not a call the reconYa backend makes with your scan
-data — but it does mean the UI does not currently work fully offline/air-gapped.
-Vendoring those assets is tracked as future work.
+One remaining browser-side exception: the web UI loads its fonts from Google Fonts (`fonts.googleapis.com`). All other UI assets (CSS, JavaScript) are embedded in the binary and served locally. Vendoring the fonts is tracked as future work for fully offline/air-gapped use.
 
 ## Architecture
 
-- **Backend**: Go API with HTMX templates and SQLite database (Port 3008)
-- **Web Interface**: HTML and vanilla JS
-- **Scanning**: Multi-strategy network discovery with native Go implementation
-- **Database**: SQLite for device storage and event logging
+- **Backend** - Go, serving a server-rendered web console on port 3008
+- **Frontend** - Go templates with vanilla JavaScript, all assets embedded in the binary
+- **Database** - SQLite for device storage, event logging, and alerts
+- **Scanning** - multi-strategy network discovery with a native Go implementation
 
-## Scanning Algorithm
+### Scanning pipeline
 
-### Discovery Process
+1. **Network discovery** (every 30 seconds) - ICMP ping sweeps in privileged mode, TCP connect probes to common ports as a fallback, and ARP table lookups for MAC resolution
+2. **Device identification** - IEEE OUI database for vendors, multi-method hostname resolution (DNS, NetBIOS, mDNS), device type classification from ports and vendors
+3. **Port scanning** - top 100 ports with service detection and banner grabbing, run concurrently by a worker pool
+4. **Web service detection** - automatic discovery of HTTP/HTTPS services with screenshot capture and metadata extraction (titles, server headers)
 
-Reconya uses a multi-layered scanning approach built entirely with native Go:
+### IPv6 passive monitoring
 
-**1. Network Discovery (Every 30 seconds)**
-- ICMP ping sweeps (privileged mode)
-- TCP connect probes to common ports (fallback)
-- ARP table lookups for MAC address resolution
+IPv6 monitoring activates automatically during network scans and generates no traffic of its own. It watches the Neighbor Discovery (NDP) cache and network interfaces, classifies addresses (link-local `fe80::/10`, unique local `fc00::/7`, global `2000::/3`), and links IPv6 addresses to existing IPv4 devices via their MAC address. Works on Linux, macOS, and Windows.
 
-**2. Device Identification**
-- IEEE OUI database for vendor identification
-- Multi-method hostname resolution (DNS, NetBIOS, mDNS)
-- Device type classification based on ports and vendors
+## Docker (experimental, not recommended)
 
-**3. Port Scanning (Background workers)**
-- Top 100 ports scan for active services
-- Service detection and banner grabbing
-- Concurrent scanning with worker pool pattern
-
-**4. Web Service Detection**
-- Automatic discovery of HTTP/HTTPS services
-- Screenshot capture using headless Chrome
-- Service metadata extraction (titles, server headers)
+Docker files live in the `experimental/` directory, but containerized deployment is not recommended: Docker's network architecture prevents containers from reliably accessing Layer 2 (MAC address) information across network segments, even in privileged mode. Use a local installation for full functionality.
 
 ## Troubleshooting
-
-### Common Issues
 
 **No devices found**
 - Run `make status` to check service status
 - Check that you're on the same network segment as target devices
 
 **Services won't start**
-- Run `make stop` to kill any stuck processes
-- Check `make status` for dependency issues
+- Run `make stop` to kill any stuck processes, then `make start`
 - Ensure port 3008 is available
 
 **Missing MAC addresses**
-- MAC addresses only visible on same network segment
+- MAC addresses are only visible on the same network segment
 - Some devices may not respond to ARP requests
 
-**Services keep crashing**
-- Verify your `.env` configuration is correct
-- Try stopping and restarting: `make stop && make start`
-- Check logs with: `make logs`
+**Crashes or odd behavior**
+- Verify your `.env` configuration
+- Check logs with `make logs`
 
-**Windows SQLite CGO Error**
-- If you see "Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work":
-  ```bash
-  cd backend
-  CGO_ENABLED=1 go run ./cmd
-  # or for building:
-  make build-cgo
-  ```
-- Ensure you have a C compiler installed (like TDM-GCC or Visual Studio Build Tools)
+**Windows: "go-sqlite3 requires cgo to work"**
+- Build or run with `CGO_ENABLED=1` and install a C compiler (TDM-GCC or Visual Studio Build Tools)
 
-## Uninstalling reconYa
-
-To completely remove reconYa:
+## Uninstalling
 
 ```bash
-make stop      # Stop any running processes
-make clean     # Remove build artifacts
-rm -rf reconya # Remove the directory
+make stop      # stop any running processes
+make clean     # remove build artifacts
+rm -rf reconya # remove the directory
 ```
 
-## Experimental Docker Support
-
-Docker files are available in the `experimental/` directory but are not recommended due to network isolation limitations that prevent proper MAC address discovery. Use local installation for full functionality.
-
-## 💖 Support the Project
+## Support the project
 
 If you find reconYa useful, consider supporting its development:
 
@@ -321,21 +196,21 @@ If you find reconYa useful, consider supporting its development:
   <a href="https://www.paypal.com/donate/?hosted_button_id=QEQCKLXPB6XAE"><img src="https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge" alt="PayPal"></a>
 </p>
 
-Your support helps keep reconYa free, open-source, and actively maintained. Every contribution — big or small — makes a difference!
+Your support helps keep reconYa free, open-source, and actively maintained.
 
 ## Contributing
 
 1. Fork the repository
-2. Create feature branch
+2. Create a feature branch
 3. Make changes and test
-4. Submit pull request
+4. Submit a pull request
 
 ## License
 
-Creative Commons Attribution-NonCommercial 4.0 International License. Commercial use requires permission.
+Creative Commons Attribution-NonCommercial 4.0 International. Commercial use requires permission.
 
-## 🌟 Please check my other projects!
+## Check out my other projects
 
-- **[tududi](https://tududi.com)** -  Self-hosted task management with hierarchical organization, multi-language support, and Telegram integration
-- **[BreachHarbor](https://breachharbor.com)** - Cybersecurity suite for digital asset protection  
-- **[Hevetra](https://hevetra.com)** - Digital tracking for child health milestones
+- **[tududi](https://tududi.com)** - self-hosted task management with hierarchical organization, multi-language support, and Telegram integration
+- **[BreachHarbor](https://breachharbor.com)** - cybersecurity suite for digital asset protection
+- **[Hevetra](https://hevetra.com)** - digital tracking for child health milestones
