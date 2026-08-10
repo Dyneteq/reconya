@@ -1,8 +1,6 @@
 module reconya
 
-go 1.23.0
-
-toolchain go1.24.4
+go 1.25.0
 
 require (
 	github.com/chromedp/chromedp v0.13.7
@@ -12,7 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/net v0.41.0
+	golang.org/x/net v0.55.0
 )
 
 require (
@@ -25,6 +23,6 @@ require (
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
