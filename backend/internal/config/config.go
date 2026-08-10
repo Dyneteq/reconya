@@ -31,6 +31,12 @@ type Config struct {
 	GeolocationEnabled    bool // system_status_service.go  -> ip-api.com (plain HTTP)
 	VendorLookupEnabled   bool // native_scanner.go         -> api.macvendors.com, per discovered MAC
 	OUIDownloadEnabled    bool // oui_service.go             -> standards-oui.ieee.org (plain HTTP)
+
+	// AlertOfflineThresholdHours is how long a device must have been
+	// unreachable before the host_unreachable alert rule fires. Devices go
+	// offline for mundane reasons all the time, so this wants to be long
+	// enough that it means something.
+	AlertOfflineThresholdHours int
 }
 
 // envBool reads a boolean env var, defaulting to false so that an unset,
@@ -39,6 +45,16 @@ func envBool(name string) bool {
 	val, err := strconv.ParseBool(os.Getenv(name))
 	if err != nil {
 		return false
+	}
+	return val
+}
+
+// envInt reads an integer env var, falling back to def when it is unset, empty,
+// unparsable, or not positive.
+func envInt(name string, def int) int {
+	val, err := strconv.Atoi(os.Getenv(name))
+	if err != nil || val <= 0 {
+		return def
 	}
 	return val
 }
@@ -75,6 +91,8 @@ func LoadConfig() (*Config, error) {
 		GeolocationEnabled:    envBool("GEOLOCATION_ENABLED"),
 		VendorLookupEnabled:   envBool("VENDOR_LOOKUP_ONLINE_ENABLED"),
 		OUIDownloadEnabled:    envBool("OUI_DOWNLOAD_ENABLED"),
+
+		AlertOfflineThresholdHours: envInt("ALERT_OFFLINE_THRESHOLD_HOURS", 6),
 	}
 
 	sqlitePath := os.Getenv("SQLITE_PATH")

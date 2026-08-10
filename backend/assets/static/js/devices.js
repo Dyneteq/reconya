@@ -1,658 +1,475 @@
-// Device functionality
-function loadDeviceModal(deviceId) {
-    fetch(`/api/devices/${deviceId}/modal`, { credentials: 'include' })
-        .then(response => response.json())
-        .then(data => {
-            const modalContent = document.getElementById('device-modal-content');
-            if (modalContent) {
-                modalContent.innerHTML = renderDeviceModal(data.device, data.screenshotsEnabled);
-                showModal('deviceModal');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading device modal:', error);
-        });
-}
+/* Devices: the shared table renderer and the inspection drawer.
+ *
+ * One component serves three surfaces — the dock strip under the map, the
+ * full-height HOSTS page, and the drawer that both of them (and the map, and
+ * the alert feed) open. They render the same columns because they are the same
+ * table.
+ */
+(function () {
+    'use strict';
 
-function renderDeviceModal(device, screenshotsEnabled = false) {
-    return `
-        <div class="p-6">
-            <!-- Header -->
-            <div class="flex justify-between items-center mb-4 pb-3" style="border-bottom: 1px solid var(--border-color);">
-                <div class="flex items-center">
-                    <div class="w-4 h-4 rounded-full mr-3 ${getStatusColor(device.status)}"></div>
-                    <h3 class="device-ip" style="color: var(--text-primary);">${device.ipv4}</h3>
-                    ${device.name || device.hostname ? `<span class="text-lg ml-3" style="color: var(--text-secondary);">- ${device.name || device.hostname}</span>` : ''}
-                </div>
-                <button type="button" class="text-xl transition-colors" style="color: var(--text-muted);" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'" onclick="closeModal('deviceModal')">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            
-            <!-- Device Information -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                    <h4 class="text-green-500 font-semibold mb-3">Device Info</h4>
-                    <div class="space-y-3 text-sm">
-                        <div><span style="color: var(--text-muted);">IP Address:</span> <span class="device-ip" style="color: var(--text-primary); font-size: 1rem;">${device.ipv4}</span></div>
-                        ${device.mac ? `<div><span style="color: var(--text-muted);">MAC Address:</span> <span class="text-blue-400">${device.mac}</span></div>` : ''}
-                        ${device.hostname ? `<div><span style="color: var(--text-muted);">Hostname:</span> <span style="color: var(--text-primary);">${device.hostname}</span></div>` : ''}
-                        <div><span style="color: var(--text-muted);">Status:</span> <span class="px-2 py-1 rounded text-xs ${getStatusBadgeColor(device.status)}">${device.status}</span></div>
-                        ${device.LastSeenOnlineAt ? `<div><span style="color: var(--text-muted);">Last Seen:</span> <span style="color: var(--text-primary);">${formatLogTime(device.LastSeenOnlineAt)}</span></div>` : ''}
-                    </div>
-                </div>
-                
-                ${device.os ? `
-                    <div>
-                        <h4 class="text-green-500 font-semibold mb-2">Operating System</h4>
-                        <div class="space-y-2 text-sm">
-                            <div><span style="color: var(--text-muted);">OS:</span> <span style="color: var(--text-primary);">${device.os.name || 'Unknown'}</span></div>
-                            ${device.os.version ? `<div><span style="color: var(--text-muted);">Version:</span> <span style="color: var(--text-primary);">${device.os.version}</span></div>` : ''}
-                            ${device.os.cpe ? `<div><span style="color: var(--text-muted);">CPE:</span> <span class="text-xs" style="color: var(--text-secondary);">${device.os.cpe}</span></div>` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-            
-            <!-- Editable Fields -->
-            <div class="mb-6 space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Editable Name Field -->
-                    <div>
-                        <label class="text-green-500 font-semibold block mb-2">Device Name</label>
-                        <input type="text" 
-                               id="device-name-${device.id}" 
-                               value="${device.name || ''}" 
-                               placeholder="Enter device name"
-                               class="px-4 py-3 rounded w-full focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 transition-colors"
-                               style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">
-                    </div>
-                </div>
-                
-                <!-- Editable Comment Field - Full Width -->
-                <div>
-                    <label class="text-green-500 font-semibold block mb-2">Comments & Notes</label>
-                    <textarea id="device-comment-${device.id}" 
-                              placeholder="Add comments, notes, or observations about this device..."
-                              rows="6"
-                              class="px-4 py-3 rounded w-full focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 resize-y transition-colors"
-                              style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);">${device.comment || ''}</textarea>
-                </div>
-            </div>
-            
-            <!-- Ports -->
-            ${device.ports && device.ports.length > 0 ? `
-                <div class="mb-6">
-                    <h4 class="text-green-500 font-semibold mb-3">Open Ports</h4>
-                    <div class="rounded p-3 max-h-32 overflow-y-auto" style="background: var(--bg-tertiary); border: 1px solid var(--border-color);">
-                        <div class="space-y-1">
-                            ${device.ports.filter(port => port.state === 'open' || port.state === 'filtered').map(port => `
-                                <div class="flex items-center justify-between text-xs py-1">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="text-green-400 font-medium">${port.number || port.Port}/${port.protocol || port.Protocol}</span>
-                                        <span style="color: var(--text-secondary);">${port.service || port.Service || 'unknown'}</span>
-                                    </div>
-                                    <span class="text-xs font-bold uppercase ${port.state === 'open' ? 'text-red-500' : port.state === 'filtered' ? 'text-yellow-500' : 'text-gray-500'}">${port.state}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-            
-            <!-- Actions -->
-            <div class="flex justify-between items-center pt-4" style="border-top: 1px solid var(--border-color);">
-                <button type="button" class="px-4 py-2 rounded transition-colors" style="color: var(--text-muted); border: 1px solid var(--border-color); background: transparent;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'" onclick="closeModal('deviceModal')">
-                    Close
-                </button>
-                <div class="flex gap-3">
-                    <button type="button" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors" onclick="saveDeviceChanges('${device.id}')">
-                        Save Changes
-                    </button>
-                    <button type="button" class="px-3 py-2 rounded transition-colors" style="color: #ef4444; border: 1px solid #ef4444; background: transparent;" onmouseover="this.style.background='#ef4444'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='#ef4444';" onclick="deleteDevice('${device.id}', '${device.ipv4}'); closeModal('deviceModal')" title="Delete Device">
-                        <i class="ti ti-trash"></i> Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function getStatusBadgeColor(status) {
-    switch (status) {
-        case 'online': return 'bg-green-500 text-white';
-        case 'offline': return 'bg-red-500 text-white';
-        case 'idle': return 'bg-yellow-500 text-black';
-        default: return 'bg-gray-500 text-white';
-    }
-}
-
-function formatLogTime(dateString) {
-    if (!dateString) return 'Never';
-    try {
-        const date = new Date(dateString);
-        return date.toLocaleString();
-    } catch (error) {
-        return 'Invalid date';
-    }
-}
-
-function saveDeviceChanges(deviceId) {
-    const nameInput = document.getElementById(`device-name-${deviceId}`);
-    const commentInput = document.getElementById(`device-comment-${deviceId}`);
-
-    if (!nameInput || !commentInput) {
-        console.error('Device input fields not found');
-        return;
-    }
-
-    const data = {
-        name: nameInput.value.trim(),
-        comment: commentInput.value.trim()
+    // Shared cache so the map, dock, drawer and metrics all read one snapshot
+    // instead of each fetching their own and disagreeing.
+    var state = {
+        devices: [],
+        networks: {},          // network id -> CIDR
+        activeNetworkId: null,
+        selectedId: null,
+        tab: 'overview',
+        detail: null,          // full device record for the open drawer
+        history: null,
+        listeners: []
     };
 
-    fetch(`/api/devices/${deviceId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-        credentials: 'include'
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            // Close the modal
-            closeModal('deviceModal');
+    var RISKY_PORTS = ['21', '23', '445', '3389', '5900', '9100'];
 
-            // Refresh the devices list
-            if (typeof loadDevices === 'function') {
-                loadDevices(false);
-            }
+    function onDevices(fn) {
+        state.listeners.push(fn);
+    }
 
-            // Refresh device list table if it exists
-            if (typeof loadDeviceList === 'function') {
-                loadDeviceList();
-            }
-
-            // Refresh network map if it exists
-            if (typeof window.loadNetworkMap === 'function') {
-                window.loadNetworkMap();
-            }
-        } else {
-            alert('Failed to save device changes: ' + (result.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Error saving device changes:', error);
-        alert('Failed to save device changes');
-    });
-}
-
-function deleteDevice(deviceId, deviceIP) {
-    if (confirm(`Are you sure you want to delete device ${deviceIP}? This action cannot be undone.`)) {
-        fetch(`/api/devices/${deviceId}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        })
-        .then(response => {
-            if (response.ok) {
-                loadDevices(); // Reload the device list
-            } else {
-                alert('Failed to delete device');
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting device:', error);
-            alert('Failed to delete device');
+    function notify() {
+        state.listeners.forEach(function (fn) {
+            try { fn(state); } catch (e) { console.error('device listener failed', e); }
         });
     }
-}
 
-function loadDeviceList() {
-    var targetEl = document.getElementById('device-list-container');
-    if (targetEl) {
-        targetEl.textContent = '';
-        var spinner = document.createElement('div');
-        spinner.className = 'flex items-center justify-center py-8';
-        spinner.textContent = 'Loading devices...';
-        targetEl.appendChild(spinner);
-
-        fetch('/api/device-list', { credentials: 'include' })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                targetEl.textContent = '';
-                var wrapper = document.createElement('div');
-                wrapper.innerHTML = renderDeviceTable(data.devices || [], data.networks || {});
-                while (wrapper.firstChild) targetEl.appendChild(wrapper.firstChild);
+    function loadDevices() {
+        return RC.getJSON('/api/device-list')
+            .then(function (data) {
+                state.devices = data.devices || [];
+                state.networks = data.networks || {};
+                state.activeNetworkId = data.activeNetworkId || null;
+                notify();
+                return state;
             })
-            .catch(function(error) {
-                console.error('Error loading device list:', error);
-                targetEl.textContent = 'Failed to load devices';
+            .catch(function (err) {
+                console.error('Failed to load devices:', err);
+                return state;
             });
     }
-}
 
-function renderDeviceTable(devices, networkMap) {
-    networkMap = networkMap || {};
-
-    if (!devices || devices.length === 0) {
-        return '<div class="text-center text-gray-400 py-8">No devices found</div>';
+    function getState() {
+        return state;
     }
 
-    var rows = devices.map(function(device) {
-        var networkCidr = (device.network_id && networkMap[device.network_id]) ? networkMap[device.network_id] : '';
-        var openPorts = (device.ports && device.ports.length > 0)
-            ? device.ports.filter(function(p) { return p.state === 'open'; }).length
-            : 0;
+    /* ── Table ──────────────────────────────────────────────────────── */
 
-        var nameCell = (device.name || device.hostname)
-            ? '<div class="text-gray-300">' + (device.name || device.hostname) + '</div>'
-            : '<span class="text-gray-500">-</span>';
+    function roleLabel(device) {
+        var t = (device.device_type || 'unknown').replace(/_/g, ' ');
+        return t.toUpperCase();
+    }
 
-        var macCell = device.mac
-            ? '<div class="text-blue-400 text-sm">' + device.mac + '</div>'
-            : '';
+    function portsLabel(device) {
+        var open = RC.openPorts(device);
+        if (!open.length) return '—';
 
-        var portsCell = (device.ports && device.ports.length > 0)
-            ? '<div class="text-sm text-gray-400">' + openPorts + ' open</div>'
-            : '<span class="text-gray-500">-</span>';
+        var shown = open.slice(0, 3).map(function (p) { return p.number; }).join(', ');
+        return open.length > 3 ? shown + ' +' + (open.length - 3) : shown;
+    }
 
-        return '<tr class="cursor-pointer" style="transition: background 0.2s;" onmouseover="this.style.background=\'var(--bg-tertiary)\'" onmouseout="this.style.background=\'\';" onclick="loadDeviceModal(\'' + device.id + '\')">'
-            + '<td class="px-4 py-3"><div class="flex items-center"><div class="w-3 h-3 rounded-full mr-3 ' + getStatusColor(device.status) + '"></div><div class="device-ip" style="font-size: 1.1rem;">' + device.ipv4 + '</div></div></td>'
-            + '<td class="px-4 py-3">' + nameCell + '</td>'
-            + '<td class="px-4 py-3">' + macCell + '</td>'
-            + '<td class="px-4 py-3"><span class="text-gray-400 text-sm">' + networkCidr + '</span></td>'
-            + '<td class="px-4 py-3">' + portsCell + '</td>'
-            + '<td class="px-4 py-3 text-right"><button class="px-2 py-1 text-gray-400 rounded text-sm hover:bg-gray-600 hover:text-white transition-colors" onclick="event.stopPropagation(); deleteDevice(\'' + device.id + '\', \'' + device.ipv4 + '\')" title="Delete"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button></td>'
-            + '</tr>';
-    }).join('');
+    function deviceRow(device) {
+        var color = RC.isUnidentified(device) ? 'var(--rc-amber)' : RC.statusColor(device.status);
+        var selected = device.id === state.selectedId ? ' is-selected' : '';
 
-    return '<div class="rounded overflow-hidden" style="background: var(--bg-secondary);">'
-        + '<table class="w-full">'
-        + '<thead style="background: var(--bg-primary);">'
-        + '<tr>'
-        + '<th class="px-4 py-3 text-left text-green-500">IP Address</th>'
-        + '<th class="px-4 py-3 text-left text-green-500">Name</th>'
-        + '<th class="px-4 py-3 text-left text-green-500">Network Info</th>'
-        + '<th class="px-4 py-3 text-left text-green-500">Network</th>'
-        + '<th class="px-4 py-3 text-left text-green-500">Ports</th>'
-        + '<th class="px-4 py-3"></th>'
-        + '</tr>'
-        + '</thead>'
-        + '<tbody>' + rows + '</tbody>'
-        + '</table>'
-        + '</div>';
-}
+        return '<div class="rc-devices__row' + selected + '" data-device-id="' + RC.esc(device.id) + '">' +
+            '<span class="rc-cell--addr" style="color:' + color + '">' +
+                '<span class="rc-dot" style="background:' + color + '"></span>' + RC.esc(device.ipv4 || '—') +
+            '</span>' +
+            '<span class="rc-cell--host">' + RC.esc(RC.deviceName(device) || '—') + '</span>' +
+            '<span class="rc-cell--vendor">' + RC.esc(device.vendor || '—') + '</span>' +
+            '<span class="rc-cell--role">' + RC.esc(roleLabel(device)) + '</span>' +
+            '<span class="rc-cell--ports">' + RC.esc(portsLabel(device)) + '</span>' +
+            '<span class="rc-cell--seen">' + RC.esc(RC.timeAgo(device.last_seen_online_at || device.updated_at)) + '</span>' +
+            '</div>';
+    }
 
-// Make functions available globally
-window.loadDeviceList = loadDeviceList;
-window.renderDeviceTable = renderDeviceTable;
-window.loadDeviceModal = loadDeviceModal;
-window.renderDeviceModal = renderDeviceModal;
-window.getStatusBadgeColor = getStatusBadgeColor;
-window.formatLogTime = formatLogTime;
-window.saveDeviceChanges = saveDeviceChanges;
-window.deleteDevice = deleteDevice;
+    function renderDeviceRows(devices) {
+        if (!devices.length) return RC.empty('No devices match');
+        return devices.map(deviceRow).join('');
+    }
 
-// ── Node dropdown (topology canvas click) ───────────────────────────────────
+    /* ── Drawer ─────────────────────────────────────────────────────── */
 
-function showNodeDropdown(deviceId, clientX, clientY) {
-    closeNodeDropdown();
+    function openDrawer(deviceId) {
+        state.selectedId = deviceId;
+        state.tab = 'overview';
+        state.history = null;
 
-    var tip = document.getElementById('network-viz-tip');
-    if (tip) tip.style.display = 'none';
+        // Keep the map's selection marker in step however the drawer was
+        // opened — dock row, host table, alert feed or the canvas itself.
+        if (window.RCMap) window.RCMap.setSelected(deviceId);
 
-    fetch('/api/devices/' + deviceId + '/modal', { credentials: 'include' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var d = data.device;
-            var green  = '#10b981';
-            var muted  = '#6b7280';
-            var dim    = '#9ca3af';
-            var bg     = 'rgba(7,13,23,0.97)';
-            var border = 'rgba(16,185,129,0.30)';
-            var body   = '#d1fae5';
-            var red    = '#ef4444';
-            var inputBg = 'rgba(255,255,255,0.05)';
+        var shell = RC.el('rc-shell');
+        if (shell) shell.classList.add('is-drawer-open');
 
-            var openPorts = (d.ports || []).filter(function(p) { return p.state === 'open'; }).length;
-            var statusColor = d.status === 'online' ? green
-                            : d.status === 'idle'   ? '#eab308'
-                            : muted;
+        syncTabs();
+        notify();
+        loadDetail(deviceId);
+    }
 
-            function ago(ts) {
-                if (!ts) return '';
-                var diff = Date.now() - new Date(ts).getTime();
-                var m = Math.floor(diff / 60000);
-                if (m < 1)  return 'just now';
-                if (m < 60) return m + 'm ago';
-                var h = Math.floor(m / 60);
-                if (h < 24) return h + 'h ago';
-                return Math.floor(h / 24) + 'd ago';
-            }
+    function closeDrawer() {
+        state.selectedId = null;
+        state.detail = null;
+        if (window.RCMap) window.RCMap.setSelected(null);
 
-            function makeRow(labelText, valueText, valueColor) {
-                var row = document.createElement('div');
-                var lbl = document.createElement('span');
-                lbl.textContent = labelText;
-                lbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';';
-                var val = document.createElement('span');
-                val.textContent = valueText;
-                if (valueColor) val.style.color = valueColor;
-                row.appendChild(lbl);
-                row.appendChild(document.createTextNode(' '));
-                row.appendChild(val);
-                return row;
-            }
+        var shell = RC.el('rc-shell');
+        if (shell) shell.classList.remove('is-drawer-open');
 
-            function makeFieldGroup(labelText, el) {
-                var wrap = document.createElement('div');
-                wrap.style.cssText = 'display:flex;flex-direction:column;gap:3px;';
-                var lbl = document.createElement('label');
-                lbl.textContent = labelText;
-                lbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';';
-                wrap.appendChild(lbl);
-                wrap.appendChild(el);
-                return wrap;
-            }
+        notify();
+    }
 
-            // ── Outer container ──────────────────────────────────────────
-            var drop = document.createElement('div');
-            drop.id = 'node-dropdown';
-            drop.style.cssText =
-                'position:fixed;z-index:9999;pointer-events:auto;' +
-                'background:' + bg + ';border:1px solid ' + border + ';' +
-                'border-radius:6px;padding:10px 12px;width:260px;' +
-                'box-shadow:0 8px 32px rgba(0,0,0,0.55);' +
-                'color:' + body + ';font-family:\'Roboto Mono\',monospace;font-size:10px;line-height:1.7;';
+    function loadDetail(deviceId) {
+        RC.render(RC.el('rc-d-body'), '<div class="rc-loading">LOADING HOST</div>');
 
-            // ── Header ───────────────────────────────────────────────────
-            var header = document.createElement('div');
-            header.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;';
+        RC.getJSON('/api/devices/' + encodeURIComponent(deviceId) + '/modal')
+            .then(function (data) {
+                // Guard against a slow response landing after the user moved on.
+                if (state.selectedId !== deviceId) return;
+                state.detail = data.device || null;
+                renderDrawer();
+            })
+            .catch(function (err) {
+                console.error('Failed to load device:', err);
+                if (state.selectedId !== deviceId) return;
+                RC.render(RC.el('rc-d-body'), RC.empty('Could not load this host'));
+            });
+    }
 
-            var headerLeft = document.createElement('div');
-            headerLeft.style.cssText = 'min-width:0;flex:1;';
+    function syncTabs() {
+        var tabs = RC.el('rc-d-tabs');
+        if (!tabs) return;
 
-            var ipEl = document.createElement('div');
-            ipEl.textContent = d.ipv4 || '—';
-            ipEl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:13px;font-weight:bold;color:' + green + ';letter-spacing:0.05em;';
-            headerLeft.appendChild(ipEl);
+        Array.prototype.forEach.call(tabs.children, function (tab) {
+            tab.classList.toggle('is-active', tab.getAttribute('data-tab') === state.tab);
+        });
+    }
 
-            var displayName = d.name || d.hostname || '';
-            var nameDisplay = document.createElement('div');
-            nameDisplay.textContent = displayName || '';
-            nameDisplay.style.cssText = 'font-size:10px;color:' + dim + ';margin-top:1px;' + (displayName ? '' : 'display:none;');
-            headerLeft.appendChild(nameDisplay);
+    function renderDrawer() {
+        var device = state.detail;
+        if (!device) return;
 
-            var headerRight = document.createElement('div');
-            headerRight.style.cssText = 'display:flex;align-items:center;gap:4px;flex-shrink:0;padding-left:6px;';
+        var color = RC.isUnidentified(device) ? 'var(--rc-amber)' : RC.statusColor(device.status);
+        var status = (device.status || 'unknown').toUpperCase();
+        var seen = RC.timeAgo(device.last_seen_online_at);
 
-            var editBtn = document.createElement('button');
-            editBtn.title = 'Edit';
-            editBtn.style.cssText = 'background:none;border:1px solid ' + border + ';cursor:pointer;color:' + green + ';font-size:11px;line-height:1;padding:2px 5px;border-radius:3px;';
-            editBtn.textContent = '✎';
+        var dot = RC.el('rc-d-dot');
+        if (dot) dot.style.background = color;
+        if (dot) dot.style.boxShadow = '0 0 8px ' + color;
 
-            var closeBtn = document.createElement('button');
-            closeBtn.textContent = '✕';
-            closeBtn.title = 'Close';
-            closeBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:' + muted + ';font-size:15px;line-height:1;padding:0;';
-            closeBtn.addEventListener('click', function() { window.closeNodeDropdown(); });
+        var statusEl = RC.el('rc-d-status');
+        if (statusEl) {
+            statusEl.textContent = status + (seen !== '—' ? ' · ' + seen : '');
+            statusEl.style.color = color;
+        }
 
-            headerRight.appendChild(editBtn);
-            headerRight.appendChild(closeBtn);
-            header.appendChild(headerLeft);
-            header.appendChild(headerRight);
-            drop.appendChild(header);
+        RC.text('rc-d-ip', device.ipv4 || '—');
+        RC.text('rc-d-sub', [RC.deviceName(device) || 'no hostname', device.vendor || 'unknown vendor'].join(' · '));
 
-            // ── View section ─────────────────────────────────────────────
-            var viewEl = document.createElement('div');
-            viewEl.style.cssText = 'border-top:1px solid ' + border + ';padding-top:7px;display:flex;flex-direction:column;gap:3px;';
+        syncTabs();
 
-            var statusRow = document.createElement('div');
-            statusRow.style.cssText = 'display:flex;align-items:center;gap:5px;';
-            var dot = document.createElement('span');
-            dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:' + statusColor + ';flex-shrink:0;';
-            var statusLbl = document.createElement('span');
-            statusLbl.textContent = (d.status || 'unknown').toUpperCase();
-            statusLbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:9px;color:' + statusColor + ';';
-            statusRow.appendChild(dot);
-            statusRow.appendChild(statusLbl);
-            if (openPorts > 0) {
-                var portsSpan = document.createElement('span');
-                portsSpan.textContent = '· ' + openPorts + ' open port' + (openPorts > 1 ? 's' : '');
-                portsSpan.style.cssText = 'color:' + red + ';margin-left:4px;';
-                statusRow.appendChild(portsSpan);
-            }
-            viewEl.appendChild(statusRow);
+        var body = RC.el('rc-d-body');
+        if (!body) return;
 
-            if (d.mac)    viewEl.appendChild(makeRow('MAC',  d.mac));
-            if (d.vendor) viewEl.appendChild(makeRow('MFR',  d.vendor, dim));
-            if (d.os && d.os.name) {
-                var osText = d.os.name + (d.os.version ? ' ' + d.os.version : '');
-                viewEl.appendChild(makeRow('OS', osText));
-            }
-            if (d.last_seen_online_at) viewEl.appendChild(makeRow('SEEN', ago(d.last_seen_online_at)));
+        if (state.tab === 'overview') RC.render(body, overviewHTML(device));
+        else if (state.tab === 'ports') RC.render(body, portsHTML(device));
+        else if (state.tab === 'history') renderHistory(device);
+        else if (state.tab === 'notes') renderNotes(device);
+    }
 
-            var openPortList = (d.ports || []).filter(function(p) { return p.state === 'open'; });
-            if (openPortList.length > 0) {
-                var portsSection = document.createElement('div');
-                portsSection.style.cssText = 'margin-top:4px;';
-                var portsLbl = document.createElement('div');
-                portsLbl.textContent = 'PORTS';
-                portsLbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';margin-bottom:4px;';
-                portsSection.appendChild(portsLbl);
+    function overviewHTML(device) {
+        var os = device.os ? [device.os.name, device.os.version].filter(Boolean).join(' ') : '';
+        var open = RC.openPorts(device);
 
-                var table = document.createElement('table');
-                table.style.cssText = 'width:100%;border-collapse:collapse;font-size:9px;';
+        var rows = [
+            ['MAC', device.mac || '—'],
+            ['VENDOR', device.vendor || '—'],
+            ['SUBNET', state.networks[device.network_id] || '—'],
+            ['ROLE', roleLabel(device)],
+            ['OS GUESS', os || 'no fingerprint'],
+            ['FIRST SEEN', RC.dateTime(device.created_at)],
+            ['LAST SEEN', RC.timeAgo(device.last_seen_online_at) + ' ago']
+        ];
 
-                openPortList.forEach(function(p) {
-                    var num  = p.number   || '';
-                    var proto = p.protocol || 'tcp';
-                    var svc  = p.service  || '';
+        var html = '<dl class="rc-kv">' + rows.map(function (r) {
+            return '<dt>' + RC.esc(r[0]) + '</dt><dd>' + RC.esc(r[1]) + '</dd>';
+        }).join('') + '</dl>';
 
-                    var isHttp  = svc === 'http'  || num === '80'   || num === '8080' || num === '8000' || num === '8888';
-                    var isHttps = svc === 'https' || num === '443'  || num === '8443';
-                    var isWeb   = isHttp || isHttps;
-                    var scheme  = isHttps ? 'https' : 'http';
+        html += '<div class="rc-section"><span>OPEN PORTS</span><span style="color:var(--rc-text-5)">' +
+            open.length + ' FOUND</span></div>';
+        html += open.length ? portRows(open) : RC.empty('No open ports recorded');
 
-                    var tr = document.createElement('tr');
-                    tr.style.cssText = 'border-bottom:1px solid ' + border + ';';
+        var services = device.web_services || [];
+        if (services.length) {
+            html += '<div class="rc-section"><span>WEB SERVICES</span></div>';
+            html += '<div class="rc-ports">' + services.map(function (s) {
+                return '<div class="rc-port">' +
+                    '<span class="rc-port__num">' + RC.esc(String(s.port || '')) + '</span>' +
+                    '<span class="rc-port__svc">' + RC.esc(s.title || s.url || '') + '</span>' +
+                    '<a class="rc-port__detail" href="' + RC.esc(s.url || '#') + '" target="_blank" rel="noreferrer noopener">↗</a>' +
+                    '</div>';
+            }).join('') + '</div>';
+        }
 
-                    // Port + protocol
-                    var tdPort = document.createElement('td');
-                    tdPort.style.cssText = 'padding:3px 6px 3px 0;white-space:nowrap;';
-                    var portNum = document.createElement('span');
-                    portNum.textContent = num;
-                    portNum.style.cssText = 'color:' + red + ';font-weight:bold;';
-                    var portProto = document.createElement('span');
-                    portProto.textContent = '/' + proto;
-                    portProto.style.cssText = 'color:' + muted + ';';
-                    tdPort.appendChild(portNum);
-                    tdPort.appendChild(portProto);
+        return html;
+    }
 
-                    // Service
-                    var tdSvc = document.createElement('td');
-                    tdSvc.style.cssText = 'padding:3px 6px;color:' + dim + ';width:100%;';
-                    tdSvc.textContent = svc || '—';
+    function portRows(ports) {
+        return '<div class="rc-ports">' + ports.map(function (p) {
+            var risky = RISKY_PORTS.indexOf(String(p.number)) !== -1;
+            return '<div class="rc-port">' +
+                '<span class="rc-port__num' + (risky ? ' is-risky' : '') + '">' + RC.esc(p.number) + '</span>' +
+                '<span class="rc-port__svc">' + RC.esc(p.service || 'unknown') + '</span>' +
+                '<span class="rc-port__detail">' + RC.esc(p.protocol || 'tcp') + '</span>' +
+                '</div>';
+        }).join('') + '</div>';
+    }
 
-                    // Link (web ports only)
-                    var tdLink = document.createElement('td');
-                    tdLink.style.cssText = 'padding:3px 0 3px 4px;white-space:nowrap;';
-                    if (isWeb) {
-                        var link = document.createElement('a');
-                        link.href = scheme + '://' + (d.ipv4 || '') + ':' + num;
-                        link.target = '_blank';
-                        link.rel = 'noopener noreferrer';
-                        link.textContent = '↗';
-                        link.style.cssText = 'color:' + green + ';text-decoration:none;font-size:11px;';
-                        tdLink.appendChild(link);
+    function portsHTML(device) {
+        var open = RC.openPorts(device);
+        if (!open.length) return RC.empty('No open ports recorded');
+
+        return '<div style="padding:14px 16px">' +
+            '<div class="rc-section" style="padding:0 0 8px">' +
+                '<span>' + open.length + ' OPEN</span>' +
+                '<span style="color:var(--rc-text-5)">' + RC.esc(scanStamp(device)) + '</span>' +
+            '</div>' + portRows(open) + '</div>';
+    }
+
+    function scanStamp(device) {
+        if (!device.port_scan_ended_at) return 'never scanned';
+        return 'scanned ' + RC.timeAgo(device.port_scan_ended_at) + ' ago';
+    }
+
+    function renderHistory(device) {
+        var body = RC.el('rc-d-body');
+
+        if (state.history) {
+            RC.render(body, historyHTML(state.history));
+            return;
+        }
+
+        RC.render(body, '<div class="rc-loading">LOADING HISTORY</div>');
+        RC.getJSON('/api/devices/' + encodeURIComponent(device.id) + '/events')
+            .then(function (data) {
+                if (state.selectedId !== device.id || state.tab !== 'history') return;
+                state.history = data.logs || [];
+                RC.render(RC.el('rc-d-body'), historyHTML(state.history));
+            })
+            .catch(function (err) {
+                console.error('Failed to load device history:', err);
+                if (state.selectedId !== device.id) return;
+                RC.render(RC.el('rc-d-body'), RC.empty('Could not load history'));
+            });
+    }
+
+    function historyHTML(logs) {
+        if (!logs.length) return RC.empty('Nothing recorded for this host yet');
+
+        return '<div class="rc-history">' + logs.map(function (log) {
+            var mark = eventMark(log.type);
+            return '<div class="rc-history__row">' +
+                '<span class="rc-history__when">' + RC.esc(RC.dateTime(log.created_at)) + '</span>' +
+                '<span style="flex:none;width:8px;color:' + mark.color + '">' + mark.glyph + '</span>' +
+                '<span class="rc-history__text">' + RC.esc(log.description || log.type || '') + '</span>' +
+                '</div>';
+        }).join('') + '</div>';
+    }
+
+    // EEventLogType values are human strings ("Ping sweep", "Device online"),
+    // not slugs — match on those, not on snake_case that never appears.
+    function eventMark(type) {
+        switch (type) {
+            case 'Device online':
+                return { glyph: '+', color: 'var(--rc-accent)' };
+            case 'Device became idle':
+                return { glyph: '~', color: 'var(--rc-amber)' };
+            case 'Device is now offline':
+                return { glyph: '−', color: 'var(--rc-text-4)' };
+            case 'Device deleted':
+                return { glyph: '✕', color: 'var(--rc-red)' };
+            case 'Port scan started':
+                return { glyph: '›', color: 'var(--rc-text-4)' };
+            case 'Port scan completed':
+            case 'Ping sweep':
+                return { glyph: '✓', color: 'var(--rc-text-4)' };
+            case 'Warning':
+            case 'Alert':
+                return { glyph: '▲', color: 'var(--rc-amber)' };
+            default:
+                return { glyph: '●', color: 'var(--rc-text-4)' };
+        }
+    }
+
+    function renderNotes(device) {
+        var note = device.comment || '';
+
+        RC.render(RC.el('rc-d-body'),
+            '<div class="rc-notes">' +
+                '<div class="rc-field">' +
+                    '<label for="rc-d-note">Operator notes</label>' +
+                    '<textarea id="rc-d-note" placeholder="What is this host, and what should the next person know about it?">' +
+                        RC.esc(note) +
+                    '</textarea>' +
+                '</div>' +
+                '<div style="display:flex;gap:8px">' +
+                    '<button class="rc-btn rc-btn--solid" id="rc-d-note-save">SAVE NOTE</button>' +
+                    '<span id="rc-d-note-status" style="align-self:center;font-size:10px;letter-spacing:.12em;color:var(--rc-text-5)"></span>' +
+                '</div>' +
+            '</div>');
+
+        var save = RC.el('rc-d-note-save');
+        if (!save) return;
+
+        save.addEventListener('click', function () {
+            var field = RC.el('rc-d-note');
+            if (!field) return;
+
+            RC.text('rc-d-note-status', 'SAVING…');
+            RC.sendJSON('PUT', '/api/devices/' + encodeURIComponent(device.id), {
+                name: device.name || '',
+                comment: field.value
+            }).then(function () {
+                device.comment = field.value;
+                RC.text('rc-d-note-status', 'SAVED');
+                loadDevices();
+            }).catch(function (err) {
+                console.error('Failed to save note:', err);
+                RC.text('rc-d-note-status', 'FAILED');
+            });
+        });
+    }
+
+    /* ── Drawer footer actions ──────────────────────────────────────── */
+
+    function rescanHost() {
+        if (!state.detail) return;
+        var device = state.detail;
+        var btn = RC.el('rc-d-rescan');
+
+        if (btn) {
+            btn.textContent = 'QUEUEING…';
+            btn.disabled = true;
+        }
+
+        RC.sendJSON('POST', '/api/devices/' + encodeURIComponent(device.id) + '/rescan')
+            .then(function () {
+                if (btn) btn.textContent = 'SCAN QUEUED';
+            })
+            .catch(function (err) {
+                console.error('Rescan failed:', err);
+                if (btn) btn.textContent = 'RESCAN FAILED';
+            })
+            .then(function () {
+                setTimeout(function () {
+                    if (btn) {
+                        btn.textContent = 'RESCAN HOST';
+                        btn.disabled = false;
                     }
-
-                    tr.appendChild(tdPort);
-                    tr.appendChild(tdSvc);
-                    tr.appendChild(tdLink);
-                    table.appendChild(tr);
-                });
-
-                portsSection.appendChild(table);
-                viewEl.appendChild(portsSection);
-            }
-
-            if (d.comment) {
-                var commentRow = document.createElement('div');
-                commentRow.style.cssText = 'margin-top:2px;';
-                var commentLbl = document.createElement('span');
-                commentLbl.textContent = 'NOTE';
-                commentLbl.style.cssText = 'font-family:\'Orbitron\',monospace;font-size:8px;color:' + muted + ';display:block;';
-                var commentVal = document.createElement('div');
-                commentVal.textContent = d.comment;
-                commentVal.style.cssText = 'color:' + dim + ';font-size:9px;line-height:1.4;margin-top:1px;white-space:pre-wrap;word-break:break-word;';
-                commentRow.appendChild(commentLbl);
-                commentRow.appendChild(commentVal);
-                viewEl.appendChild(commentRow);
-            }
-
-            drop.appendChild(viewEl);
-
-            // ── Edit section (hidden by default) ─────────────────────────
-            var editEl = document.createElement('div');
-            editEl.style.cssText = 'display:none;border-top:1px solid ' + border + ';padding-top:8px;display:none;flex-direction:column;gap:8px;';
-
-            var nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.value = d.name || '';
-            nameInput.placeholder = 'Device name';
-            nameInput.style.cssText =
-                'width:100%;box-sizing:border-box;padding:4px 7px;border-radius:3px;' +
-                'border:1px solid ' + border + ';background:' + inputBg + ';' +
-                'color:' + body + ';font-family:\'Roboto Mono\',monospace;font-size:10px;outline:none;';
-            editEl.appendChild(makeFieldGroup('NAME', nameInput));
-
-            var commentInput = document.createElement('textarea');
-            commentInput.value = d.comment || '';
-            commentInput.placeholder = 'Add a note…';
-            commentInput.rows = 3;
-            commentInput.style.cssText =
-                'width:100%;box-sizing:border-box;padding:4px 7px;border-radius:3px;' +
-                'border:1px solid ' + border + ';background:' + inputBg + ';' +
-                'color:' + body + ';font-family:\'Roboto Mono\',monospace;font-size:10px;' +
-                'resize:vertical;outline:none;min-height:54px;';
-            editEl.appendChild(makeFieldGroup('NOTE', commentInput));
-
-            // Save / Cancel row
-            var formActions = document.createElement('div');
-            formActions.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;';
-
-            var cancelBtn = document.createElement('button');
-            cancelBtn.textContent = 'Cancel';
-            cancelBtn.style.cssText =
-                'padding:3px 10px;border-radius:3px;border:1px solid ' + border + ';' +
-                'background:none;color:' + muted + ';font-family:\'Roboto Mono\',monospace;font-size:10px;cursor:pointer;';
-
-            var saveBtn = document.createElement('button');
-            saveBtn.textContent = 'Save';
-            saveBtn.style.cssText =
-                'padding:3px 10px;border-radius:3px;border:1px solid ' + green + ';' +
-                'background:' + green + ';color:#fff;font-family:\'Roboto Mono\',monospace;font-size:10px;cursor:pointer;';
-
-            formActions.appendChild(cancelBtn);
-            formActions.appendChild(saveBtn);
-            editEl.appendChild(formActions);
-            drop.appendChild(editEl);
-
-            // ── Toggle edit mode ─────────────────────────────────────────
-            function enterEdit() {
-                viewEl.style.display = 'none';
-                editEl.style.display = 'flex';
-                editBtn.textContent = '✕';
-                editBtn.title = 'Cancel edit';
-                nameInput.focus();
-                document.removeEventListener('click', _nodeDropdownOutside);
-            }
-
-            function exitEdit() {
-                editEl.style.display = 'none';
-                viewEl.style.display = 'flex';
-                editBtn.textContent = '✎';
-                editBtn.title = 'Edit';
-                setTimeout(function() {
-                    document.addEventListener('click', _nodeDropdownOutside);
-                }, 0);
-            }
-
-            editBtn.addEventListener('click', function() {
-                if (editEl.style.display === 'none') enterEdit(); else exitEdit();
+                }, 2500);
             });
-            cancelBtn.addEventListener('click', function() {
-                nameInput.value    = d.name    || '';
-                commentInput.value = d.comment || '';
-                exitEdit();
-            });
-
-            saveBtn.addEventListener('click', function() {
-                saveBtn.textContent = '…';
-                saveBtn.disabled = true;
-                fetch('/api/devices/' + deviceId, {
-                    method: 'PUT',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: nameInput.value.trim(), comment: commentInput.value.trim() })
-                })
-                .then(function(r) {
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
-                    return r.text();
-                })
-                .then(function() {
-                    d.name    = nameInput.value.trim();
-                    d.comment = commentInput.value.trim();
-                    nameDisplay.textContent = d.name || d.hostname || '';
-                    nameDisplay.style.display = (d.name || d.hostname) ? '' : 'none';
-                    exitEdit();
-                })
-                .catch(function() {
-                    saveBtn.textContent = 'Save';
-                    saveBtn.disabled = false;
-                });
-            });
-
-            document.body.appendChild(drop);
-
-            // ── Position near cursor ─────────────────────────────────────
-            var dw = 260, dh = drop.offsetHeight || 130;
-            var vw = window.innerWidth, vh = window.innerHeight;
-            var left = clientX + 14;
-            var top  = clientY + 14;
-            if (left + dw > vw - 8) left = clientX - dw - 14;
-            if (top  + dh > vh - 8) top  = clientY - dh - 14;
-            drop.style.left = Math.max(4, left) + 'px';
-            drop.style.top  = Math.max(4, top)  + 'px';
-
-            setTimeout(function() {
-                document.addEventListener('click', _nodeDropdownOutside);
-            }, 0);
-        })
-        .catch(function() {});
-}
-
-function _nodeDropdownOutside(e) {
-    var drop = document.getElementById('node-dropdown');
-    if (drop && !drop.contains(e.target)) {
-        window.closeNodeDropdown();
     }
-}
 
-function closeNodeDropdown() {
-    var drop = document.getElementById('node-dropdown');
-    if (drop) drop.remove();
-    document.removeEventListener('click', _nodeDropdownOutside);
-}
+    function renameHost() {
+        if (!state.detail) return;
+        var device = state.detail;
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeNodeDropdown();
-});
+        openDialog({
+            title: 'RENAME HOST',
+            body: '<div class="rc-field">' +
+                    '<label for="rc-rename-input">Display name for ' + RC.esc(device.ipv4) + '</label>' +
+                    '<input id="rc-rename-input" value="' + RC.esc(device.name || '') + '" placeholder="' +
+                        RC.esc(device.hostname || 'e.g. nas-vault') + '">' +
+                  '</div>',
+            confirm: 'SAVE',
+            onConfirm: function () {
+                var field = RC.el('rc-rename-input');
+                if (!field) return;
 
-window.showNodeDropdown  = showNodeDropdown;
-window.closeNodeDropdown = closeNodeDropdown;
+                RC.sendJSON('PUT', '/api/devices/' + encodeURIComponent(device.id), {
+                    name: field.value,
+                    comment: device.comment || ''
+                }).then(function () {
+                    device.name = field.value;
+                    closeDialog();
+                    renderDrawer();
+                    loadDevices();
+                }).catch(function (err) {
+                    console.error('Rename failed:', err);
+                    failDialog('RENAME FAILED', 'The host could not be renamed. ' + err.message);
+                });
+            }
+        });
+    }
+
+    function deleteHost() {
+        if (!state.detail) return;
+        var device = state.detail;
+
+        openDialog({
+            title: 'DELETE HOST',
+            body: '<div style="font-size:12px;color:var(--rc-text-3);line-height:1.6">' +
+                'Remove <strong style="color:var(--rc-text)">' + RC.esc(device.ipv4) + '</strong> and its ' +
+                'scan history. If the host is still on the network the next sweep will find it again.' +
+                '</div>',
+            confirm: 'DELETE',
+            danger: true,
+            onConfirm: function () {
+                fetch('/api/devices/' + encodeURIComponent(device.id), {
+                    method: 'DELETE',
+                    credentials: 'include'
+                }).then(function (r) {
+                    if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+                    closeDialog();
+                    closeDrawer();
+                    loadDevices();
+                }).catch(function (err) {
+                    console.error('Delete failed:', err);
+                    failDialog('DELETE FAILED', 'The host could not be deleted. ' + err.message);
+                });
+            }
+        });
+    }
+
+    function bindDrawer() {
+        var close = RC.el('rc-d-close');
+        if (close) close.addEventListener('click', closeDrawer);
+
+        var tabs = RC.el('rc-d-tabs');
+        if (tabs) {
+            tabs.addEventListener('click', function (e) {
+                var tab = e.target.closest('[data-tab]');
+                if (!tab) return;
+                state.tab = tab.getAttribute('data-tab');
+                renderDrawer();
+            });
+        }
+
+        var rescan = RC.el('rc-d-rescan');
+        if (rescan) rescan.addEventListener('click', rescanHost);
+
+        var rename = RC.el('rc-d-rename');
+        if (rename) rename.addEventListener('click', renameHost);
+
+        var del = RC.el('rc-d-delete');
+        if (del) del.addEventListener('click', deleteHost);
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            var dialog = RC.el('rc-dialog');
+            if (dialog && dialog.classList.contains('is-open')) return;
+            if (state.selectedId) closeDrawer();
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', bindDrawer);
+
+    window.RCDevices = {
+        load: loadDevices,
+        state: getState,
+        onDevices: onDevices,
+        renderRows: renderDeviceRows,
+        roleLabel: roleLabel,
+        openDrawer: openDrawer,
+        closeDrawer: closeDrawer
+    };
+})();

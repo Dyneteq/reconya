@@ -1,66 +1,61 @@
-window.detectedNetworks = [];
+/* Auto-discovery of local networks.
+ *
+ * reconYa is meant to be useful the moment it starts, so any interface network
+ * it detects and does not already know about is added automatically. The scan
+ * control picks it up from there and starts sweeping.
+ */
+(function () {
+    'use strict';
 
-function checkForNetworkSuggestions() {
-    Promise.all([
-        fetch('/api/detected-networks', { credentials: 'include' }).then(r => r.ok ? r.json() : []),
-        fetch('/api/networks', { credentials: 'include' }).then(r => r.ok ? r.json() : {networks: []})
-    ]).then(([detectedData, networksData]) => {
-        const existingNetworks = networksData.networks || [];
-        const detected = detectedData || [];
+    var detected = [];
+    var timer = null;
 
-        window.detectedNetworks = detected;
+    function checkForNetworkSuggestions() {
+        return Promise.all([
+            RC.getJSON('/api/detected-networks').catch(function () { return []; }),
+            RC.getJSON('/api/networks').catch(function () { return { networks: [] }; })
+        ]).then(function (results) {
+            detected = results[0] || [];
+            var existing = (results[1] && results[1].networks) || [];
 
-        // Auto-add any detected networks not yet in the database
-        const toAdd = detected.filter(n => !existingNetworks.some(e => e.cidr === n.cidr));
-        if (toAdd.length > 0) {
-            autoAddDetectedNetworks(toAdd);
-        }
-    }).catch(error => {
-        console.error('Failed to fetch network data:', error);
-    });
-}
+            var missing = detected.filter(function (n) {
+                return !existing.some(function (e) { return e.cidr === n.cidr; });
+            });
 
-function autoAddDetectedNetworks(networks) {
-    let index = 0;
-    function addNext() {
-        if (index >= networks.length) {
-            // All networks added — reload scan control to trigger auto-start
-            if (typeof window.loadScanControl === 'function') {
-                window.loadScanControl(true);
-            }
-            return;
-        }
-        const network = networks[index++];
-        fetch('/api/network-suggestion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                cidr: network.cidr,
-                interface_name: network.interface_name || '',
-                gateway: network.gateway || '',
-                name: network.name || ''
-            }),
-            credentials: 'include'
-        })
-        .then(r => {
-            if (r.ok) {
-                addNext();
-            } else {
-                console.error('Failed to auto-add network:', network.cidr);
-            }
-        })
-        .catch(e => console.error('Error auto-adding network:', e));
+            if (missing.length) return addDetected(missing);
+        }).catch(function (err) {
+            console.error('Failed to check for detected networks:', err);
+        });
     }
-    addNext();
-}
 
-// Initialize network suggestion functionality
-function initNetworkSuggestions() {
-    // Check for detected networks immediately and periodically
-    checkForNetworkSuggestions();
-
-    if (window.networkSuggestionInterval) {
-        clearInterval(window.networkSuggestionInterval);
+    // Added one at a time rather than in parallel: every write funnels through
+    // the DB manager's single worker anyway, and serialising here keeps the
+    // event log readable.
+    function addDetected(networks) {
+        return networks.reduce(function (chain, network) {
+            return chain.then(function () {
+                return RC.sendForm('/api/network-suggestion', {
+                    cidr: network.cidr,
+                    interface_name: network.interface_name || network['interface'] || '',
+                    gateway: network.gateway || '',
+                    name: network.name || ''
+                }).catch(function (err) {
+                    console.error('Failed to auto-add network', network.cidr, err);
+                });
+            });
+        }, Promise.resolve()).then(function () {
+            if (window.RCScan) return window.RCScan.load();
+        });
     }
-    window.networkSuggestionInterval = setInterval(checkForNetworkSuggestions, 15000);
-}
+
+    function initNetworkSuggestions() {
+        checkForNetworkSuggestions();
+        if (timer) clearInterval(timer);
+        timer = setInterval(checkForNetworkSuggestions, 15000);
+    }
+
+    window.RCSuggestions = {
+        init: initNetworkSuggestions,
+        detected: function () { return detected; }
+    };
+})();

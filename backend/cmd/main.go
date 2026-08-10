@@ -18,6 +18,7 @@ import (
 
 	"reconya/assets"
 	"reconya/db"
+	"reconya/internal/alert"
 	"reconya/internal/config"
 	"reconya/internal/device"
 	"reconya/internal/eventlog"
@@ -32,9 +33,16 @@ import (
 	"reconya/internal/systemstatus"
 	"reconya/internal/web"
 	"reconya/middleware"
+	"reconya/models"
 )
 
-func runDeviceUpdater(service *device.DeviceService, done <-chan bool) {
+// runDeviceUpdater ages out devices that have stopped answering.
+//
+// It also writes the event log for each transition. Those used to be silent:
+// UpdateDeviceStatuses was two set-based UPDATEs that reported nothing, so
+// models.DeviceIdle and models.DeviceOffline were declared and rendered but
+// never actually written by anything.
+func runDeviceUpdater(service *device.DeviceService, eventLogService *eventlog.EventLogService, done <-chan bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			errorLogger.Printf("Device updater panic recovered: %v", r)
@@ -60,10 +68,61 @@ func runDeviceUpdater(service *device.DeviceService, done <-chan bool) {
 						errorLogger.Printf("UpdateDeviceStatuses stack: %s", debug.Stack())
 					}
 				}()
-				err := service.UpdateDeviceStatuses()
+				changes, err := service.UpdateDeviceStatuses()
 				if err != nil {
 					infoLogger.Printf("Failed to update device statuses: %v", err)
 					time.Sleep(1 * time.Second)
+					return
+				}
+
+				for _, c := range changes {
+					eventType := models.DeviceOffline
+					if c.Status == models.DeviceStatusIdle {
+						eventType = models.DeviceIdle
+					}
+					if err := eventLogService.Log(eventType, "", c.ID); err != nil {
+						infoLogger.Printf("Failed to log %s transition for %s: %v", c.Status, c.IPv4, err)
+					}
+				}
+			}()
+		}
+	}
+}
+
+// runAlertEvaluator re-runs the stateful alert rules on a timer.
+//
+// The scan loop already evaluates after every sweep, which covers everything
+// that changes because a device was seen. This ticker exists for the rules that
+// fire on the passage of time instead — host_unreachable crosses its threshold
+// and one-shot alerts age out with no scan activity involved at all.
+func runAlertEvaluator(service *alert.AlertService, done <-chan bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			errorLogger.Printf("Alert evaluator panic recovered: %v", r)
+			errorLogger.Printf("Alert evaluator stack trace: %s", debug.Stack())
+		}
+		infoLogger.Println("Alert evaluator stopped")
+	}()
+
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	infoLogger.Println("Alert evaluator started")
+	for {
+		select {
+		case <-done:
+			infoLogger.Println("Alert evaluator received shutdown signal")
+			return
+		case <-ticker.C:
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						errorLogger.Printf("Alert evaluation panic: %v", r)
+					}
+				}()
+
+				if err := service.Evaluate(context.Background()); err != nil {
+					errorLogger.Printf("Alert evaluation failed: %v", err)
 				}
 			}()
 		}
@@ -208,6 +267,7 @@ func main() {
 	systemStatusRepo := repoFactory.NewSystemStatusRepository()
 	geolocationRepo := repoFactory.NewGeolocationRepository()
 	settingsRepo := repoFactory.NewSettingsRepository()
+	alertRepo := repoFactory.NewAlertRepository()
 
 	dbManager := db.NewDBManager()
 
@@ -234,19 +294,36 @@ func main() {
 
 	ipv6MonitorService := ipv6monitor.NewIPv6MonitorService(deviceService, networkService, infoLogger)
 
-	scanManager := scan.NewScanManager(pingSweepService, networkService, ipv6MonitorService)
+	alertService := alert.NewAlertService(alertRepo, deviceService, networkService, dbManager,
+		time.Duration(cfg.AlertOfflineThresholdHours)*time.Hour)
+
+	scanManager := scan.NewScanManager(pingSweepService, networkService, ipv6MonitorService, alertService)
 
 	nicService := nicidentifier.NewNicIdentifierService(networkService, systemStatusService, eventLogService, deviceService, cfg)
 
 	done := make(chan bool)
 
-	go nicService.Identify()
+	// Identify the primary NIC, then preselect its network as the scan target
+	// so a sweep started with no explicit selection hits the LAN the machine is
+	// actually on rather than whichever network row happens to come first.
+	go func() {
+		nicService.Identify()
+		status, err := systemStatusService.GetLatest()
+		if err != nil || status == nil || status.NetworkID == "" {
+			return
+		}
+		if err := scanManager.SetSelectedNetwork(status.NetworkID); err != nil {
+			infoLogger.Printf("Could not preselect network %s for scanning: %v", status.NetworkID, err)
+		}
+	}()
 
-	go runDeviceUpdater(deviceService, done)
+	go runDeviceUpdater(deviceService, eventLogService, done)
 
 	go runNetworkDetection(nicService, done)
 
 	go runGeolocationCacheCleanup(geolocationRepo, done)
+
+	go runAlertEvaluator(alertService, done)
 
 	// Prepare embedded filesystems for the web handler
 	templateFS, err := fs.Sub(assets.TemplateFS, "templates")
@@ -261,7 +338,7 @@ func main() {
 	version := strings.TrimSpace(assets.Version)
 
 	sessionSecret := "your-secret-key-here-replace-in-production"
-	webHandler := web.NewWebHandler(deviceService, eventLogService, networkService, systemStatusService, scanManager, geolocationRepo, settingsService, nicService, cfg, sessionSecret, templateFS, staticFS, version)
+	webHandler := web.NewWebHandler(deviceService, eventLogService, networkService, systemStatusService, scanManager, geolocationRepo, settingsService, nicService, alertService, portScanService, cfg, sessionSecret, templateFS, staticFS, version)
 	router := webHandler.SetupRoutes()
 	loggedRouter := middleware.LoggingMiddleware(router)
 

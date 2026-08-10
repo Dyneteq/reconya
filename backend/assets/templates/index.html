@@ -4,1092 +4,327 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>reconYa</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Core functionality -->
-    <script src="/static/js/modal.js"></script>
 
-    <!-- Feature modules -->
-    <script src="/static/js/devices.js"></script>
-    <script src="/static/js/network-list.js"></script>
-    <script src="/static/js/network-suggestions.js"></script>
-    <script src="/static/js/scan-control.js"></script>
-    <script src="/static/js/settings.js"></script>
-    <script src="/static/js/hud-metrics.js"></script>
-
-    <script src="/static/js/network-viz.js"></script>
-    <!-- Main initialization (load last) -->
-    <script src="/static/js/main.js"></script>
-    <!-- Tabler Icons - lightweight SVG icons that work great with Tailwind -->
-    <link rel="stylesheet" href="https://unpkg.com/@tabler/icons@latest/tabler-icons.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;800;900&family=Roboto+Condensed:wght@300;400;500;600;700&family=Roboto+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/console.css">
 </head>
-<body class="bg-gray-900 text-gray-200" style="font-family: 'Roboto Condensed', sans-serif; font-size: 0.875rem;">
-    <!-- Fixed Top Bar -->
-    <header id="top-bar" class="fixed top-0 left-0 right-0 bg-gray-800 p-4 border-b border-gray-700 z-50">
-        <div class="flex items-center justify-between w-full">
-            <div class="flex items-center justify-center" style="flex-shrink: 0;">
-                <span class="text-lg font-bold text-green-500" style="font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.5px;">reconYa</span>
-            </div>
+<body>
+{{/*
+    The console is a fixed shell — rail, top bar, drawer — around one swappable
+    view region. Only the region changes between pages, so the rail's active
+    item is the single source of truth for "which page is this" and there is no
+    second navigation anywhere to fall out of sync with it.
+*/}}
+<div class="rc-shell" id="rc-shell" data-page="{{.Page}}">
 
-            <!-- Theme Toggle and User Menu -->
-            <div class="flex items-center gap-3">
-                <!-- Internet Down Warning -->
-                <div id="internet-down-warning" class="hidden flex items-center gap-2 px-3 py-1.5 rounded" style="background: rgba(127,29,29,0.4); border: 1px solid rgba(239,68,68,0.45);">
-                    <span class="relative flex h-2.5 w-2.5">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background-color: #ef4444;"></span>
-                        <span class="relative inline-flex rounded-full h-2.5 w-2.5" style="background-color: #ef4444;"></span>
-                    </span>
-                    <span style="font-family: 'Orbitron', monospace; font-size: 0.68rem; color: #f87171; letter-spacing: 0.06em;">INTERNET DOWN</span>
-                </div>
-                <!-- User Menu -->
-                <div class="relative">
-                    <button class="flex items-center px-3 py-2 text-gray-300 hover:text-green-500" id="dropdownMenuButton">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                        <span style="font-family:'Orbitron',monospace;font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;">{{if and .User .User.Username}}{{.User.Username}}{{else}}Operator{{end}}</span>
-                        <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                    <div class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded shadow-lg hidden z-50" id="dropdownMenu">
-                    <a href="#" class="block px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700" onclick="loadAboutPage(); return false;">
-                        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        About
-                    </a>
-                    <hr class="border-gray-600">
-                    <form action="/logout" method="POST" class="block">
-                        <button type="submit" class="w-full text-left px-4 py-2 text-gray-300 hover:text-green-500 hover:bg-gray-700">
-                            <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                            </svg>
-                            Logout
-                        </button>
-                    </form>
-                </div>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- ── Rail ─────────────────────────────────────────────────────── -->
+    <nav class="rc-rail">
+        <div class="rc-rail__mark"></div>
 
-    <div class="flex min-h-screen" style="padding-top: 73px;">
-        <!-- Main Content -->
-        <div id="main-content" class="flex-1 transition-all duration-300">
-            <!-- Content Area -->
-            <main id="content">
-                {{if or (eq .Page "devices") (eq .Page "networks") (eq .Page "alerts") (eq .Page "logs") (eq .Page "settings")}}
-                <!-- Fixed nav button for pages with no HUD stack of their own.
-                     Dashboard and about render their own nav inside the HUD
-                     stack below, so this condition has to stay the exact
-                     complement of the final else-branch in the page switch
-                     further down. It used to be "Page is not dashboard",
-                     which also matched "about" and rendered both navs. -->
-                <div id="global-nav-menu" style="position:fixed;top:89px;left:16px;z-index:25;">
-                    <div style="position:relative;">
-                        <div id="nav-menu-btn" onclick="toggleNavMenu(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">
-                            <span class="hud-label" style="margin-bottom:0;">Menu</span>
-                            <svg id="nav-menu-chevron" style="width:9px;height:9px;flex-shrink:0;opacity:0.45;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </div>
-                        <div id="nav-menu-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:160px;z-index:100;" class="hud-panel">
-                            <nav style="display:flex;flex-direction:column;gap:1px;">
-                                <a href="/" class="nav-menu-link" data-page="dashboard">
-                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                                    Dashboard
-                                </a>
-                                <a href="/devices" class="nav-menu-link" data-page="devices">
-                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                    Devices
-                                </a>
-                                <a href="/networks" class="nav-menu-link" data-page="networks">
-                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
-                                    Networks
-                                </a>
-                                <a href="/logs" class="nav-menu-link" data-page="logs">
-                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6"/></svg>
-                                    Activity
-                                </a>
-                                <a href="/settings" class="nav-menu-link" data-page="settings">
-                                    <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                    Settings
-                                </a>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-                {{end}}
+        <a class="rc-rail__item{{if eq .Page "dashboard"}} is-active{{end}}" href="/" title="Topology map">
+            <span class="rc-rail__glyph">◎</span><span class="rc-rail__name">MAP</span>
+        </a>
+        <a class="rc-rail__item{{if eq .Page "devices"}} is-active{{end}}" href="/devices" title="Hosts">
+            <span class="rc-rail__glyph">▤</span><span class="rc-rail__name">HOSTS</span>
+        </a>
+        <a class="rc-rail__item{{if eq .Page "networks"}} is-active{{end}}" href="/networks" title="Networks">
+            <span class="rc-rail__glyph">⌗</span><span class="rc-rail__name">NETS</span>
+        </a>
+        <a class="rc-rail__item{{if eq .Page "logs"}} is-active{{end}}" href="/logs" title="Activity log">
+            <span class="rc-rail__glyph">⌁</span><span class="rc-rail__name">LOG</span>
+        </a>
+        <a class="rc-rail__item{{if eq .Page "settings"}} is-active{{end}}" href="/settings" title="Settings">
+            <span class="rc-rail__glyph">⚙</span><span class="rc-rail__name">CONF</span>
+        </a>
 
-                {{if eq .Page "devices"}}
-                    <!-- Devices Page Content -->
-                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ DEVICES ]</h1>
-                                </div>
+        <div class="rc-rail__spacer"></div>
 
-                                <!-- Search Bar -->
-                                <div class="mb-4">
-                                    <input type="text" id="device-search" placeholder="Search by IP, name, MAC, vendor..."
-                                           class="w-full px-4 py-2 rounded focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 text-sm"
-                                           style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
-                                </div>
+        {{/*
+            The design puts a second gear here, duplicating CONF. It is the only
+            spot left for the account menu, which the design has nowhere for, so
+            it carries that instead.
+        */}}
+        <button class="rc-rail__item" id="rc-user-btn" title="Account">
+            <span class="rc-rail__glyph">◍</span><span class="rc-rail__name">USER</span>
+        </button>
+    </nav>
 
-                                <!-- Device List View -->
-                                <div id="device-list-container">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading devices...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "networks"}}
-                    <!-- Networks Page Content -->
-                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ NETWORKS ]</h1>
-                                    <button type="button" 
-                                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-                                            onclick="loadNetworkModal()">
-                                        <i class="ti ti-plus mr-1"></i>Add Network
-                                    </button>
-                                </div>
-
-                                <!-- Networks List -->
-                                <div id="networks-container">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading networks...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "alerts"}}
-                    <!-- Alerts Page Content -->
-                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ ALERTS ]</h1>
-                                    <div class="flex gap-2">
-                                        <button type="button" 
-                                                class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600" 
-                                                onclick="refreshAlerts()">
-                                            <i class="ti ti-refresh mr-1"></i>Refresh
-                                        </button>
-                                        <button type="button" 
-                                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm" 
-                                                onclick="markAllRead()">
-                                            <i class="ti ti-checks mr-1"></i>Mark All Read
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Alerts Content -->
-                                <div id="alerts-container">
-                                    <!-- No alerts message -->
-                                    <div class="bg-gray-800 rounded p-8 text-center">
-                                        <i class="ti ti-circle-check-filled text-green-500 text-6xl mb-4"></i>
-                                        <h4 class="text-green-500 text-xl font-bold mb-2">All Clear!</h4>
-                                        <p class="text-gray-400">No alerts at this time. Your network is operating normally.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "logs"}}
-                    <!-- Logs Page Content -->
-                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
-                        <!-- Main Content -->
-                        <div class="flex-1">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ ACTIVITY ]</h1>
-                                </div>
-                                <!-- Event Logs Content -->
-                                <div id="event-logs-container" class="bg-gray-800 rounded">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading activity logs...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else if eq .Page "settings"}}
-                    <!-- Settings Page Content -->
-                    <div class="flex gap-4 p-4" style="padding-left:10rem;">
-                        <!-- Main Content -->
-                        <div class="flex-1 lg:w-3/4">
-                            <div class="mb-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h1 class="text-sm font-bold text-green-500">[ SETTINGS ]</h1>
-                                </div>
-
-                                <!-- Settings Content -->
-                                <div id="settings-container" class="bg-gray-800 rounded">
-                                    <div class="flex justify-center items-center h-32">
-                                        <div class="animate-spin rounded-full h-8 w-8 border-2 border-green-500 border-t-transparent"></div>
-                                        <span class="ml-3 text-gray-400">Loading settings...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Settings sidebar/help -->
-                        <div class="w-full lg:w-1/4">
-                            <div class="bg-gray-800 rounded p-4">
-                                <div class="flex items-center mb-3">
-                                    <i class="ti ti-info-circle text-green-500 mr-2"></i>
-                                    <h6 class="text-green-500 font-bold">Settings Help</h6>
-                                </div>
-                                <div class="space-y-3 text-sm text-gray-300">
-                                    <div>
-                                        <strong class="text-white">Network Scanning:</strong> Configure how often and which networks to scan for devices.
-                                    </div>
-                                    <div>
-                                        <strong class="text-white">Screenshots:</strong> Enable automatic screenshot capture when devices are detected.
-                                    </div>
-                                    <div>
-                                        <strong class="text-white">Notifications:</strong> Set up alerts for network changes and device status updates.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {{else}}
-                    <!-- Full-page topology dashboard -->
-                    <script>
-                        document.body.style.overflow = 'hidden';
-                        document.body.classList.add('topology-fullscreen');
-                    </script>
-
-                    <!-- Topology canvas: full viewport, sits behind glass navbar -->
-                    <div id="network-viz-wrap" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:1;">
-                        <canvas id="network-viz-canvas" style="display:block;"></canvas>
-                        <div id="network-viz-tip" style="display:none;"></div>
-                    </div>
-
-                    <!-- HUD: Network stats + nav menu (below navbar, left) -->
-                    <div style="position:fixed;top:89px;left:16px;z-index:20;display:flex;flex-direction:column;gap:6px;">
-                        <div class="hud-panel">
-                            <div class="hud-label">Network Status</div>
-                            <div style="display:flex;gap:20px;align-items:flex-end;">
-                                <div>
-                                    <div class="hud-sublabel">Range</div>
-                                    <div id="network-range" class="hud-value" style="font-size:12px;">N/A</div>
-                                </div>
-                                <div>
-                                    <div class="hud-sublabel">Found</div>
-                                    <div id="devices-found" class="hud-value">0</div>
-                                </div>
-                                <div>
-                                    <div class="hud-sublabel">Online</div>
-                                    <div id="devices-online" class="hud-value" style="color:#10b981;">0</div>
-                                </div>
-                                <div>
-                                    <div class="hud-sublabel">Public IP</div>
-                                    <div id="public-ip" class="hud-value" style="font-size:12px;">—</div>
-                                </div>
-                                <div>
-                                    <div class="hud-sublabel">Saturation</div>
-                                    <div id="network-saturation" class="hud-value">0%</div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Offline device filter -->
-                        <div id="show-offline-btn" onclick="toggleShowOffline(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">
-                            <span class="hud-label" style="margin-bottom:0;">Show Offline</span>
-                            <span id="show-offline-state" style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:0.08em;color:#6b7280;">OFF</span>
-                        </div>
-                        <!-- Nav menu button -->
-                        <div style="position:relative;">
-                            <div id="nav-menu-btn" onclick="toggleNavMenu(event)" class="hud-panel" style="cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:20px;">
-                                <span class="hud-label" style="margin-bottom:0;">Menu</span>
-                                <svg id="nav-menu-chevron" style="width:9px;height:9px;flex-shrink:0;opacity:0.45;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </div>
-                            <div id="nav-menu-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:160px;z-index:100;" class="hud-panel">
-                                <nav style="display:flex;flex-direction:column;gap:1px;">
-                                    <a href="/" class="nav-menu-link" data-page="dashboard">
-                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                                        Dashboard
-                                    </a>
-                                    <a href="/devices" class="nav-menu-link" data-page="devices">
-                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                        Devices
-                                    </a>
-                                    <a href="/networks" class="nav-menu-link" data-page="networks">
-                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
-                                        Networks
-                                    </a>
-                                    <a href="/logs" class="nav-menu-link" data-page="logs">
-                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6"/></svg>
-                                        Activity
-                                    </a>
-                                    <a href="/settings" class="nav-menu-link" data-page="settings">
-                                        <svg style="width:13px;height:13px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                        Settings
-                                    </a>
-                                </nav>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- HUD: Scan control (below navbar, right) -->
-                    <div class="hud-panel" style="position:fixed;top:89px;right:16px;z-index:20;width:260px;">
-                        <div id="scan-control-container"></div>
-                    </div>
-                {{end}}
-            </main>
-        </div>
+    <div class="rc-usermenu" id="rc-usermenu">
+        <div class="rc-usermenu__who">{{if and .User .User.Username}}{{.User.Username}}{{else}}OPERATOR{{end}}</div>
+        <button class="rc-usermenu__item" id="rc-about-btn">About reconYa</button>
+        <form action="/logout" method="POST">
+            <button type="submit" class="rc-usermenu__item">Sign out</button>
+        </form>
     </div>
 
-    <style>
-        @keyframes flash-green-text {
-            0% { color: #10b981; }
-            80% { color: #10b981; }
-            100% { color: inherit; }
-        }
-        .activity-flash .text-xs {
-            animation: flash-green-text 5s ease-out forwards;
-        }
+    <div class="rc-main">
 
-        #top-bar {
-            height: 73px;
-            box-sizing: border-box;
-            display: flex;
-            align-items: center;
-        }
+        <!-- ── Top bar ──────────────────────────────────────────────── -->
+        <header class="rc-topbar">
+            <div class="rc-topbar__cell rc-topbar__brand">
+                <div class="rc-wordmark">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"></path>
+                        <path d="M12 3c1.333 .333 2 2.333 2 6s-.667 5.667 -2 6"></path>
+                        <path d="M12 3c-1.333 .333 -2 2.333 -2 6s.667 5.667 2 6"></path>
+                        <path d="M6 9h12"></path>
+                        <path d="M3 20h7"></path>
+                        <path d="M14 20h7"></path>
+                        <path d="M10 20a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                        <path d="M12 15v3"></path>
+                    </svg>
+                    <span>reconYa</span>
+                </div>
+                <div class="rc-topbar__sub" id="rc-net-summary">—</div>
+            </div>
 
-        /* Nav panel links */
-        .nav-menu-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 7px 10px;
-            color: rgba(16,185,129,0.60);
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 12px;
-            font-family: 'Roboto Condensed', sans-serif;
-        }
-        .nav-menu-link:hover, .nav-menu-link.active {
-            background: rgba(16,185,129,0.10);
-            color: #10b981;
-        }
+            <div class="rc-topbar__cell">
+                <span class="rc-metric__label">Hosts online</span>
+                <div class="rc-metric__row">
+                    <span class="rc-metric__value" id="rc-m-online">0</span>
+                    <span class="rc-metric__sub" id="rc-m-total">/ 0</span>
+                </div>
+                <span class="rc-metric__delta" id="rc-m-saturation">—</span>
+            </div>
 
-        /* Modal Styles */
-        .modal {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        .modal.show { opacity: 1; visibility: visible; }
-        .modal-backdrop {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            cursor: pointer;
-        }
-        .modal-container {
-            position: relative;
-            width: 100%; height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-            pointer-events: none;
-        }
-        .modal-content {
-            background: #1f2937;
-            border-radius: 0.5rem;
-            border: 1px solid #10b981;
-            max-width: 90vw;
-            max-height: 90vh;
-            overflow-y: auto;
-            pointer-events: all;
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-        }
-        .modal.show .modal-content { transform: scale(1); }
+            <div class="rc-topbar__cell">
+                <span class="rc-metric__label">New · 24h</span>
+                <div class="rc-metric__row">
+                    <span class="rc-metric__value" id="rc-m-new" style="color:var(--rc-text)">0</span>
+                    <span class="rc-metric__sub">devices</span>
+                </div>
+                <span class="rc-metric__delta" id="rc-m-new-sub">—</span>
+            </div>
 
-        /* CSS variables (dark only) */
-        :root {
-            --bg-primary: #111827;
-            --bg-secondary: #1f2937;
-            --bg-tertiary: #374151;
-            --text-primary: #f9fafb;
-            --text-secondary: #d1d5db;
-            --text-muted: #9ca3af;
-            --text-accent: #10b981;
-            --border-color: #4b5563;
-            --border-accent: #10b981;
-        }
-        body { background-color: var(--bg-primary); color: var(--text-primary); }
+            <div class="rc-topbar__cell">
+                <span class="rc-metric__label">Unidentified</span>
+                <div class="rc-metric__row">
+                    <span class="rc-metric__value" id="rc-m-unknown" style="color:var(--rc-amber)">0</span>
+                    <span class="rc-metric__sub">hosts</span>
+                </div>
+                <span class="rc-metric__delta" id="rc-m-unknown-sub">—</span>
+            </div>
 
-        /* Device IP styling */
-        .device-ip {
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #fff;
-        }
+            {{/*
+                The design's sweep meter shows "62% · ETA 01:48". The scanner
+                reports no per-sweep progress, so rather than invent a number
+                this cell shows what the scan manager actually knows: target,
+                running state, elapsed runtime and sweep count. The bar is an
+                activity indicator, not a progress meter.
+            */}}
+            <div class="rc-sweep" id="rc-sweep">
+                <div class="rc-sweep__head">
+                    <span class="rc-sweep__target" id="rc-sweep-target">NO NETWORK SELECTED</span>
+                    <span class="rc-sweep__state" id="rc-sweep-state">IDLE</span>
+                </div>
+                <div class="rc-sweep__bar" id="rc-sweep-bar"><span></span></div>
+                <div class="rc-sweep__facts" id="rc-sweep-facts"></div>
+            </div>
 
-        /* Topology fullscreen: glass navbar */
-        body.topology-fullscreen #top-bar {
-            background: rgba(7,13,23,0.72) !important;
-            backdrop-filter: blur(18px) !important;
-            -webkit-backdrop-filter: blur(18px) !important;
-            border-bottom: 1px solid rgba(16,185,129,0.14) !important;
-        }
+            <div class="rc-alert-tile" id="rc-alert-tile" title="Open alerts">
+                <div class="rc-alert-tile__head">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" id="rc-alert-icon" style="color:var(--rc-accent)">
+                        <path d="M12 9v4"></path>
+                        <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"></path>
+                        <path d="M12 16h.01"></path>
+                    </svg>
+                    <span class="rc-label">Alerts</span>
+                </div>
+                <div class="rc-alert-tile__count">
+                    <span class="rc-alert-tile__n" id="rc-alert-count">0</span>
+                    <div class="rc-alert-tile__shorts" id="rc-alert-shorts"></div>
+                </div>
+            </div>
 
-        /* HUD panels */
-        .hud-panel {
-            background: rgba(7,13,23,0.82);
-            border: 1px solid rgba(16,185,129,0.18);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border-radius: 6px;
-            padding: 12px 16px;
-        }
-        .hud-label {
-            font-family: 'Orbitron', monospace;
-            font-size: 8px;
-            letter-spacing: 0.12em;
-            color: rgba(16,185,129,0.55);
-            text-transform: uppercase;
-            margin-bottom: 8px;
-        }
-        .hud-sublabel {
-            font-family: 'Orbitron', monospace;
-            font-size: 7px;
-            letter-spacing: 0.08em;
-            color: rgba(16,185,129,0.40);
-            text-transform: uppercase;
-            margin-bottom: 3px;
-        }
-        .hud-value {
-            font-family: 'Roboto Mono', monospace;
-            font-size: 14px;
-            font-weight: 500;
-            color: #10b981;
-            line-height: 1;
-        }
-    </style>
-    
-    <script>
-        // Nav menu toggle
-        function toggleNavMenu(e) {
-            if (e) e.stopPropagation();
-            var d = document.getElementById('nav-menu-dropdown');
-            var c = document.getElementById('nav-menu-chevron');
-            if (!d) return;
-            var open = d.style.display !== 'none';
-            d.style.display = open ? 'none' : 'block';
-            if (c) c.style.transform = open ? '' : 'rotate(180deg)';
-        }
+            <div class="rc-actions">
+                <button class="rc-actions__btn rc-actions__btn--solid" id="rc-sweep-toggle">START SWEEP</button>
+                <button class="rc-actions__btn" id="rc-new-network">NEW NETWORK +</button>
+            </div>
+        </header>
 
-        // Offline devices are hidden from the topology by default. The choice
-        // is remembered per browser so it survives the dashboard's reloads.
-        var _showOffline = localStorage.getItem('reconya.showOffline') === 'true';
-        function renderShowOfflineState() {
-            var s = document.getElementById('show-offline-state');
-            if (!s) return;
-            s.textContent = _showOffline ? 'ON' : 'OFF';
-            s.style.color = _showOffline ? '#10b981' : '#6b7280';
-        }
-        function toggleShowOffline(e) {
-            if (e) e.stopPropagation();
-            _showOffline = !_showOffline;
-            localStorage.setItem('reconya.showOffline', _showOffline ? 'true' : 'false');
-            renderShowOfflineState();
-            if (typeof window.setNetworkVizShowOffline === 'function') {
-                window.setNetworkVizShowOffline(_showOffline);
-            }
-        }
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('#nav-menu-btn') && !e.target.closest('#nav-menu-dropdown')) {
-                var d = document.getElementById('nav-menu-dropdown');
-                var c = document.getElementById('nav-menu-chevron');
-                if (d) d.style.display = 'none';
-                if (c) c.style.transform = '';
-            }
-        });
+        {{if eq .Page "devices"}}
+        <section class="rc-view rc-view--scroll">
+            <div class="rc-page__head">
+                <h1 class="rc-page__title">HOSTS</h1>
+                <span class="rc-page__count" id="rc-hosts-count"></span>
+                <div class="rc-spacer"></div>
+                <input type="search" id="rc-host-search" placeholder="filter: ip, hostname, mac, vendor…" style="width:280px">
+            </div>
+            <div id="rc-hosts-page"><div class="rc-loading">LOADING HOSTS</div></div>
+        </section>
 
-        // Mark active nav link
-        (function() {
-            var path = window.location.pathname;
-            var page = path === '/' ? 'dashboard' : path.replace(/^\//, '');
-            document.querySelectorAll('.nav-menu-link').forEach(function(a) {
-                if (a.getAttribute('data-page') === page) a.classList.add('active');
-            });
-        })();
+        {{else if eq .Page "networks"}}
+        <section class="rc-view rc-view--scroll">
+            <div class="rc-page__head">
+                <h1 class="rc-page__title">NETWORKS</h1>
+                <div class="rc-spacer"></div>
+                <button class="rc-btn rc-btn--solid" onclick="openNetworkDialog()">ADD NETWORK +</button>
+            </div>
+            <div id="rc-networks-page"><div class="rc-loading">LOADING NETWORKS</div></div>
+        </section>
 
-        // Dropdown functionality is handled by main.js
+        {{else if eq .Page "logs"}}
+        <section class="rc-view rc-view--scroll">
+            <div class="rc-page__head">
+                <h1 class="rc-page__title">ACTIVITY</h1>
+                <div class="rc-spacer"></div>
+            </div>
+            <div id="rc-logs-page"><div class="rc-loading">LOADING ACTIVITY</div></div>
+        </section>
 
-        // About page function
-        function loadAboutPage() {
-            if (typeof showAboutModal === 'function') {
-                showAboutModal();
-            } else {
-                loadContent('/about', 'content');
-            }
-        }
-        
-        // Make loadAboutPage available globally
-        window.loadAboutPage = loadAboutPage;
-        
-        // Content loading utility functions
-        function loadContent(url, targetId) {
-            fetch(url)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById(targetId).innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Failed to load content:', error);
-                    document.getElementById(targetId).innerHTML = '<div class="p-6"><p class="text-red-400">Error loading content. Please try again.</p></div>';
-                });
-        }
-        
-        // Page-specific content loading functions
-        var _devicePageData = { devices: [], networks: {} };
+        {{else if eq .Page "alerts"}}
+        <section class="rc-view rc-view--scroll">
+            <div class="rc-page__head">
+                <h1 class="rc-page__title">ALERTS</h1>
+                <div class="rc-spacer"></div>
+                <button class="rc-btn" onclick="ackAllAlerts()">ACKNOWLEDGE ALL</button>
+            </div>
+            <div class="rc-filters" id="rc-alert-filters-page"></div>
+            <div id="rc-alerts-page"><div class="rc-loading">LOADING ALERTS</div></div>
+        </section>
 
-        function loadDevicesPage() {
-            var container = document.getElementById('device-list-container');
-            if (!container) return;
+        {{else if eq .Page "settings"}}
+        <section class="rc-view rc-view--scroll">
+            <div class="rc-page__head">
+                <h1 class="rc-page__title">SETTINGS</h1>
+                <div class="rc-spacer"></div>
+            </div>
+            <div id="rc-settings-page"><div class="rc-loading">LOADING SETTINGS</div></div>
+        </section>
 
-            fetch('/api/device-list', { credentials: 'include' })
-                .then(function(response) { return response.json(); })
-                .then(function(data) {
-                    _devicePageData.devices = data.devices || [];
-                    _devicePageData.networks = data.networks || {};
-                    filterAndRenderDevices();
+        {{else}}
+        <!-- MAP view: canvas + overlays, with the dock beneath -->
+        <section class="rc-view" id="rc-map-view">
+            <canvas id="rc-map-canvas"></canvas>
 
-                    var searchInput = document.getElementById('device-search');
-                    if (searchInput && !searchInput._bound) {
-                        searchInput._bound = true;
-                        searchInput.addEventListener('input', filterAndRenderDevices);
-                    }
-                })
-                .catch(function(error) {
-                    console.error('Failed to load devices:', error);
-                    if (container) container.textContent = 'Failed to load devices';
-                });
-        }
-
-        function filterAndRenderDevices() {
-            var container = document.getElementById('device-list-container');
-            if (!container) return;
-            var searchInput = document.getElementById('device-search');
-            var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
-            var devices = _devicePageData.devices;
-            var networks = _devicePageData.networks;
-
-            if (query) {
-                devices = devices.filter(function(d) {
-                    var ip = (d.ipv4 || '').toLowerCase();
-                    var name = (d.name || d.hostname || '').toLowerCase();
-                    var mac = (d.mac || '').toLowerCase();
-                    var vendor = (d.vendor || '').toLowerCase();
-                    var net = (d.network_id && networks[d.network_id]) ? networks[d.network_id].toLowerCase() : '';
-                    return ip.indexOf(query) !== -1 || name.indexOf(query) !== -1 || mac.indexOf(query) !== -1 || vendor.indexOf(query) !== -1 || net.indexOf(query) !== -1;
-                });
-            }
-
-            // Use wrapper to safely set content from renderDeviceTable
-            var html = renderDeviceTable(devices, networks);
-            container.textContent = '';
-            var wrapper = document.createElement('div');
-            wrapper.innerHTML = html;
-            while (wrapper.firstChild) container.appendChild(wrapper.firstChild);
-        }
-
-        function renderDeviceTable(devices, networks) {
-            networks = networks || {};
-            if (!devices || devices.length === 0) {
-                return '<div class="text-center text-gray-400 py-8">No devices found</div>';
-            }
-
-            var rows = devices.map(function(device) {
-                var hostname = device.hostname || device.name || 'Unknown';
-                var ip = device.ipv4 || device.ip || 'N/A';
-                var mac = device.mac || 'N/A';
-                var osInfo = device.os ? (device.os.name || 'Unknown') : 'Unknown';
-                var status = device.status || 'unknown';
-                var deviceId = device.id;
-                var networkCidr = (device.network_id && networks[device.network_id]) ? networks[device.network_id] : '-';
-
-                return '<tr class="hover:bg-gray-700 transition-colors cursor-pointer" onclick="loadDeviceModal(\'' + deviceId + '\')">'
-                    + '<td class="px-4 py-3"><div class="flex items-center"><div class="mr-2">' + getDeviceIcon(status) + '</div><span class="font-medium">' + hostname + '</span></div></td>'
-                    + '<td class="px-4 py-3 font-mono text-sm">' + ip + '</td>'
-                    + '<td class="px-4 py-3 font-mono text-sm">' + mac + '</td>'
-                    + '<td class="px-4 py-3">' + osInfo + '</td>'
-                    + '<td class="px-4 py-3"><span class="text-gray-400 text-sm">' + networkCidr + '</span></td>'
-                    + '<td class="px-4 py-3 text-right"><button onclick="event.stopPropagation(); deleteDevice(\'' + deviceId + '\', \'' + ip + '\')" class="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-600 transition-colors" title="Delete Device"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>'
-                    + '</tr>';
-            }).join('');
-
-            return '<div class="overflow-x-auto">'
-                + '<table class="w-full bg-gray-800 rounded">'
-                + '<thead class="bg-gray-700">'
-                + '<tr>'
-                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">Device</th>'
-                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">IP Address</th>'
-                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">MAC Address</th>'
-                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">OS</th>'
-                + '<th class="px-4 py-3 text-left text-green-500 font-semibold">Network</th>'
-                + '<th class="px-4 py-3"></th>'
-                + '</tr>'
-                + '</thead>'
-                + '<tbody class="divide-y divide-gray-600">' + rows + '</tbody>'
-                + '</table>'
-                + '</div>';
-        }
-        
-        function getDeviceStatusColor(status) {
-            if (!status || typeof status !== 'string') return 'bg-gray-600 text-gray-300';
-            const statusLower = status.toLowerCase();
-            switch (statusLower) {
-                case 'online': return 'bg-green-600 text-green-100';
-                case 'offline': return 'bg-red-600 text-red-100';
-                case 'unknown': return 'bg-yellow-600 text-yellow-100';
-                default: return 'bg-gray-600 text-gray-300';
-            }
-        }
-        
-        function getDeviceIcon(status) {
-            if (!status || typeof status !== 'string') return getDeviceIconSVG('gray');
-            const statusLower = status.toLowerCase();
-            switch (statusLower) {
-                case 'online': return getDeviceIconSVG('green');
-                case 'offline': return getDeviceIconSVG('red');
-                case 'unknown': return getDeviceIconSVG('yellow');
-                default: return getDeviceIconSVG('gray');
-            }
-        }
-        
-        function getDeviceIconSVG(color) {
-            const colorClass = `text-${color}-500`;
-            return `<svg class="w-4 h-4 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                    </svg>`;
-        }
-        
-        function getStatusColor(status) {
-            if (!status || typeof status !== 'string') return 'bg-gray-400';
-            const statusLower = status.toLowerCase();
-            switch (statusLower) {
-                case 'online': return 'bg-green-500';
-                case 'offline': return 'bg-red-500';
-                case 'idle': return 'bg-yellow-500';
-                default: return 'bg-gray-400';
-            }
-        }
-        
-        function loadNetworksPage() {
-            const container = document.getElementById('networks-container');
-            if (!container) return;
-            
-            fetch('/api/networks')
-                .then(response => response.json())
-                .then(data => {
-                    container.innerHTML = renderNetworksTable(data.networks || []);
-                })
-                .catch(error => {
-                    console.error('Failed to load networks:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load networks</div>';
-                });
-        }
-        
-        function renderNetworksTable(networks) {
-            if (!networks || networks.length === 0) {
-                return `
-                    <div class="text-center py-8 text-gray-400">
-                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                        </svg>
-                        <p>No networks configured</p>
+            <div class="rc-overlay rc-overlay--tl">
+                <div class="rc-mode">
+                    <div class="rc-mode__btn" id="rc-mode-btn">
+                        <span id="rc-mode-label">MAP · TREE</span>
+                        <span class="rc-mode__caret" id="rc-mode-caret">▼</span>
                     </div>
-                `;
-            }
-            
-            return `
-                <div class="overflow-x-auto">
-                    <table class="w-full bg-gray-800 rounded">
-                        <thead class="bg-gray-700">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Name</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Network</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Description</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Status</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-600">
-                            ${networks.map(network => {
-                                const name = network.name || network.Name || 'Unnamed Network';
-                                const cidr = network.cidr || network.CIDR || 'N/A';
-                                const description = network.description || network.Description || 'No description';
-                                const status = network.status || network.Status || 'unknown';
-                                const networkId = network.id || network.ID;
-                                
-                                return `
-                                    <tr class="hover:bg-gray-700 transition-colors">
-                                        <td class="px-4 py-3">
-                                            <span class="font-medium text-gray-200">${name}</span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex items-center">
-                                                <div class="mr-2">
-                                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                                                    </svg>
-                                                </div>
-                                                <code class="text-green-400 px-2 py-1 rounded text-sm bg-gray-900">${cidr}</code>
-                                            </div>
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-300">${description}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded text-xs bg-green-600 text-green-100">Active</span>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex gap-2">
-                                                <button onclick="editNetwork('${networkId}')" 
-                                                        class="text-green-500 hover:text-green-400 p-1 rounded hover:bg-green-500 hover:bg-opacity-20 transition-colors"
-                                                        title="Edit Network">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                    </svg>
-                                                </button>
-                                                <button onclick="deleteNetwork('${networkId}')" 
-                                                        class="text-red-500 hover:text-red-400 p-1 rounded hover:bg-red-500 hover:bg-opacity-20 transition-colors"
-                                                        title="Delete Network">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+                    <div class="rc-mode__menu" id="rc-mode-menu" style="display:none"></div>
                 </div>
-            `;
-        }
-        
-        
-        function loadSettingsPage() {
-            const container = document.getElementById('settings-container');
-            if (!container) return;
-            
-            fetch('/api/settings')
-                .then(response => response.json())
-                .then(data => {
-                    container.innerHTML = renderSettings(data.settings || {});
-                })
-                .catch(error => {
-                    console.error('Failed to load settings:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load settings</div>';
-                });
-        }
-        
-        function loadLogsPage() {
-            const container = document.getElementById('event-logs-container');
-            if (!container) return;
-            
-            fetch('/api/event-logs-table')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Event logs data:', data); // Debug log
-                    // Try multiple possible data structures
-                    const logs = data.logs || data.eventLogs || data.events || data || [];
-                    container.innerHTML = renderEventLogsTable(logs);
-                })
-                .catch(error => {
-                    console.error('Failed to load event logs:', error);
-                    container.innerHTML = '<div class="text-red-400 p-4">Failed to load activity logs</div>';
-                });
-        }
-        
-        function renderEventLogsTable(logs) {
-            console.log('Rendering logs table with data:', logs); // Debug log
-            
-            if (!logs || logs.length === 0) {
-                return `
-                    <div class="text-center py-8 text-gray-400">
-                        <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                        </svg>
-                        <p>No activity logs found</p>
-                        <p class="text-xs text-gray-500 mt-2">Total logs received: ${Array.isArray(logs) ? logs.length : 'invalid data'}</p>
+                <input type="search" class="rc-map-filter" id="rc-map-filter" placeholder="⌕ filter: ip, hostname, vendor…">
+                <span class="rc-map-hint" id="rc-mode-hint"></span>
+            </div>
+
+            <div class="rc-overlay rc-overlay--tr rc-panel">
+                <div class="rc-panel__head"><span>SUBNET LOAD</span><span style="color:var(--rc-text-5)">ON / KNOWN</span></div>
+                <div class="rc-subnets" id="rc-subnets"></div>
+            </div>
+
+            <div class="rc-overlay rc-overlay--bl rc-legend">
+                <div class="rc-legend__item"><span class="rc-legend__swatch" style="background:var(--rc-accent);border-radius:50%"></span>ONLINE</div>
+                <div class="rc-legend__item"><span class="rc-legend__swatch" style="background:var(--rc-idle);border-radius:50%"></span>IDLE</div>
+                <div class="rc-legend__item"><span class="rc-legend__swatch" style="background:var(--rc-offline);border-radius:50%"></span>OFFLINE</div>
+                <div class="rc-legend__item"><span class="rc-legend__swatch" style="background:var(--rc-amber)"></span>UNIDENTIFIED</div>
+            </div>
+
+            <div class="rc-overlay rc-overlay--br">
+                <div class="rc-zoom">
+                    <button class="rc-zoom__btn" id="rc-zoom-out">−</button>
+                    <button class="rc-zoom__btn" id="rc-zoom-in">+</button>
+                    <button class="rc-zoom__btn rc-zoom__btn--wide" id="rc-zoom-fit">FIT</button>
+                    <span class="rc-zoom__level" id="rc-zoom-level">100%</span>
+                </div>
+                <div class="rc-map-help">SCROLL TO ZOOM · DRAG TO PAN · CLICK TO INSPECT</div>
+            </div>
+
+            <div id="rc-map-tip" style="display:none"></div>
+        </section>
+
+        <div class="rc-dock">
+            <div class="rc-dock__devices rc-devices">
+                <div class="rc-dock__head">
+                    <span class="rc-dock__title">DEVICES</span>
+                    <span class="rc-dock__meta" id="rc-dock-meta"></span>
+                    <div class="rc-spacer"></div>
+                    <span class="rc-dock__meta" id="rc-offline-toggle" style="cursor:pointer">SHOW OFFLINE: OFF</span>
+                </div>
+                <div class="rc-devices__head">
+                    <span>ADDRESS</span><span>HOSTNAME</span><span>VENDOR</span><span>ROLE</span><span>PORTS</span><span class="rc-cell--right">SEEN</span>
+                </div>
+                <div class="rc-scroll" id="rc-dock-devices"></div>
+            </div>
+
+            <div class="rc-dock__feed">
+                <div class="rc-tabs">
+                    <div class="rc-tab is-active" id="rc-tab-alerts" data-feed="alerts">
+                        <span>ALERTS</span><span class="rc-badge" id="rc-feed-badge">0</span>
                     </div>
-                `;
-            }
-            
-            return `
-                <div class="overflow-x-auto">
-                    <table class="w-full rounded">
-                        <thead class="bg-gray-700">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Time</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Type</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Event</th>
-                                <th class="px-4 py-3 text-left text-green-500 font-semibold">Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-600">
-                            ${logs.map((log, index) => {
-                                console.log(`Log ${index}:`, log); // Debug each log entry
-                                const createdAt = log.CreatedAt || log.created_at || log.timestamp || log.time;
-                                const type = log.Type || log.type || log.event_type || 'unknown';
-                                const message = log.Message || log.message || log.description || log.event || 'No description';
-                                const duration = log.DurationSeconds || log.duration_seconds || log.duration;
-                                
-                                return `
-                                    <tr class="hover:bg-gray-700 transition-colors">
-                                        <td class="px-4 py-3 font-mono text-sm text-gray-300">${formatLogTime(createdAt)}</td>
-                                        <td class="px-4 py-3">
-                                            <span class="px-2 py-1 rounded text-xs ${getLogTypeColor(type)}">${type}</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-300">${message}</td>
-                                        <td class="px-4 py-3 font-mono text-sm text-gray-400">${formatDuration(duration)}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
+                    <div class="rc-tab" id="rc-tab-events" data-feed="events">
+                        <span>EVENTS</span><span class="rc-live">● LIVE</span>
+                    </div>
                 </div>
-            `;
-        }
-        
-        function getLogTypeColor(type) {
-            if (!type) return 'bg-gray-600 text-gray-300';
-            switch (type.toLowerCase()) {
-                case 'ping_sweep': return 'bg-blue-600 text-blue-100';
-                case 'port_scan': return 'bg-purple-600 text-purple-100';
-                case 'network_scan': return 'bg-green-600 text-green-100';
-                case 'error': return 'bg-red-600 text-red-100';
-                default: return 'bg-gray-600 text-gray-300';
-            }
-        }
-        
-        function formatDuration(seconds) {
-            if (!seconds) return '-';
-            if (seconds < 60) return `${seconds}s`;
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return `${minutes}m ${remainingSeconds}s`;
-        }
-        
-        function renderSettings(settings) {
-            return `
-                <div class="p-6">
-                    <form id="settings-form" class="space-y-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-green-500 mb-4">Network Scanning</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Scan Interval (seconds)</label>
-                                    <input type="number" 
-                                           name="scan_interval" 
-                                           value="${settings.scan_interval || 300}"
-                                           min="60" 
-                                           max="3600"
-                                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-green-500 focus:outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Concurrent Scans</label>
-                                    <input type="number" 
-                                           name="concurrent_scans" 
-                                           value="${settings.concurrent_scans || 50}"
-                                           min="1" 
-                                           max="200"
-                                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:border-green-500 focus:outline-none">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h3 class="text-lg font-semibold text-green-500 mb-4">Screenshot Capture</h3>
-                            <div class="flex items-center space-x-3">
-                                <input type="checkbox" 
-                                       id="screenshots_enabled" 
-                                       name="screenshots_enabled" 
-                                       ${settings.screenshots_enabled ? 'checked' : ''}
-                                       class="w-4 h-4 text-green-500 bg-gray-700 border-gray-600 rounded focus:ring-green-500">
-                                <label for="screenshots_enabled" class="text-sm font-medium text-gray-300">
-                                    Enable automatic screenshot capture for detected devices
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="flex justify-end">
-                            <button type="submit" 
-                                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded font-medium transition-colors">
-                                Save Settings
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            `;
-        }
-        
-        
-        function refreshAlerts() {
-            console.log('Refresh alerts');
-        }
-        
-        function markAllRead() {
-            console.log('Mark all alerts as read');
-        }
-        
-        // Initialize page content based on current page
-        function initPageContent() {
-            // Start navbar scan indicator polling on all pages
-            if (typeof startNavbarScanPolling === 'function') {
-                startNavbarScanPolling();
-            }
 
-            const currentPath = window.location.pathname;
-
-            if (currentPath === '/devices') {
-                loadDevicesPage();
-                setInterval(loadDevicesPage, 10000);
-            } else if (currentPath === '/networks') {
-                loadNetworksPage();
-                setInterval(loadNetworksPage, 15000);
-            } else if (currentPath === '/logs') {
-                loadLogsPage();
-                setInterval(loadLogsPage, 10000);
-            } else if (currentPath === '/settings') {
-                loadSettingsPage();
-            } else if (currentPath === '/' || currentPath === '/home' || currentPath === '') {
-                // Initialize main dashboard widgets
-                if (typeof initNetworkViz === 'function') {
-                    initNetworkViz();
-                }
-                // Apply the remembered offline-visibility choice to both the
-                // HUD label and the canvas before the first poll lands.
-                renderShowOfflineState();
-                if (typeof window.setNetworkVizShowOffline === 'function') {
-                    window.setNetworkVizShowOffline(_showOffline);
-                }
-                if (typeof loadScanControl === 'function') {
-                    loadScanControl();
-                }
-                if (typeof loadDashboardMetrics === 'function') {
-                    loadDashboardMetrics();
-                }
-
-                // Set up periodic updates for dashboard
-                setInterval(() => {
-                    if (typeof loadDashboardMetrics === 'function') {
-                        loadDashboardMetrics();
-                    }
-                }, 15000);
-            }
-        }
-        
-        // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', initPageContent);
-
-        // Make page-specific functions globally available (non-duplicated ones)
-        window.loadDevicesPage = loadDevicesPage;
-        window.loadNetworksPage = loadNetworksPage;
-        window.loadLogsPage = loadLogsPage;
-        window.loadSettingsPage = loadSettingsPage;
-        window.refreshAlerts = refreshAlerts;
-        window.markAllRead = markAllRead;
-        window.getDeviceStatusColor = getDeviceStatusColor;
-        window.getDeviceIcon = getDeviceIcon;
-        window.getDeviceIconSVG = getDeviceIconSVG;
-        window.getStatusColor = getStatusColor;
-        window.renderDeviceTable = renderDeviceTable;
-    </script>
-
-    <!-- Device Modal -->
-    <div id="deviceModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-h-[90vh] overflow-y-auto" style="width: 50vw; min-width: 500px;">
-                <div id="device-modal-content" class="mx-auto">
-                    <!-- Content will be loaded here -->
-                </div>
+                <div class="rc-filters" id="rc-alert-filters"></div>
+                <div class="rc-scroll" id="rc-feed-alerts"></div>
+                <div class="rc-scroll" id="rc-feed-events" style="display:none"></div>
             </div>
         </div>
+        {{end}}
     </div>
 
-    <!-- Network Modal -->
-    <div id="networkModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-md">
-                <div id="network-modal-content">
-                    <!-- Content will be loaded here -->
+    <!-- ── Device drawer ────────────────────────────────────────────── -->
+    <aside class="rc-drawer" id="rc-drawer">
+        <div class="rc-drawer__head">
+            <div style="flex:1;min-width:0">
+                <div class="rc-drawer__status">
+                    <span class="rc-drawer__status-dot" id="rc-d-dot"></span>
+                    <span id="rc-d-status">—</span>
                 </div>
+                <div class="rc-drawer__ip" id="rc-d-ip">—</div>
+                <div class="rc-drawer__sub" id="rc-d-sub">—</div>
             </div>
+            <span class="rc-close" id="rc-d-close">✕</span>
         </div>
-    </div>
 
-    <!-- Network Delete Modal -->
-    <div id="networkDeleteModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-md w-full">
-                <div id="network-delete-modal-content">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
+        <div class="rc-drawer__tabs" id="rc-d-tabs">
+            <div class="rc-drawer__tab is-active" data-tab="overview">OVERVIEW</div>
+            <div class="rc-drawer__tab" data-tab="ports">PORTS</div>
+            <div class="rc-drawer__tab" data-tab="history">HISTORY</div>
+            <div class="rc-drawer__tab" data-tab="notes">NOTES</div>
         </div>
-    </div>
 
-    <!-- New Scan Modal -->
-    <div id="newScanModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-md w-full">
-                <div id="newScanModalContent">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
+        <div class="rc-scroll" id="rc-d-body"></div>
+
+        <div class="rc-drawer__foot">
+            <button class="rc-btn rc-btn--solid rc-btn--grow" id="rc-d-rescan">RESCAN HOST</button>
+            <button class="rc-btn rc-btn--grow" id="rc-d-rename">RENAME</button>
+            <button class="rc-btn rc-btn--danger" id="rc-d-delete" style="width:44px">⌫</button>
         </div>
-    </div>
+    </aside>
 
-    <!-- About Modal -->
-    <div id="aboutModal" class="modal hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal-container">
-            <div class="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div id="about-modal-content">
-                    <!-- Content will be loaded here -->
-                </div>
-            </div>
+    <!-- Critical-alert toast is injected here by alerts.js -->
+    <div id="rc-toast-mount"></div>
+</div>
+
+<!-- ── Dialog (network add/edit, about, confirmations) ──────────────── -->
+<div class="rc-dialog" id="rc-dialog">
+    <div class="rc-dialog__scrim" data-dialog-close></div>
+    <div class="rc-dialog__panel">
+        <div class="rc-dialog__head">
+            <span id="rc-dialog-title">—</span>
+            <div class="rc-spacer"></div>
+            <span class="rc-close" data-dialog-close>✕</span>
         </div>
+        <div class="rc-dialog__body" id="rc-dialog-body"></div>
+        <div class="rc-dialog__foot" id="rc-dialog-foot"></div>
     </div>
+</div>
 
+<script src="/static/js/rc.js"></script>
+<script src="/static/js/dialog.js"></script>
+<script src="/static/js/devices.js"></script>
+<script src="/static/js/alerts.js"></script>
+<script src="/static/js/network-list.js"></script>
+<script src="/static/js/network-suggestions.js"></script>
+<script src="/static/js/scan-control.js"></script>
+<script src="/static/js/settings.js"></script>
+<script src="/static/js/network-viz.js"></script>
+<script src="/static/js/console.js"></script>
 </body>
 </html>

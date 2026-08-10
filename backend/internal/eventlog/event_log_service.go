@@ -92,7 +92,7 @@ func (s *EventLogService) generateDescription(eventLog models.EventLog) string {
 		return eventLog.Description // Use the custom description for scan events
 	case models.Warning:
 		return "Warning event occurred"
-	case models.Alert:
+	case models.AlertRaised:
 		return "Alert event occurred"
 	default:
 		return fmt.Sprintf("System event: %s", string(eventLog.Type))
@@ -115,8 +115,12 @@ func (s *EventLogService) GetAllByDeviceId(deviceId string, limitSize int64) ([]
 	eventLogs := make([]models.EventLog, count)
 	for i := 0; i < count; i++ {
 		eventLogs[i] = *eventLogPtrs[i]
+		// Most event types are stored with an empty description and rendered
+		// from their type on read, the same way GetAll does it. Without this,
+		// the device drawer's history tab shows blank rows.
+		eventLogs[i].Description = s.generateDescription(eventLogs[i])
 	}
-	
+
 	return eventLogs, nil
 }
 

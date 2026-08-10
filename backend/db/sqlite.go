@@ -376,6 +376,55 @@ func InitializeSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create index on settings.user_id: %w", err)
 	}
 
+	// Create alerts table
+	//
+	// dedupe_key is the upsert target: alert rules re-run after every sweep and
+	// re-emit the full current finding set, so writes go through
+	// INSERT ... ON CONFLICT(dedupe_key) rather than piling up duplicates.
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS alerts (
+		id TEXT PRIMARY KEY,
+		rule_id TEXT NOT NULL,
+		dedupe_key TEXT NOT NULL UNIQUE,
+		severity TEXT NOT NULL,
+		title TEXT NOT NULL,
+		detail TEXT NOT NULL DEFAULT '',
+		device_id TEXT,
+		network_id TEXT,
+		state TEXT NOT NULL DEFAULT 'open',
+		occurrences INTEGER NOT NULL DEFAULT 1,
+		first_seen_at TIMESTAMP NOT NULL,
+		last_seen_at TIMESTAMP NOT NULL,
+		acked_at TIMESTAMP,
+		resolved_at TIMESTAMP,
+		created_at TIMESTAMP NOT NULL,
+		updated_at TIMESTAMP NOT NULL,
+		FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+	)`)
+	if err != nil {
+		return fmt.Errorf("failed to create alerts table: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_alerts_state ON alerts(state)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on alerts.state: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_alerts_severity ON alerts(severity)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on alerts.severity: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_alerts_device_id ON alerts(device_id)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on alerts.device_id: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_alerts_rule_id ON alerts(rule_id)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on alerts.rule_id: %w", err)
+	}
+
 	log.Println("Database schema initialized successfully")
 	return nil
 }

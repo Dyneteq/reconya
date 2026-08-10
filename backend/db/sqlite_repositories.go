@@ -673,42 +673,97 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 	return device, nil
 }
 
-// UpdateDeviceStatuses updates device statuses based on last seen time
-func (r *SQLiteDeviceRepository) UpdateDeviceStatuses(ctx context.Context, timeout time.Duration) error {
+// UpdateDeviceStatuses updates device statuses based on last seen time and
+// returns the devices it moved.
+//
+// The transitions are the point: these two UPDATEs used to be fire-and-forget,
+// which is why models.DeviceOffline and models.DeviceIdle event logs were
+// declared and rendered but never written by anything. Selecting the affected
+// rows first lets callers log the transition and raise alerts on it.
+func (r *SQLiteDeviceRepository) UpdateDeviceStatuses(ctx context.Context, timeout time.Duration) ([]DeviceStatusChange, error) {
 	now := time.Now()
-	offlineThreshold := now.Add(-timeout)
 
-	query := `
-	UPDATE devices 
-	SET status = ?, updated_at = ?
-	WHERE status IN (?, ?) AND last_seen_online_at < ?`
+	var changes []DeviceStatusChange
 
-	_, err := r.db.ExecContext(ctx, query,
-		models.DeviceStatusOffline, now,
-		models.DeviceStatusOnline, models.DeviceStatusIdle,
-		offlineThreshold,
-	)
+	// online|idle -> offline, past the timeout
+	offline, err := r.transitionStatus(ctx,
+		[]models.DeviceStatus{models.DeviceStatusOnline, models.DeviceStatusIdle},
+		models.DeviceStatusOffline, now.Add(-timeout), now)
 	if err != nil {
-		return fmt.Errorf("error updating device statuses: %w", err)
+		return nil, fmt.Errorf("error updating device statuses: %w", err)
+	}
+	changes = append(changes, offline...)
+
+	// online -> idle, after a minute of silence
+	idle, err := r.transitionStatus(ctx,
+		[]models.DeviceStatus{models.DeviceStatusOnline},
+		models.DeviceStatusIdle, now.Add(-1*time.Minute), now)
+	if err != nil {
+		return nil, fmt.Errorf("error updating device idle statuses: %w", err)
+	}
+	changes = append(changes, idle...)
+
+	return changes, nil
+}
+
+// transitionStatus moves every device in `from` whose last_seen_online_at
+// predates the threshold into `to`, reporting which ones moved.
+//
+// Select and update run in one transaction so a device that gets refreshed by a
+// concurrent sweep between the two statements can't be reported as transitioned
+// without actually being updated.
+func (r *SQLiteDeviceRepository) transitionStatus(
+	ctx context.Context,
+	from []models.DeviceStatus,
+	to models.DeviceStatus,
+	threshold time.Time,
+	now time.Time,
+) ([]DeviceStatusChange, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error beginning transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	where := "status IN (" + placeholders(len(from)) + ") AND last_seen_online_at < ?"
+	args := make([]interface{}, 0, len(from)+1)
+	for _, s := range from {
+		args = append(args, string(s))
+	}
+	args = append(args, threshold)
+
+	rows, err := tx.QueryContext(ctx, `SELECT id, ipv4 FROM devices WHERE `+where, args...)
+	if err != nil {
+		return nil, err
 	}
 
-	// Set devices to idle after 1 minute of inactivity
-	idleThreshold := now.Add(-1 * time.Minute)
-	query = `
-	UPDATE devices 
-	SET status = ?, updated_at = ?
-	WHERE status = ? AND last_seen_online_at < ?`
+	var changes []DeviceStatusChange
+	for rows.Next() {
+		var c DeviceStatusChange
+		if err := rows.Scan(&c.ID, &c.IPv4); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		c.Status = to
+		changes = append(changes, c)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	rows.Close()
 
-	_, err = r.db.ExecContext(ctx, query,
-		models.DeviceStatusIdle, now,
-		models.DeviceStatusOnline,
-		idleThreshold,
-	)
-	if err != nil {
-		return fmt.Errorf("error updating device idle statuses: %w", err)
+	if len(changes) == 0 {
+		return nil, tx.Commit()
 	}
 
-	return nil
+	updateArgs := append([]interface{}{string(to), now}, args...)
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE devices SET status = ?, updated_at = ? WHERE `+where, updateArgs...); err != nil {
+		return nil, err
+	}
+
+	return changes, tx.Commit()
 }
 
 // DeleteByID deletes a device by ID

@@ -38,35 +38,54 @@ func NewDeviceService(deviceRepo db.DeviceRepository, networkService *network.Ne
 	}
 }
 
+// DeviceDelta describes what a CreateOrUpdate changed relative to what was
+// already on record. Alert rules need this because the stored row is
+// overwritten in place — once the write lands, "this device is new" and "this
+// port just opened" are no longer recoverable from the database.
+type DeviceDelta struct {
+	// IsNew is true when nothing was on record for this IP or MAC.
+	IsNew bool
+	// NewPorts are ports open now that were not in the previous port set. It is
+	// always empty for a new device: every port of a first sighting is "new",
+	// which is noise rather than signal.
+	NewPorts []models.Port
+}
+
 func (s *DeviceService) CreateOrUpdate(device *models.Device) (*models.Device, error) {
+	saved, _, err := s.CreateOrUpdateWithDelta(device)
+	return saved, err
+}
+
+// CreateOrUpdateWithDelta upserts a device and reports what changed about it.
+func (s *DeviceService) CreateOrUpdateWithDelta(device *models.Device) (*models.Device, *DeviceDelta, error) {
 	currentTime := time.Now()
 	device.LastSeenOnlineAt = &currentTime
 
 	// If device doesn't have a network ID, we can't proceed
 	// The scan manager should set the network ID before calling this method
 	if device.NetworkID == "" {
-		return nil, fmt.Errorf("device must have a network ID set")
+		return nil, nil, fmt.Errorf("device must have a network ID set")
 	}
 
 	// Get the network to check CIDR
 	network, err := s.networkService.FindByID(device.NetworkID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find network: %v", err)
+		return nil, nil, fmt.Errorf("failed to find network: %v", err)
 	}
 	if network == nil {
-		return nil, fmt.Errorf("network not found")
+		return nil, nil, fmt.Errorf("network not found")
 	}
 
 	// Skip network and broadcast addresses
 	if s.isNetworkOrBroadcastAddress(device.IPv4, network.CIDR) {
 		log.Printf("Skipping network/broadcast address: %s", device.IPv4)
-		return nil, fmt.Errorf("network or broadcast address not allowed: %s", device.IPv4)
+		return nil, nil, fmt.Errorf("network or broadcast address not allowed: %s", device.IPv4)
 	}
 
 	// First try to find device by IP address
 	existingDevice, err := s.FindByIPv4(device.IPv4)
 	if err != nil && err != db.ErrNotFound {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// If no device found by IP and we have a MAC address, try to find by MAC
@@ -110,8 +129,51 @@ func (s *DeviceService) CreateOrUpdate(device *models.Device) (*models.Device, e
 
 	// Leave device name empty if not explicitly set
 
+	// Compute the delta before the write, while the previous row is still known.
+	delta := &DeviceDelta{IsNew: existingDevice == nil}
+	if existingDevice != nil {
+		delta.NewPorts = newlyOpenedPorts(existingDevice.Ports, device.Ports)
+	}
+
 	// Use DB manager to serialize database access
-	return s.dbManager.CreateOrUpdateDevice(s.repository, context.Background(), device)
+	saved, err := s.dbManager.CreateOrUpdateDevice(s.repository, context.Background(), device)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return saved, delta, nil
+}
+
+// newlyOpenedPorts returns ports that are open in `current` but were not open in
+// `previous`, keyed by protocol/number.
+//
+// A sweep that did not port-scan the device carries no ports at all; treat that
+// as "no information" rather than "everything closed", otherwise the next scan
+// re-reports every port as new.
+func newlyOpenedPorts(previous, current []models.Port) []models.Port {
+	if len(current) == 0 || len(previous) == 0 {
+		return nil
+	}
+
+	was := make(map[string]bool, len(previous))
+	for _, p := range previous {
+		if isOpenPort(p) {
+			was[p.Protocol+"/"+p.Number] = true
+		}
+	}
+
+	var opened []models.Port
+	for _, p := range current {
+		if isOpenPort(p) && !was[p.Protocol+"/"+p.Number] {
+			opened = append(opened, p)
+		}
+	}
+
+	return opened
+}
+
+func isOpenPort(p models.Port) bool {
+	return strings.EqualFold(p.State, "open")
 }
 
 func (s *DeviceService) setTimestamps(device, existingDevice *models.Device, currentTime time.Time) {
@@ -427,7 +489,10 @@ func (s *DeviceService) isNetworkOrBroadcastAddress(ipStr, cidrStr string) bool 
 	return false
 }
 
-func (s *DeviceService) UpdateDeviceStatuses() error {
+// UpdateDeviceStatuses ages out devices that have stopped answering and returns
+// the ones whose status changed, so the caller can log the transition and run
+// alert rules against it.
+func (s *DeviceService) UpdateDeviceStatuses() ([]db.DeviceStatusChange, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

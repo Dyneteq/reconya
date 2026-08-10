@@ -19,5 +19,7 @@ const (
 	ScanStopped       EEventLogType = "Scan stopped"
 	NewNetworkDetected EEventLogType = "New network detected"
 	Warning           EEventLogType = "Warning"
-	Alert             EEventLogType = "Alert"
+	// AlertRaised is spelled out rather than "Alert" so it does not collide with
+	// models.Alert, the persisted alert record. The stored value is unchanged.
+	AlertRaised EEventLogType = "Alert"
 )

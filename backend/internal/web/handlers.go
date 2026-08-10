@@ -6,18 +6,19 @@ import (
 	"html/template"
 	"io/fs"
 	"log"
-	"math"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"reconya/db"
+	"reconya/internal/alert"
 	"reconya/internal/config"
 	"reconya/internal/device"
 	"reconya/internal/eventlog"
 	"reconya/internal/network"
 	"reconya/internal/nicidentifier"
+	"reconya/internal/portscan"
 	"reconya/internal/scan"
 	"reconya/internal/settings"
 	"reconya/internal/systemstatus"
@@ -36,6 +37,8 @@ type WebHandler struct {
 	geolocationRepository *db.GeolocationRepository
 	settingsService       *settings.SettingsService
 	nicIdentifierService  *nicidentifier.NicIdentifierService
+	alertService          *alert.AlertService
+	portScanService       *portscan.PortScanService
 	templates             *template.Template
 	templateFS            fs.FS
 	staticFS              fs.FS
@@ -44,17 +47,14 @@ type WebHandler struct {
 	config                *config.Config
 }
 
+// PageData is everything index.html reads. The console fetches its data over
+// the JSON API, so the shell only needs to know which page it is rendering and
+// who is logged in; login.html adds the two error fields.
 type PageData struct {
-	Page         string
-	User         *models.User
-	Error        string
-	Username     string
-	Devices      []*models.Device
-	EventLogs    []*models.EventLog
-	SystemStatusData *SystemStatusTemplateData // Use the new struct for system status
-	NetworkMap   *NetworkMapData
-	Networks     []models.Network
-	ScanState    *scan.ScanState
+	Page     string
+	User     *models.User
+	Error    string
+	Username string
 }
 
 type NetworkMapData struct {
@@ -70,14 +70,6 @@ type NetworkInfo struct {
 	OfflineDevices int
 }
 
-// SystemStatusTemplateData holds system status data
-type SystemStatusTemplateData struct {
-	SystemStatus *models.SystemStatus
-	NetworkCIDR  string
-	NetworkInfo  *NetworkInfo
-	DevicesCount int
-	ScanState    *scan.ScanState
-}
 
 func NewWebHandler(
 	deviceService *device.DeviceService,
@@ -88,6 +80,8 @@ func NewWebHandler(
 	geolocationRepository *db.GeolocationRepository,
 	settingsService *settings.SettingsService,
 	nicIdentifierService *nicidentifier.NicIdentifierService,
+	alertService *alert.AlertService,
+	portScanService *portscan.PortScanService,
 	config *config.Config,
 	sessionSecret string,
 	templateFS fs.FS,
@@ -99,13 +93,7 @@ func NewWebHandler(
 	// Parse templates from embedded filesystem
 	tmpl := template.New("").Funcs(funcMap)
 
-	componentFiles, err := fs.Glob(templateFS, "components/*.html")
-	if err != nil {
-		panic(fmt.Sprintf("Failed to glob component templates: %v", err))
-	}
-
 	allFiles := []string{"index.html"}
-	allFiles = append(allFiles, componentFiles...)
 
 	standaloneFiles, err := fs.Glob(templateFS, "standalone/*.html")
 	if err != nil {
@@ -146,6 +134,8 @@ func NewWebHandler(
 		geolocationRepository: geolocationRepository,
 		settingsService:       settingsService,
 		nicIdentifierService:  nicIdentifierService,
+		alertService:          alertService,
+		portScanService:       portScanService,
 		templates:             tmpl,
 		templateFS:            templateFS,
 		staticFS:              staticFS,
@@ -162,11 +152,6 @@ func (h *WebHandler) ServePage(pageName string) http.HandlerFunc {
 		session, _ := h.sessionStore.Get(r, "reconya-session")
 		user := h.getUserFromSession(session)
 		if user == nil {
-			if r.Header.Get("HX-Request") == "true" {
-				w.Header().Set("HX-Redirect", "/login")
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
@@ -193,143 +178,7 @@ func (h *WebHandler) Index(w http.ResponseWriter, r *http.Request) {
 	h.ServePage("dashboard")(w, r)
 }
 
-func (h *WebHandler) Home(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		// Check if this is an HTMX request
-		if r.Header.Get("HX-Request") == "true" {
-			// For HTMX requests, return a redirect header instead of HTTP redirect
-			w.Header().Set("HX-Redirect", "/login")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
 
-	// Get system status from service
-	status, err := h.systemStatusService.GetLatest()
-	if err != nil {
-		log.Printf("Error getting system status for home page: %v", err)
-		// Fallback to mock data or handle gracefully
-		status = &models.SystemStatus{
-			NetworkID: "N/A",
-			PublicIP:  nil,
-		}
-	} else if status == nil {
-		log.Printf("No system status found in database for home page, using fallback")
-		status = &models.SystemStatus{
-			NetworkID: "N/A",
-			PublicIP:  nil,
-		}
-	}
-
-	// Get current or selected network to determine which network to show
-	currentNetwork := h.scanManager.GetSelectedOrCurrentNetwork()
-	scanState := h.scanManager.GetState()
-	var devices []*models.Device
-	var networkCIDR string = "N/A"
-
-	if currentNetwork != nil {
-		log.Printf("Home: currentNetwork is not nil, ID: %s", currentNetwork.ID)
-		// Show devices from the currently selected/scanning network
-		devicesSlice, err := h.deviceService.FindByNetworkID(currentNetwork.ID)
-		if err != nil {
-			log.Printf("Error getting devices for home page system status %s: %v", currentNetwork.ID, err)
-			devices = []*models.Device{}
-		} else {
-			// Convert []models.Device to []*models.Device
-			devices = make([]*models.Device, len(devicesSlice))
-			for i := range devicesSlice {
-				devices[i] = &devicesSlice[i]
-			}
-		}
-		networkCIDR = currentNetwork.CIDR
-	} else {
-		log.Println("Home: currentNetwork is nil, falling back to all devices")
-		// If no network is selected, show all devices
-		devices, err = h.deviceService.FindAll()
-		if err != nil {
-			log.Printf("Error getting all devices for home page system status: %v", err)
-			devices = []*models.Device{}
-		}
-	}
-
-	networkMapData := h.buildNetworkMap(devices)
-
-	systemStatusData := &SystemStatusTemplateData{
-		SystemStatus: status,
-		NetworkCIDR:  networkCIDR,
-		NetworkInfo:  networkMapData.NetworkInfo,
-		DevicesCount: len(devices),
-		ScanState:    &scanState,
-	}
-
-	// Get recent event logs
-	eventLogSlice, err := h.eventLogService.GetAll(20)
-	if err != nil {
-		log.Printf("Error getting event logs for home page: %v", err)
-		eventLogSlice = []models.EventLog{} // Ensure it's an empty slice, not nil
-	}
-
-	// Convert to pointer slice for template
-	eventLogs := make([]*models.EventLog, len(eventLogSlice))
-	for i := range eventLogSlice {
-		eventLogs[i] = &eventLogSlice[i]
-	}
-
-	// Get networks list
-	networksSlice, err := h.networkService.FindAll()
-	if err != nil {
-		log.Printf("Error getting networks for home page: %v", err)
-		networksSlice = []models.Network{} // Ensure it's an empty slice, not nil
-	}
-
-	// Create page data with dashboard page and the prepared data
-	pageData := PageData{
-		Page:         "dashboard",
-		User:         user,
-		SystemStatusData: systemStatusData,
-		Devices:      devices,
-		EventLogs:    eventLogs,
-		Networks:     networksSlice,
-		ScanState:    &scanState,
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "index.html", pageData); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func (h *WebHandler) About(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		if r.Header.Get("HX-Request") == "true" {
-			w.Header().Set("HX-Redirect", "/login")
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	data := struct {
-		Page    string
-		User    *models.User
-		Version string
-	}{
-		Page:    "about",
-		User:    user,
-		Version: h.getVersion(),
-	}
-
-	if err := h.templates.ExecuteTemplate(w, "components/about.html", data); err != nil {
-		log.Printf("About template execution error: %v", err)
-		http.Error(w, fmt.Sprintf("Template error: %v", err), http.StatusInternalServerError)
-	}
-}
 
 func (h *WebHandler) Devices(w http.ResponseWriter, r *http.Request) {
 	h.ServePage("devices")(w, r)
@@ -413,71 +262,6 @@ func (h *WebHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// API Handlers for HTMX
-func (h *WebHandler) APIDevices(w http.ResponseWriter, r *http.Request) {
-	log.Printf("APIDevices: Request received from %s", r.RemoteAddr)
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	log.Printf("APIDevices: User session: %v", user != nil)
-	if user == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": "Unauthorized",
-			"success": false,
-		})
-		return
-	}
-
-	// Get current or selected network to determine which network to show
-	currentNetwork := h.scanManager.GetSelectedOrCurrentNetwork()
-	var devicesSlice []models.Device
-	var err error
-
-	if currentNetwork != nil {
-		// Show devices from the currently selected/scanning network
-		devicesSlice, err = h.deviceService.FindByNetworkID(currentNetwork.ID)
-		if err != nil {
-			log.Printf("Error getting devices for network %s: %v", currentNetwork.ID, err)
-			devicesSlice = []models.Device{}
-		}
-	} else {
-		// If no network is selected, show empty list
-		devicesSlice = []models.Device{}
-	}
-
-	// Show devices with visual status indicators
-	devices := make([]*models.Device, len(devicesSlice))
-	for i := range devicesSlice {
-		devices[i] = &devicesSlice[i]
-	}
-
-	// Get user's screenshot setting
-	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
-
-	viewMode := r.URL.Query().Get("view")
-
-	log.Printf("APIDevices: Found %d devices, viewMode: %s", len(devices), viewMode)
-	if len(devices) > 0 {
-		log.Printf("First device: ID=%s, IPv4=%s, Status=%s", devices[0].ID, devices[0].IPv4, devices[0].Status)
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	response := map[string]interface{}{
-		"devices":            devices,
-		"viewMode":           viewMode,
-		"screenshotsEnabled": screenshotsEnabled,
-	}
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Failed to encode JSON response in APIDevices: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": "Failed to encode response",
-			"success": false,
-		})
-	}
-}
 
 func (h *WebHandler) APIDeviceModal(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
@@ -616,84 +400,6 @@ func (h *WebHandler) APIDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *WebHandler) APISystemStatus(w http.ResponseWriter, r *http.Request) {
-	log.Println("APISystemStatus called")
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Get system status from service
-	status, err := h.systemStatusService.GetLatest()
-	if err != nil {
-		log.Printf("Error getting system status: %v", err)
-		// If service fails, create mock data for now
-		status = &models.SystemStatus{
-			NetworkID: "N/A",
-			PublicIP:  nil,
-		}
-	} else if status == nil {
-		log.Printf("No system status found in database, using fallback")
-		// If no system status exists yet, create mock data
-		status = &models.SystemStatus{
-			NetworkID: "N/A",
-			PublicIP:  nil,
-		}
-	} else {
-		log.Printf("SystemStatus found: NetworkID=%s", status.NetworkID)
-	}
-
-	// Get current or selected network to determine which network to show
-	currentNetwork := h.scanManager.GetSelectedOrCurrentNetwork()
-	scanState := h.scanManager.GetState()
-	var devices []*models.Device
-	var networkCIDR string = "N/A"
-
-	if currentNetwork != nil {
-		log.Printf("APISystemStatus: currentNetwork is not nil, ID: %s", currentNetwork.ID)
-		// Show devices from the currently selected/scanning network
-		devicesSlice, err := h.deviceService.FindByNetworkID(currentNetwork.ID)
-		if err != nil {
-			log.Printf("Error getting devices for system status %s: %v", currentNetwork.ID, err)
-			devices = []*models.Device{}
-		} else {
-			// Convert []models.Device to []*models.Device
-			devices = make([]*models.Device, len(devicesSlice))
-			for i := range devicesSlice {
-				devices[i] = &devicesSlice[i]
-			}
-		}
-		networkCIDR = currentNetwork.CIDR
-	} else {
-		log.Println("APISystemStatus: currentNetwork is nil, falling back to all devices")
-		// If no network is selected, show all devices
-		devices, err = h.deviceService.FindAll()
-		if err != nil {
-			log.Printf("Error getting all devices for system status: %v", err)
-			devices = []*models.Device{}
-		}
-	}
-
-	networkMapData := h.buildNetworkMap(devices)
-
-	data := SystemStatusTemplateData{
-		SystemStatus: status,
-		NetworkCIDR:  networkCIDR,
-		NetworkInfo:  networkMapData.NetworkInfo,
-		DevicesCount: len(devices),
-		ScanState:    &scanState,
-	}
-
-	log.Printf("APISystemStatus: returning data: %+v", data)
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("Error encoding system status JSON: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 func (h *WebHandler) APIPingInternet(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
@@ -773,45 +479,6 @@ func (h *WebHandler) APIEventLogsTable(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *WebHandler) APINetworkMap(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized"})
-		return
-	}
-
-	// Get current or selected network to determine which network to show
-	currentNetwork := h.scanManager.GetSelectedOrCurrentNetwork()
-	var devicesSlice []models.Device
-	var err error
-
-	if currentNetwork != nil {
-		// Show devices from the currently selected/scanning network
-		devicesSlice, err = h.deviceService.FindByNetworkID(currentNetwork.ID)
-		if err != nil {
-			log.Printf("Error getting devices for network map %s: %v", currentNetwork.ID, err)
-			devicesSlice = []models.Device{}
-		}
-	} else {
-		// If no network is selected, show empty map
-		devicesSlice = []models.Device{}
-	}
-
-	devices := make([]*models.Device, len(devicesSlice))
-	for i := range devicesSlice {
-		devices[i] = &devicesSlice[i]
-	}
-
-	networkMap := h.buildNetworkMap(devices)
-	
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(networkMap); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 // Helper methods
 func (h *WebHandler) getUserFromSession(session *sessions.Session) *models.User {
@@ -1125,37 +792,6 @@ func (h *WebHandler) APINetworks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *WebHandler) APINetworkModal(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	vars := mux.Vars(r)
-	networkID := vars["id"]
-
-	response := map[string]interface{}{
-		"network": &models.Network{},
-		"error":   "",
-	}
-
-	// If editing existing network, load it
-	if networkID != "" {
-		network, err := h.networkService.FindByID(networkID)
-		if err != nil {
-			response["error"] = "Network not found"
-		} else if network != nil {
-			response["network"] = network
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 func (h *WebHandler) APICreateNetwork(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
@@ -1394,216 +1030,8 @@ func (h *WebHandler) APIDeleteNetwork(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-// APINetworkDeleteInfo returns information about network deletion including affected devices
-func (h *WebHandler) APINetworkDeleteInfo(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
 
-	vars := mux.Vars(r)
-	networkID := vars["id"]
 
-	// Get network info
-	network, err := h.networkService.FindByID(networkID)
-	if err != nil {
-		http.Error(w, "Network not found", http.StatusNotFound)
-		return
-	}
-
-	// Check if a scan is currently running on this network
-	isScanning := false
-	if h.scanManager.IsRunning() {
-		currentNetwork := h.scanManager.GetCurrentNetwork()
-		if currentNetwork != nil && currentNetwork.ID == networkID {
-			isScanning = true
-		}
-	}
-
-	// Get device count
-	deviceCount, err := h.networkService.GetDeviceCount(networkID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to check network devices: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Get devices for this network to show in confirmation
-	devices, err := h.deviceService.FindByNetworkID(networkID)
-	if err != nil {
-		log.Printf("Error fetching devices for network %s: %v", networkID, err)
-		devices = []models.Device{} // Empty slice if error
-	}
-
-	deleteInfo := struct {
-		Network     *models.Network `json:"network"`
-		DeviceCount int             `json:"deviceCount"`
-		Devices     []models.Device `json:"devices"`
-		IsScanning  bool            `json:"isScanning"`
-		CanDelete   bool            `json:"canDelete"`
-		Message     string          `json:"message"`
-	}{
-		Network:     network,
-		DeviceCount: deviceCount,
-		Devices:     devices,
-		IsScanning:  isScanning,
-		CanDelete:   !isScanning,
-		Message:     "",
-	}
-
-	if isScanning {
-		deleteInfo.Message = "Cannot delete network: a scan is currently running on this network. Please stop the scan first."
-	} else if deviceCount > 0 {
-		deleteInfo.Message = fmt.Sprintf("This network contains %d device(s). Deleting the network will also remove these devices from the system.", deviceCount)
-	} else {
-		deleteInfo.Message = "Are you sure you want to delete this network?"
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(deleteInfo)
-}
-
-// APIForceDeleteNetwork deletes a network and all its devices with confirmation
-func (h *WebHandler) APIForceDeleteNetwork(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	vars := mux.Vars(r)
-	networkID := vars["id"]
-
-	// Check if a scan is currently running on this network
-	if h.scanManager.IsRunning() {
-		currentNetwork := h.scanManager.GetCurrentNetwork()
-		if currentNetwork != nil && currentNetwork.ID == networkID {
-			http.Error(w, "Cannot delete network: a scan is currently running on this network. Please stop the scan first.", http.StatusConflict)
-			return
-		}
-	}
-
-	// Get network info before deletion for logging
-	network, err := h.networkService.FindByID(networkID)
-	if err != nil {
-		http.Error(w, "Network not found", http.StatusNotFound)
-		return
-	}
-
-	// Get device count for logging
-	deviceCount, err := h.networkService.GetDeviceCount(networkID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to check network devices: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Delete devices first if they exist
-	if deviceCount > 0 {
-		err = h.deviceService.DeleteByNetworkID(networkID)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to delete network devices: %v", err), http.StatusInternalServerError)
-			return
-		}
-		log.Printf("Deleted %d devices from network %s before network deletion", deviceCount, networkID)
-	}
-
-	// Now delete the network
-	err = h.networkService.Delete(networkID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to delete network: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Log the event
-	if network != nil {
-		message := fmt.Sprintf("Network %s (%s) deleted", network.CIDR, network.Name)
-		if deviceCount > 0 {
-			message += fmt.Sprintf(" along with %d device(s)", deviceCount)
-		}
-		h.eventLogService.Log(models.NetworkDeleted, message, "")
-	}
-
-	// Return success response
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-		"message": "Network deleted successfully",
-	})
-}
-
-// APINetworkDeleteModal returns the network deletion confirmation modal
-func (h *WebHandler) APINetworkDeleteModal(w http.ResponseWriter, r *http.Request) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	vars := mux.Vars(r)
-	networkID := vars["id"]
-
-	// Get network info
-	network, err := h.networkService.FindByID(networkID)
-	if err != nil {
-		http.Error(w, "Network not found", http.StatusNotFound)
-		return
-	}
-
-	// Check if a scan is currently running on this network
-	isScanning := false
-	if h.scanManager.IsRunning() {
-		currentNetwork := h.scanManager.GetCurrentNetwork()
-		if currentNetwork != nil && currentNetwork.ID == networkID {
-			isScanning = true
-		}
-	}
-
-	// Get device count
-	deviceCount, err := h.networkService.GetDeviceCount(networkID)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to check network devices: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Get devices for this network to show in confirmation
-	devices, err := h.deviceService.FindByNetworkID(networkID)
-	if err != nil {
-		log.Printf("Error fetching devices for network %s: %v", networkID, err)
-		devices = []models.Device{} // Empty slice if error
-	}
-
-	deleteInfo := struct {
-		Network     *models.Network `json:"network"`
-		DeviceCount int             `json:"deviceCount"`
-		Devices     []models.Device `json:"devices"`
-		IsScanning  bool            `json:"isScanning"`
-		CanDelete   bool            `json:"canDelete"`
-		Message     string          `json:"message"`
-	}{
-		Network:     network,
-		DeviceCount: deviceCount,
-		Devices:     devices,
-		IsScanning:  isScanning,
-		CanDelete:   !isScanning,
-		Message:     "",
-	}
-
-	if isScanning {
-		deleteInfo.Message = "Cannot delete network: a scan is currently running on this network. Please stop the scan first."
-	} else if deviceCount > 0 {
-		deleteInfo.Message = fmt.Sprintf("This network contains %d device(s). Deleting the network will also remove these devices from the system.", deviceCount)
-	} else {
-		deleteInfo.Message = "Are you sure you want to delete this network?"
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(deleteInfo); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 // APIScanStatus returns the current scan status
 func (h *WebHandler) APIScanStatus(w http.ResponseWriter, r *http.Request) {
@@ -1760,43 +1188,6 @@ func (h *WebHandler) APIScanControl(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *WebHandler) APIScanControlWithError(w http.ResponseWriter, r *http.Request, errorMsg string) {
-	session, _ := h.sessionStore.Get(r, "reconya-session")
-	user := h.getUserFromSession(session)
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Set cache control headers to prevent browser caching
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("Expires", "0")
-
-	// Get networks and scan state
-	networksSlice, err := h.networkService.FindAll()
-	if err != nil {
-		log.Printf("Error getting networks for scan control: %v", err)
-		networksSlice = []models.Network{}
-	}
-
-	scanState := h.scanManager.GetState()
-
-	// Return JSON data for external JavaScript to handle
-	data := map[string]interface{}{
-		"networks":  networksSlice,
-		"scanState": &scanState,
-	}
-	if errorMsg != "" {
-		data["error"] = errorMsg
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("Error encoding scan control JSON: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
 
 // APIScanSelectNetwork sets the selected network (without starting scan)
 // APIDashboardMetrics returns JSON data for dashboard metrics
@@ -2123,253 +1514,16 @@ func (h *WebHandler) getVersion() string {
 
 // templateFuncMap returns the helpers available to the HTML templates.
 // Extracted from NewWebHandler so the helpers can be unit-tested directly.
+// templateFuncMap is deliberately empty.
+//
+// index.html and login.html use only Go's builtin actions now — every helper
+// that used to live here served the server-rendered device modal and radial
+// map, both of which the console replaced with JSON endpoints and a canvas.
+//
+// Do NOT add "or" or "eq" overrides here. Earlier versions did, and they broke
+// boolean `or` (it coalesces rather than disjoins) and `eq` on named string
+// types like models.DeviceStatus. internal/web/template_funcs_test.go pins that
+// behaviour against regression.
 func templateFuncMap() template.FuncMap {
-	return template.FuncMap{
-		"formatTime": func(t time.Time) string {
-			if t.IsZero() {
-				return "Never"
-			}
-			return t.Format("2006-01-02 15:04:05")
-		},
-		"formatTimeAgo": func(t time.Time) string {
-			if t.IsZero() {
-				return "Never"
-			}
-			duration := time.Since(t)
-			switch {
-			case duration < time.Minute:
-				return fmt.Sprintf("%ds ago", int(duration.Seconds()))
-			case duration < time.Hour:
-				return fmt.Sprintf("%dm ago", int(duration.Minutes()))
-			case duration < 24*time.Hour:
-				return fmt.Sprintf("%dh ago", int(duration.Hours()))
-			default:
-				return fmt.Sprintf("%dd ago", int(duration.Hours()/24))
-			}
-		},
-		"formatFileSize": func(bytes interface{}) string {
-			var size float64
-			switch v := bytes.(type) {
-			case int:
-				size = float64(v)
-			case int64:
-				size = float64(v)
-			case float64:
-				size = v
-			default:
-				return "N/A"
-			}
-
-			if size == 0 {
-				return "N/A"
-			}
-
-			kb := size / 1024
-			if kb < 1024 {
-				return fmt.Sprintf("%.1f KB", kb)
-			}
-			mb := kb / 1024
-			return fmt.Sprintf("%.1f MB", mb)
-		},
-		"upper": func(s string) string {
-			return strings.ToUpper(s)
-		},
-		"deref": func(ptr interface{}) interface{} {
-			if ptr == nil {
-				return "-"
-			}
-			switch v := ptr.(type) {
-			case *string:
-				if v == nil {
-					return "-"
-				}
-				return *v
-			case *time.Time:
-				if v == nil {
-					return time.Time{}
-				}
-				return *v
-			default:
-				return ptr
-			}
-		},
-		"formatEventType": func(eventType string) string {
-			return strings.ReplaceAll(strings.Title(strings.ReplaceAll(eventType, "_", " ")), "_", " ")
-		},
-		"slice": func(items interface{}, start, end int) interface{} {
-			switch v := items.(type) {
-			case []*models.Port:
-				if start >= len(v) {
-					return []*models.Port{}
-				}
-				if end > len(v) {
-					end = len(v)
-				}
-				return v[start:end]
-			}
-			return items
-		},
-		"len": func(items interface{}) int {
-			switch v := items.(type) {
-			case []*models.Device:
-				return len(v)
-			case []*models.Port:
-				return len(v)
-			case []*models.WebService:
-				return len(v)
-			case []*models.EventLog:
-				return len(v)
-			}
-			return 0
-		},
-		// NOTE: "or" and "eq" are deliberately NOT defined here. Overriding
-		// them shadows the correct text/template builtins:
-		//   - the old "or" returned the first arg that was neither nil nor "",
-		//     so with boolean args it returned `false` whenever the first
-		//     condition was false, regardless of the rest.
-		//   - the old "eq" was `a == b` over interface{}, which compares
-		//     dynamic type as well as value, so `eq .Status "online"` was
-		//     always false for named string types like models.DeviceStatus.
-		"where": func(slice interface{}, field, value string) interface{} {
-			switch v := slice.(type) {
-			case []*models.Device:
-				var result []*models.Device
-				for _, item := range v {
-					var fieldValue string
-					switch field {
-					case "Status":
-						fieldValue = string(item.Status)
-					case "IPv4":
-						fieldValue = item.IPv4
-					}
-					if fieldValue == value {
-						result = append(result, item)
-					}
-				}
-				return result
-			}
-			return slice
-		},
-		"split": func(s, sep string) []string {
-			return strings.Split(s, sep)
-		},
-		"last": func(slice []string) string {
-			if len(slice) == 0 {
-				return ""
-			}
-			return slice[len(slice)-1]
-		},
-		"add": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					return av + bv
-				}
-				if bv, ok := b.(float64); ok {
-					return float64(av) + bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					return av + bv
-				}
-				if bv, ok := b.(int); ok {
-					return av + float64(bv)
-				}
-			}
-			return a
-		},
-		"mul": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					return av * bv
-				}
-				if bv, ok := b.(float64); ok {
-					return float64(av) * bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					return av * bv
-				}
-				if bv, ok := b.(int); ok {
-					return av * float64(bv)
-				}
-			}
-			return a
-		},
-		"div": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					if bv == 0 {
-						return 0
-					}
-					return av / bv
-				}
-				if bv, ok := b.(float64); ok {
-					if bv == 0 {
-						return 0.0
-					}
-					return float64(av) / bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					if bv == 0 {
-						return 0.0
-					}
-					return av / bv
-				}
-				if bv, ok := b.(int); ok {
-					if bv == 0 {
-						return 0.0
-					}
-					return av / float64(bv)
-				}
-			}
-			return a
-		},
-		"sub": func(a, b interface{}) interface{} {
-			switch av := a.(type) {
-			case int:
-				if bv, ok := b.(int); ok {
-					return av - bv
-				}
-				if bv, ok := b.(float64); ok {
-					return float64(av) - bv
-				}
-			case float64:
-				if bv, ok := b.(float64); ok {
-					return av - bv
-				}
-				if bv, ok := b.(int); ok {
-					return av - float64(bv)
-				}
-			}
-			return a
-		},
-		"cos": func(angle float64) float64 {
-			return math.Cos(angle)
-		},
-		"sin": func(angle float64) float64 {
-			return math.Sin(angle)
-		},
-		"replace": func(s, old, new string) string {
-			return strings.ReplaceAll(s, old, new)
-		},
-		"contains": func(s, substr string) bool {
-			return strings.Contains(s, substr)
-		},
-		"string": func(v interface{}) string {
-			switch val := v.(type) {
-			case models.DeviceType:
-				return string(val)
-			case models.DeviceStatus:
-				return string(val)
-			case string:
-				return val
-			default:
-				return fmt.Sprintf("%v", val)
-			}
-		},
-	}
+	return template.FuncMap{}
 }

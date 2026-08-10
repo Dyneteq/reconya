@@ -326,6 +326,12 @@ func (s *NicIdentifierService) CheckForNewNetworks() {
 			continue
 		}
 
+		// Tunnels (VPN, Tailscale utun*) carry a single host address, not a
+		// scannable LAN.
+		if iface.Flags&net.FlagPointToPoint != 0 {
+			continue
+		}
+
 		addrs, err := iface.Addrs()
 		if err != nil {
 			continue
@@ -339,6 +345,11 @@ func (s *NicIdentifierService) CheckForNewNetworks() {
 
 			ip := ipNet.IP.To4()
 			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+
+			if ones, _ := ipNet.Mask.Size(); ones >= 31 {
+				log.Printf("Skipping host-only network: %s on interface %s", ipNet.String(), iface.Name)
 				continue
 			}
 
@@ -413,6 +424,12 @@ func (s *NicIdentifierService) GetDetectedNetworks() []DetectedNetwork {
 			continue
 		}
 
+		// Tunnels (VPN, Tailscale utun*) carry a single host address, not a
+		// scannable LAN.
+		if iface.Flags&net.FlagPointToPoint != 0 {
+			continue
+		}
+
 		addrs, err := iface.Addrs()
 		if err != nil {
 			continue
@@ -423,9 +440,13 @@ func (s *NicIdentifierService) GetDetectedNetworks() []DetectedNetwork {
 			if !ok {
 				continue
 			}
-			
+
 			ip := ipNet.IP.To4()
 			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+
+			if maskOnes, _ := ipNet.Mask.Size(); maskOnes >= 31 {
 				continue
 			}
 

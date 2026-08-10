@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -23,6 +24,14 @@ type ScanState struct {
 	IPv6Monitoring  bool              `json:"ipv6_monitoring"`
 }
 
+// AlertEvaluator is the slice of the alert service the scan loop needs. It is
+// declared here rather than imported so internal/alert stays a leaf package.
+type AlertEvaluator interface {
+	Evaluate(ctx context.Context) error
+	RecordNewDevice(ctx context.Context, device *models.Device, networkCIDR string)
+	RecordNewPorts(ctx context.Context, device *models.Device, ports []models.Port)
+}
+
 // ScanManager manages the network scanning state and operations
 type ScanManager struct {
 	state           ScanState
@@ -30,12 +39,14 @@ type ScanManager struct {
 	pingSweepService *pingsweep.PingSweepService
 	networkService  *network.NetworkService
 	ipv6MonitorService *ipv6monitor.IPv6MonitorService
+	alertService    AlertEvaluator
 	stopChannel     chan bool
 	done            chan bool
 }
 
-// NewScanManager creates a new scan manager
-func NewScanManager(pingSweepService *pingsweep.PingSweepService, networkService *network.NetworkService, ipv6MonitorService *ipv6monitor.IPv6MonitorService) *ScanManager {
+// NewScanManager creates a new scan manager. alertService may be nil, in which
+// case sweeps simply raise no alerts.
+func NewScanManager(pingSweepService *pingsweep.PingSweepService, networkService *network.NetworkService, ipv6MonitorService *ipv6monitor.IPv6MonitorService, alertService AlertEvaluator) *ScanManager {
 	return &ScanManager{
 		state: ScanState{
 			IsRunning: false,
@@ -44,6 +55,7 @@ func NewScanManager(pingSweepService *pingsweep.PingSweepService, networkService
 		pingSweepService: pingSweepService,
 		networkService:  networkService,
 		ipv6MonitorService: ipv6MonitorService,
+		alertService:    alertService,
 	}
 }
 
@@ -328,12 +340,24 @@ func (sm *ScanManager) runSingleScan() {
 		device.NetworkID = network.ID
 
 		// Update device in database
-		updatedDevice, err := sm.pingSweepService.DeviceService.CreateOrUpdate(&device)
+		updatedDevice, delta, err := sm.pingSweepService.DeviceService.CreateOrUpdateWithDelta(&device)
 		if err != nil {
 			log.Printf("Error updating device %s: %v", device.IPv4, err)
 			continue
 		}
 		log.Printf("Successfully saved device: %s", device.IPv4)
+
+		// Raise the event-shaped alerts while we still know what changed — the
+		// stored row has just been overwritten, so this is the last moment at
+		// which "first sighting" and "newly opened port" are knowable.
+		if sm.alertService != nil && delta != nil {
+			if delta.IsNew {
+				sm.alertService.RecordNewDevice(context.Background(), updatedDevice, network.CIDR)
+			}
+			if len(delta.NewPorts) > 0 {
+				sm.alertService.RecordNewPorts(context.Background(), updatedDevice, delta.NewPorts)
+			}
+		}
 
 		// Create event log
 		deviceIDStr := device.ID
@@ -372,6 +396,16 @@ func (sm *ScanManager) runSingleScan() {
 	})
 	if err != nil {
 		log.Printf("Error creating ping sweep completion event log: %v", err)
+	}
+
+	// Re-evaluate the stateful alert rules now that this sweep's devices have
+	// landed. This looks at every device, not just this network's: auto-resolve
+	// is scoped per rule, so evaluating a subset would resolve valid findings
+	// on the networks that were not swept.
+	if sm.alertService != nil {
+		if err := sm.alertService.Evaluate(context.Background()); err != nil {
+			log.Printf("Error evaluating alert rules after sweep: %v", err)
+		}
 	}
 }
 

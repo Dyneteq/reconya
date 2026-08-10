@@ -1,841 +1,737 @@
+/* Topology map.
+ *
+ * Two layouts, both drawn from live device data:
+ *
+ *   TREE    gateway → core switch → one band per network → host swarm
+ *   RADIAL  one dashed ring per network, gateway at the centre
+ *
+ * The design also sketches CLUSTERS and GRID. GRID enumerates a /24's whole
+ * address space, which this app does not model — it stores discovered hosts,
+ * not allocations — so drawing it would mean inventing 200 empty cells per
+ * network. Both are left out rather than faked.
+ *
+ * Node shape encodes role, fill encodes status. The internet node and packet
+ * animation the old map drew are gone: the design has no internet node, and
+ * that state now lives in the top bar.
+ */
 (function () {
     'use strict';
 
-    var canvas, ctx;
-    var lw = 0, lh = 600;
-    var nodes = [];
-    var gateway = { x: 0, y: 0, pulse: 0, rot: 0 };
-    var packets = [];
-    var hitIdx = null;
+    var COLORS = {
+        bg: '#050806',
+        grid: 'rgba(74,222,128,0.045)',
+        line: 'rgba(74,222,128,0.16)',
+        lineSoft: 'rgba(74,222,128,0.08)',
+        lineMid: 'rgba(74,222,128,0.30)',
+        accent: '#4ade80',
+        accentDim: 'rgba(74,222,128,0.55)',
+        amber: '#f5b544',
+        idle: 'rgba(74,222,128,0.45)',
+        offline: '#3a4a42',
+        text: '#dbe5de',
+        textDim: '#6f8378',
+        textFaint: '#4c5f55'
+    };
+
+    var MODES = [
+        { id: 'TREE', hint: 'gateway → switch → subnet → hosts' },
+        { id: 'RADIAL', hint: 'rings = subnet · shape = role' }
+    ];
+
+    var GRID = 44;
+    var ENTRY_MS = 900;
+    var ZOOM_MIN = 0.4;
+    var ZOOM_MAX = 6;
+
+    var canvas, ctx, wrap;
+    var lw = 0, lh = 0;
     var rafId = null;
-    var prevTs = 0;
-    var MAX_NODES = 50;
-    var ENTRY_MS  = 1200;
 
-    // Full device set for the active network, before the offline filter.
-    var allDevices = [];
+    var view = { zoom: 1, panX: 0, panY: 0 };
+    var drag = null;
+    var pinch = null;
+    var suppressClick = false;
+
+    var nodes = [];            // laid-out, animated node records
+    var groups = [];           // one per network, in display order
+    var devices = [];          // filtered device set currently drawn
+    var hovered = null;
+    var selectedId = null;
     var showOffline = false;
-    var hiddenOfflineCount = 0;
+    var filterText = '';
+    var mode = 'TREE';
+    var onSelect = null;
 
-    // Zoom / pan
-    var zoom = 1, panX = 0, panY = 0;
-    var ZOOM_MIN = 0.4, ZOOM_MAX = 4;
-    var pinchDist0 = null, pinchZoom0 = 1;
+    /* ── Setup ──────────────────────────────────────────────────────── */
 
-    var currentTs = 0;
-    var ipackets = [];
-    var internet = { x: 80, y: 0, connected: null, ip: '', prevConnected: null, lostAt: 0 };
+    function init(opts) {
+        canvas = document.getElementById('rc-map-canvas');
+        wrap = document.getElementById('rc-map-view');
+        if (!canvas || !wrap) return;
 
-    var activityEvents = [];
-
-    // Theme-aware color palette — updated each render()
-    var C = {};
-
-    function updateColors() {
-        C.bg         = '#070d17';
-        C.green      = '#10b981';
-        C.gridDot    = 'rgba(16,185,129,0.09)';
-        C.vigOuter   = 'rgba(0,0,0,0.55)';
-        C.orbitInner = 'rgba(16,185,129,0.22)';
-        C.orbitOuter = 'rgba(16,185,129,0.13)';
-        C.edgeActive = 'rgba(16,185,129,0.75)';
-        C.edgeInact  = 'rgba(75,85,99,0.45)';
-        C.packetBase = 'rgba(110,231,183,';
-        C.pulseBase  = 'rgba(16,185,129,';
-        C.glowInner  = 'rgba(16,185,129,0.65)';
-        C.glowMid    = 'rgba(16,185,129,0.18)';
-        C.hexOuter   = 'rgba(16,185,129,0.65)';
-        C.gwLabel    = 'rgba(16,185,129,0.65)';
-        C.nodeGlow   = 'rgba(16,185,129,0.28)';
-        C.ipOnline   = 'rgba(16,185,129,0.95)';
-        C.ipOffline  = 'rgba(107,114,128,0.70)';
-        C.bracket    = 'rgba(16,185,129,0.22)';
-        C.statTotal  = 'rgba(16,185,129,0.55)';
-        C.statOff    = 'rgba(107,114,128,0.75)';
-        C.emptyText  = 'rgba(107,114,128,0.40)';
-        C.warnRedFill = 'rgba(239,68,68,';
-        C.warnRedEdge = 'rgba(239,68,68,0.60)';
-        C.warnRedSolid = '#ef4444';
-    }
-
-    function sc(s) {
-        switch ((s || '').toLowerCase()) {
-            case 'online':  return '#10b981';
-            case 'idle':    return '#eab308';
-            case 'offline': return '#374151';
-            default:        return '#4b5563';
-        }
-    }
-
-    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
-
-    function hexPath(cx, cy, r, rot) {
-        ctx.beginPath();
-        for (var i = 0; i < 6; i++) {
-            var a = i / 6 * Math.PI * 2 + (rot || 0);
-            if (i === 0) ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-            else         ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-        }
-        ctx.closePath();
-    }
-
-    function initNetworkViz() {
-        canvas = document.getElementById('network-viz-canvas');
-        if (!canvas) return;
         ctx = canvas.getContext('2d');
-        var wrap = document.getElementById('network-viz-wrap');
-        if (!wrap) return;
+        onSelect = (opts && opts.onSelect) || null;
+        mode = RC.store.get('reconya.mapMode', 'TREE');
+        if (!MODES.some(function (m) { return m.id === mode; })) mode = 'TREE';
+        showOffline = RC.store.get('reconya.showOffline', 'false') === 'true';
 
-        function resize() {
-            var dpr = window.devicePixelRatio || 1;
-            lw = wrap.clientWidth  || window.innerWidth  || 800;
-            lh = wrap.clientHeight || window.innerHeight || 600;
-            canvas.style.width  = lw + 'px';
-            canvas.style.height = lh + 'px';
-            canvas.width  = Math.round(lw * dpr);
-            canvas.height = Math.round(lh * dpr);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            gateway.x = lw * 0.33;
-            gateway.y = lh / 2;
-            zoom = 1; panX = 0; panY = 0;
-            positionNodes();
-        }
         resize();
+        if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+        else window.addEventListener('resize', resize);
 
-        if (window.ResizeObserver) {
-            new ResizeObserver(resize).observe(wrap);
-        } else {
-            window.addEventListener('resize', resize);
-        }
-
+        canvas.addEventListener('mousedown', onDown);
         canvas.addEventListener('mousemove', onMove);
+        canvas.addEventListener('mouseup', onUp);
         canvas.addEventListener('mouseleave', onLeave);
         canvas.addEventListener('click', onClick);
         canvas.addEventListener('wheel', onWheel, { passive: false });
-        canvas.addEventListener('touchstart',  onTouchStart, { passive: true });
-        canvas.addEventListener('touchmove',   onTouchMove,  { passive: false });
-        canvas.addEventListener('touchend',    function () { pinchDist0 = null; }, { passive: true });
-        canvas.addEventListener('dblclick',    function () { zoom = 1; panX = 0; panY = 0; });
+        canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+        canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+        canvas.addEventListener('touchend', function () { pinch = null; }, { passive: true });
+        canvas.addEventListener('dblclick', fit);
 
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(tick);
-
-        fetchData();
-        setInterval(fetchData, 15000);
-        fetchInternetIP();
-        setInterval(fetchInternetIP, 30000);
-        pingInternet();
-        setInterval(pingInternet, 3000);
-        fetchActivity();
-        setInterval(fetchActivity, 20000);
     }
 
-    function pingInternet() {
-        fetch('/api/ping-internet', { credentials: 'include' })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                var wasConn = internet.connected;
-                internet.connected = !!d.up;
-                if (wasConn === true && !d.up) internet.lostAt = currentTs;
-            })
-            .catch(function () {
-                var wasConn = internet.connected;
-                internet.connected = false;
-                if (wasConn === true) internet.lostAt = currentTs;
-            });
+    function resize() {
+        if (!canvas || !wrap) return;
+
+        var dpr = window.devicePixelRatio || 1;
+        lw = wrap.clientWidth || 800;
+        lh = wrap.clientHeight || 600;
+
+        canvas.width = Math.round(lw * dpr);
+        canvas.height = Math.round(lh * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        layout();
     }
 
-    function fetchInternetIP() {
-        fetch('/api/dashboard-metrics', { credentials: 'include' })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                var conn = !!(d.publicIP && d.publicIP !== 'N/A' && d.publicIP !== '');
-                internet.ip = conn ? d.publicIP : '';
-            })
-            .catch(function () {});
-    }
+    /* ── Data ───────────────────────────────────────────────────────── */
 
-    function fetchActivity() {
-        fetch('/api/event-logs', { credentials: 'include' })
-            .then(function (r) { return r.json(); })
-            .then(function (d) { activityEvents = collapseEvents(d.logs || []).slice(0, 8); })
-            .catch(function () {});
-    }
-
-    // A scan writes one event per sweep plus one per device it sees, so the
-    // raw feed is long runs of the same event type. Collapse each consecutive
-    // run into a single row carrying its count; the run's newest timestamp
-    // wins, since that is what the "how fresh is this" column means.
-    function collapseEvents(logs) {
-        var out = [];
-        for (var i = 0; i < logs.length; i++) {
-            var ev   = logs[i];
-            var type = ev.Type || ev.type || '';
-            var prev = out[out.length - 1];
-
-            if (prev && prev.type === type) {
-                prev.count++;
-                continue;
-            }
-            out.push({
-                type: type,
-                count: 1,
-                description: ev.Description || ev.description || type,
-                createdAt: ev.CreatedAt || ev.created_at || ''
-            });
-        }
-        return out;
-    }
-
-    function timeAgo(ts) {
-        if (!ts) return '';
-        var diff = Date.now() - new Date(ts).getTime();
-        var m = Math.floor(diff / 60000);
-        if (m < 1)  return 'now';
-        if (m < 60) return m + 'm';
-        var h = Math.floor(m / 60);
-        if (h < 24) return h + 'h';
-        return Math.floor(h / 24) + 'd';
-    }
-
-    function drawActivityFeed() {
-        if (activityEvents.length === 0) return;
-        var lineH   = 14;
-        var maxDesc = 44;
-        var x       = 30;
-        var yBase   = lh - 36; // bottom bracket clearance
-
-        ctx.textBaseline = 'bottom';
-        ctx.textAlign    = 'left';
-        ctx.font = '8px "Orbitron", monospace';
-        ctx.fillStyle = C.bracket;
-        ctx.fillText('ACTIVITY', x, yBase - activityEvents.length * lineH - 6);
-
-        for (var i = activityEvents.length - 1; i >= 0; i--) {
-            var ev   = activityEvents[i];
-            var ts   = ev.createdAt || '';
-            // A collapsed run is labelled by its type ("Ping sweep ×8"); a
-            // lone event keeps its full description, which carries detail the
-            // type name does not (durations, IPs).
-            var desc = ev.count > 1 ? (ev.type + ' ×' + ev.count) : (ev.description || '');
-            if (desc.length > maxDesc) desc = desc.slice(0, maxDesc) + '…';
-
-            var row = yBase - (activityEvents.length - 1 - i) * lineH;
-            var fresh = i === 0;
-
-            ctx.font      = '9px "Roboto Mono", monospace';
-            ctx.fillStyle = fresh ? C.ipOnline : C.ipOffline;
-            ctx.fillText('· ' + desc, x, row);
-
-            var tag = timeAgo(ts);
-            if (tag) {
-                ctx.fillStyle  = C.statOff;
-                ctx.textAlign  = 'right';
-                ctx.fillText(tag, x + 320, row);
-                ctx.textAlign  = 'left';
-            }
-        }
-    }
-
-    function fetchData() {
-        fetch('/api/device-list', { credentials: 'include' })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                var devices = d.devices || [];
-                var activeNetworkId = d.activeNetworkId;
-                if (activeNetworkId) {
-                    devices = devices.filter(function (dev) {
-                        return dev.network_id === activeNetworkId;
-                    });
-                }
-                allDevices = devices;
-                applyDeviceFilter();
-            })
-            .catch(function () {});
-    }
-
-    function isActiveStatus(status) {
-        return status === 'online' || status === 'idle';
-    }
-
-    // Offline devices are hidden by default: a subnet's worth of them renders
-    // as an undifferentiated fan of identical glyphs and buries the hosts that
-    // are actually up. The full list stays in allDevices so toggling back on
-    // costs nothing and does not wait for the next poll.
-    function applyDeviceFilter() {
-        hiddenOfflineCount = showOffline
-            ? 0
-            : allDevices.filter(function (d) { return !isActiveStatus(d.status); }).length;
-
-        var visible = showOffline
-            ? allDevices
-            : allDevices.filter(function (d) { return isActiveStatus(d.status); });
-
-        setDevices(visible);
-    }
-
-    // Called by the HUD toggle in index.html.
-    function setShowOffline(next) {
-        showOffline = !!next;
-        applyDeviceFilter();
-    }
-
-    function positionNodes() {
-        if (!lw) return;
-        var gx = gateway.x, gy = gateway.y;
-        internet.x = 80;
-        internet.y = gy;
-
-        var active   = nodes.filter(function (n) { return n.status === 'online' || n.status === 'idle'; });
-        var inactive = nodes.filter(function (n) { return n.status !== 'online' && n.status !== 'idle'; });
-        var all = active.concat(inactive);
-        if (all.length === 0) return;
-
-        var startX  = gx + (lw - gx) * 0.26;
-        var maxRows = Math.max(4, Math.min(8, Math.floor((lh - 120) / 55)));
-        var rowH    = Math.min(58, (lh - 120) / maxRows);
-        var numCols = Math.ceil(all.length / maxRows);
-        var colW    = numCols > 1 ? Math.min(95, (lw - 40 - startX) / (numCols - 1)) : 0;
-
-        all.forEach(function (n, i) {
-            var col = Math.floor(i / maxRows);
-            var row = i % maxRows;
-            var rowsInThisCol = Math.min(maxRows, all.length - col * maxRows);
-            n.tx = startX + col * colW;
-            n.ty = gy - (rowsInThisCol - 1) * rowH / 2 + row * rowH;
+    function setData(allDevices, networkCIDRs) {
+        var filtered = (allDevices || []).filter(function (d) {
+            if (!showOffline && (d.status || '').toLowerCase() === 'offline') return false;
+            return matchesFilter(d);
         });
+
+        devices = filtered;
+        groups = groupByNetwork(filtered, networkCIDRs || {});
+        layout();
     }
 
-    function setDevices(devices) {
-        var cap = devices.slice(0, MAX_NODES);
+    function matchesFilter(device) {
+        if (!filterText) return true;
+        var haystack = [
+            device.ipv4, device.name, device.hostname, device.vendor, device.device_type,
+            (device.ports || []).map(function (p) { return p.number; }).join(' ')
+        ].join(' ').toLowerCase();
+        return haystack.indexOf(filterText) !== -1;
+    }
+
+    function groupByNetwork(list, cidrs) {
         var byId = {};
-        nodes.forEach(function (n) { byId[n.id] = n; });
 
-        var cx = gateway.x || lw / 2 || 300;
-        var cy = gateway.y || lh / 2 || 240;
-
-        nodes = cap.map(function (d) {
-            var status = d.status || 'unknown';
-            var open   = (d.ports || []).filter(function (p) { return p.state === 'open'; }).length;
-            var ex = byId[d.id];
-            if (ex) {
-                ex.status = status;
-                ex.ip     = d.ipv4  || '';
-                ex.label  = d.name  || d.hostname || '';
-                ex.mac    = d.mac   || '';
-                ex.open   = open;
-                ex.color  = sc(status);
-                return ex;
+        list.forEach(function (d) {
+            var key = d.network_id || 'unassigned';
+            if (!byId[key]) {
+                byId[key] = { id: key, label: cidrs[key] || 'unassigned', devices: [] };
             }
-            return {
-                id: d.id, ip: d.ipv4 || '',
-                label: d.name || d.hostname || '',
-                mac: d.mac || '', status: status,
-                open: open, color: sc(status),
-                x: cx, y: cy, tx: cx, ty: cy,
-                initTs: null, isNew: true
-            };
+            byId[key].devices.push(d);
         });
-        positionNodes();
+
+        return Object.keys(byId).map(function (k) { return byId[k]; })
+            .sort(function (a, b) { return a.label.localeCompare(b.label); });
     }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+
+    // Nodes keep their animated position across relayouts so devices glide to a
+    // new spot rather than snapping when the mode or the device set changes.
+    function layout() {
+        if (!lw || !lh) return;
+
+        var previous = {};
+        nodes.forEach(function (n) { previous[n.id] = n; });
+
+        var placed = mode === 'RADIAL' ? layoutRadial() : layoutTree();
+
+        nodes = placed.map(function (p) {
+            var old = previous[p.id];
+            if (old) {
+                p.x = old.x;
+                p.y = old.y;
+                p.born = old.born;
+            } else {
+                // New nodes fly out from the gateway.
+                p.x = gatewayPoint().x;
+                p.y = gatewayPoint().y;
+                p.born = performance.now();
+            }
+            return p;
+        });
+    }
+
+    function gatewayPoint() {
+        if (mode === 'RADIAL') return { x: lw / 2, y: lh / 2 };
+        return { x: 90, y: lh / 2 };
+    }
+
+    function nodeRecord(device, tx, ty) {
+        return {
+            id: device.id,
+            device: device,
+            tx: tx,
+            ty: ty,
+            x: tx,
+            y: ty,
+            born: 0,
+            shape: shapeFor(device),
+            color: colorFor(device)
+        };
+    }
+
+    function shapeFor(device) {
+        if (RC.isUnidentified(device)) return 'triangle';
+        if (RC.isInfra(device.device_type)) return 'square';
+        if (!device.device_type || device.device_type === 'unknown') return 'triangle';
+        return 'circle';
+    }
+
+    function colorFor(device) {
+        if (RC.isUnidentified(device)) return COLORS.amber;
+
+        switch ((device.status || '').toLowerCase()) {
+            case 'online': return COLORS.accent;
+            case 'idle': return COLORS.idle;
+            case 'offline': return COLORS.offline;
+            default: return COLORS.textDim;
+        }
+    }
+
+    // TREE — gateway, a core switch, one band per network sized by host count,
+    // and each band's hosts laid out as rows.
+    function layoutTree() {
+        var placed = [];
+        var total = devices.length || 1;
+        var usable = lh - 120;
+        var top = 60;
+
+        var swarmX = 620;
+        var available = Math.max(160, lw - swarmX - 40);
+        var perRow = Math.max(6, Math.floor(available / 15));
+
+        var cursor = top;
+        groups.forEach(function (group) {
+            var bandH = Math.max(48, usable * (group.devices.length / total));
+            var mid = cursor + bandH / 2;
+
+            group.bandMid = mid;
+            group.bandTop = cursor;
+            group.bandH = bandH;
+
+            var rows = Math.ceil(group.devices.length / perRow) || 1;
+            var rowH = Math.min(15, Math.max(9, (bandH - 14) / rows));
+
+            group.devices.forEach(function (d, i) {
+                var row = Math.floor(i / perRow);
+                var col = i % perRow;
+                placed.push(nodeRecord(d,
+                    swarmX + col * 15 + 6,
+                    mid - (rows * rowH) / 2 + row * rowH + rowH / 2));
+            });
+
+            cursor += bandH;
+        });
+
+        return placed;
+    }
+
+    // RADIAL — one ring per network, radius growing outward, hosts spread evenly
+    // around each ring with a small deterministic jitter so they do not comb.
+    function layoutRadial() {
+        var placed = [];
+        var cx = lw / 2;
+        var cy = lh / 2;
+        var maxR = Math.min(lw, lh) / 2 - 60;
+
+        groups.forEach(function (group, gi) {
+            var step = groups.length === 1 ? 0.62 : 0.3 + (gi / Math.max(1, groups.length - 1)) * 0.64;
+            var R = maxR * step;
+            group.ringR = R;
+            group.ringAngle = -Math.PI / 2 + gi * 0.9;
+
+            var n = group.devices.length || 1;
+            group.devices.forEach(function (d, i) {
+                var a = (i / n) * Math.PI * 2 + gi * 0.4;
+                // Deterministic wobble keyed off the index — no Math.random, so
+                // the layout is stable across redraws.
+                var wobble = ((i * 37) % 11 - 5) / 5 * (maxR * 0.02);
+                placed.push(nodeRecord(d,
+                    cx + Math.cos(a) * (R + wobble),
+                    cy + Math.sin(a) * (R + wobble)));
+            });
+        });
+
+        return placed;
+    }
+
+    /* ── Render loop ────────────────────────────────────────────────── */
 
     function tick(ts) {
-        var dt = Math.min(ts - (prevTs || ts), 50);
-        prevTs = ts;
-        currentTs = ts;
-
-        gateway.pulse += dt * 0.003;
-        gateway.rot   += dt * 0.00035;
-
-        // Internet state change detection
-        if (internet.prevConnected === true && internet.connected === false) {
-            internet.lostAt = ts;
-        }
-        internet.prevConnected = internet.connected;
+        rafId = requestAnimationFrame(tick);
+        if (!ctx || !lw) return;
 
         nodes.forEach(function (n) {
-            // Refresh color each tick in case theme changed
-            n.color = sc(n.status);
-
-            if (n.isNew) {
-                if (!n.initTs) n.initTs = ts;
-                var ep = easeOutCubic(Math.min(1, (ts - n.initTs) / ENTRY_MS));
-                n.x = gateway.x + (n.tx - gateway.x) * ep;
-                n.y = gateway.y + (n.ty - gateway.y) * ep;
-                if (ep >= 1) { n.isNew = false; n.x = n.tx; n.y = n.ty; }
+            var age = ts - n.born;
+            if (age < ENTRY_MS) {
+                var t = easeOutCubic(Math.min(1, age / ENTRY_MS));
+                var origin = gatewayPoint();
+                n.x = origin.x + (n.tx - origin.x) * t;
+                n.y = origin.y + (n.ty - origin.y) * t;
             } else {
-                n.x += (n.tx - n.x) * 0.06;
-                n.y += (n.ty - n.y) * 0.06;
+                n.x += (n.tx - n.x) * 0.12;
+                n.y += (n.ty - n.y) * 0.12;
             }
         });
 
-        if (Math.random() < 0.22) {
-            var live = nodes.filter(function (n) { return n.status === 'online' && !n.isNew; });
-            if (live.length) {
-                var t = live[Math.floor(Math.random() * live.length)];
-                packets.push({ id: t.id, t: 0, spd: 0.006 + Math.random() * 0.006 });
-            }
-        }
-        packets = packets.filter(function (p) { p.t += p.spd; return p.t < 1; });
-
-        if (internet.connected && Math.random() < 0.15) {
-            ipackets.push({ t: 0, spd: 0.006 + Math.random() * 0.006 });
-        }
-        ipackets = ipackets.filter(function (p) { p.t += p.spd; return p.t < 1; });
-
         render();
-        rafId = requestAnimationFrame(tick);
+    }
+
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
     }
 
     function render() {
-        updateColors();
-        ctx.clearRect(0, 0, lw, lh);
-
-        // Background and fixed HUD are drawn in screen space
-        drawBg();
-
-        // Everything else is in zoomed/panned world space
-        ctx.save();
-        ctx.translate(panX, panY);
-        ctx.scale(zoom, zoom);
-
-        drawOrbitRings();
-        drawInternetEdge();
-        if (nodes.length > 0) { drawEdges(); drawPackets(); }
-        if (internet.connected) drawInternetPackets();
-        drawGatewayNode();
-        if (nodes.length > 0) drawDevices();
-        drawInternetNode();
-
-        ctx.restore();
-
-        // HUD overlays stay in screen space
-        drawBrackets();
-        drawStats();
-        drawActivityFeed();
-        drawZoomHint();
-        drawInternetWarning();
-    }
-
-    function drawInternetEdge() {
-        if (internet.connected === null) return;
-        var conn = internet.connected;
-        ctx.beginPath();
-        ctx.moveTo(gateway.x, gateway.y);
-        ctx.lineTo(internet.x, internet.y);
-        ctx.strokeStyle = conn ? C.edgeActive : C.warnRedEdge;
-        ctx.lineWidth = conn ? 2.0 : 1.5;
-        ctx.setLineDash(conn ? [] : [5, 9]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
-
-    function drawInternetPackets() {
-        var gx = gateway.x, gy = gateway.y;
-        var ix = internet.x, iy = internet.y;
-        ipackets.forEach(function (p) {
-            var fade = Math.sin(p.t * Math.PI);
-            for (var j = 0; j < 5; j++) {
-                var pt = Math.max(0, p.t - j * 0.03);
-                ctx.beginPath();
-                ctx.arc(
-                    gx + (ix - gx) * pt,
-                    gy + (iy - gy) * pt,
-                    3.5 - j * 0.5, 0, Math.PI * 2
-                );
-                ctx.fillStyle = C.packetBase + (fade * (1 - j / 5)) + ')';
-                ctx.fill();
-            }
-        });
-    }
-
-    function drawInternetNode() {
-        if (internet.connected === null) return;
-        var cx = internet.x, cy = internet.y;
-        var conn = internet.connected;
-        var r = 20;
-        var color = conn ? C.green : C.warnRedSolid;
-
-        // Glow halo
-        var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.8);
-        g.addColorStop(0, conn ? C.glowInner : C.warnRedFill + '0.30)');
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.beginPath(); ctx.arc(cx, cy, r * 2.8, 0, Math.PI * 2);
-        ctx.fillStyle = g; ctx.fill();
-
-        // Globe circle
-        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = C.bg; ctx.fill();
-        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-
-        // Globe interior lines (clipped)
-        ctx.save();
-        ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, Math.PI * 2); ctx.clip();
-        ctx.strokeStyle = color; ctx.lineWidth = 0.8; ctx.globalAlpha = 0.45;
-        [-0.55, 0, 0.55].forEach(function (f) {
-            var yl = cy + f * r;
-            var hw = Math.sqrt(Math.max(0, r * r - (f * r) * (f * r)));
-            ctx.beginPath(); ctx.moveTo(cx - hw, yl); ctx.lineTo(cx + hw, yl); ctx.stroke();
-        });
-        ctx.beginPath(); ctx.ellipse(cx, cy, r * 0.42, r - 1, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.restore();
-
-        ctx.fillStyle = color;
-        ctx.font = '8px "Orbitron", monospace';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-        ctx.fillText('INTERNET', cx, cy + r + 5);
-        if (internet.ip) {
-            ctx.font = '7px "Roboto Mono", monospace';
-            ctx.fillStyle = conn ? C.ipOnline : C.warnRedFill + '0.85)';
-            ctx.fillText(internet.ip, cx, cy + r + 16);
-        }
-    }
-
-    var _warnDomState = null;
-    function drawInternetWarning() {
-        var connected = internet.connected;
-        if (connected === _warnDomState) return;
-        _warnDomState = connected;
-        var el = document.getElementById('internet-down-warning');
-        if (!el) return;
-        if (connected === false) {
-            el.classList.remove('hidden');
-        } else {
-            el.classList.add('hidden');
-        }
-    }
-
-    function drawBg() {
-        ctx.fillStyle = C.bg;
+        ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, lw, lh);
 
-        var s = 28;
-        ctx.fillStyle = C.gridDot;
-        for (var x = s; x < lw; x += s)
-            for (var y = s; y < lh; y += s) {
-                ctx.beginPath(); ctx.arc(x, y, 0.6, 0, Math.PI * 2); ctx.fill();
-            }
+        ctx.save();
+        ctx.translate(view.panX, view.panY);
+        ctx.scale(view.zoom, view.zoom);
 
-        var vg = ctx.createRadialGradient(lw / 2, lh / 2, lh * 0.15, lw / 2, lh / 2, Math.max(lw, lh) * 0.72);
-        vg.addColorStop(0, 'rgba(0,0,0,0)');
-        vg.addColorStop(1, C.vigOuter);
-        ctx.fillStyle = vg; ctx.fillRect(0, 0, lw, lh);
+        drawGrid();
+        if (mode === 'RADIAL') drawRadialChrome();
+        else drawTreeChrome();
+
+        nodes.forEach(drawNode);
+        drawSelection();
+
+        ctx.restore();
+
+        if (!nodes.length) drawEmpty();
     }
 
-    function drawOrbitRings() {
-        var gx = gateway.x, gy = gateway.y;
-        var spread1 = lh * 0.16, spread2 = lh * 0.32;
-        ctx.setLineDash([3, 10]);
-        ctx.lineWidth = 1;
-        [
-            [gy - spread2, C.orbitOuter],
-            [gy - spread1, C.orbitInner],
-            [gy + spread1, C.orbitInner],
-            [gy + spread2, C.orbitOuter]
-        ].forEach(function (lane) {
-            ctx.beginPath();
-            ctx.moveTo(gx + 50, lane[0]);
-            ctx.lineTo(lw - 20, lane[0]);
-            ctx.strokeStyle = lane[1];
-            ctx.stroke();
-        });
-        ctx.setLineDash([]);
-    }
+    function drawGrid() {
+        var x0 = -view.panX / view.zoom;
+        var y0 = -view.panY / view.zoom;
+        var x1 = x0 + lw / view.zoom;
+        var y1 = y0 + lh / view.zoom;
 
-    function drawEdges() {
-        nodes.forEach(function (n) {
-            var active = n.status === 'online';
-            ctx.beginPath();
-            ctx.moveTo(gateway.x, gateway.y);
-            ctx.lineTo(n.x, n.y);
-            ctx.strokeStyle = active ? C.edgeActive : C.edgeInact;
-            ctx.lineWidth = active ? 2.0 : 1.2;
-            ctx.setLineDash(active ? [] : [4, 8]);
-            ctx.stroke();
-        });
-        ctx.setLineDash([]);
-    }
+        ctx.strokeStyle = COLORS.grid;
+        ctx.lineWidth = 1 / view.zoom;
 
-    function drawPackets() {
-        packets.forEach(function (p) {
-            var node = null;
-            for (var i = 0; i < nodes.length; i++) { if (nodes[i].id === p.id) { node = nodes[i]; break; } }
-            if (!node) return;
-            var fade = Math.sin(p.t * Math.PI);
-            for (var j = 0; j < 5; j++) {
-                var pt = Math.max(0, p.t - j * 0.03);
-                ctx.beginPath();
-                ctx.arc(
-                    gateway.x + (node.x - gateway.x) * pt,
-                    gateway.y + (node.y - gateway.y) * pt,
-                    3.5 - j * 0.5, 0, Math.PI * 2
-                );
-                ctx.fillStyle = C.packetBase + (fade * (1 - j / 5)) + ')';
-                ctx.fill();
-            }
-        });
-    }
-
-    function drawGatewayNode() {
-        var cx = gateway.x, cy = gateway.y;
-
-        for (var i = 0; i < 3; i++) {
-            var rp = (gateway.pulse * 0.38 + i / 3) % 1;
-            ctx.beginPath();
-            ctx.arc(cx, cy, 18 + rp * 46, 0, Math.PI * 2);
-            ctx.strokeStyle = C.pulseBase + ((1 - rp) * 0.55) + ')';
-            ctx.lineWidth = 1.5; ctx.stroke();
+        for (var x = Math.floor(x0 / GRID) * GRID; x < x1; x += GRID) {
+            ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
         }
+        for (var y = Math.floor(y0 / GRID) * GRID; y < y1; y += GRID) {
+            ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+        }
+    }
 
-        var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 42);
-        glow.addColorStop(0,   C.glowInner);
-        glow.addColorStop(0.4, C.glowMid);
-        glow.addColorStop(1,   'rgba(0,0,0,0)');
-        ctx.beginPath(); ctx.arc(cx, cy, 42, 0, Math.PI * 2);
-        ctx.fillStyle = glow; ctx.fill();
+    function drawTreeChrome() {
+        var gwX = 90;
+        var gwY = lh / 2;
+        var swX = 250;
+        var subX = 430;
 
-        hexPath(cx, cy, 27, gateway.rot);
-        ctx.strokeStyle = C.hexOuter; ctx.lineWidth = 2; ctx.stroke();
+        // Gateway
+        ctx.strokeStyle = COLORS.accentDim;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(gwX - 26, gwY - 16, 52, 32);
+        ctx.fillStyle = COLORS.accent;
+        ctx.fillRect(gwX - 5, gwY - 5, 10, 10);
 
-        hexPath(cx, cy, 18, gateway.rot + Math.PI / 6);
-        ctx.fillStyle = C.bg; ctx.fill();
-        ctx.strokeStyle = C.green; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = COLORS.accentDim;
+        ctx.font = '10px "IBM Plex Mono", monospace';
+        ctx.fillText('GATEWAY', gwX, gwY - 26);
 
-        ctx.fillStyle = C.green;
-        ctx.font = 'bold 10px "Roboto Mono", monospace';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('GW', cx, cy);
+        // Core switch
+        ctx.strokeStyle = COLORS.lineMid;
+        ctx.beginPath(); ctx.moveTo(gwX + 26, gwY); ctx.lineTo(swX - 20, gwY); ctx.stroke();
+        ctx.strokeRect(swX - 20, gwY - 13, 40, 26);
+        ctx.fillStyle = 'rgba(74,222,128,0.75)';
+        ctx.font = '9px "IBM Plex Mono", monospace';
+        ctx.fillText('SWITCH', swX, gwY - 22);
 
-        ctx.fillStyle = C.gwLabel;
-        ctx.font = '8px "Orbitron", monospace';
+        groups.forEach(function (group) {
+            var mid = group.bandMid;
+
+            ctx.strokeStyle = COLORS.lineMid;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(swX + 20, gwY);
+            ctx.bezierCurveTo(swX + 80, gwY, subX - 90, mid, subX - 26, mid);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(74,222,128,0.28)';
+            ctx.strokeRect(subX - 26, mid - 13, 26, 26);
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = COLORS.text;
+            ctx.font = '10px "IBM Plex Mono", monospace';
+            ctx.fillText(group.label, subX + 6, mid - 2);
+
+            ctx.fillStyle = COLORS.textFaint;
+            ctx.font = '9px "IBM Plex Mono", monospace';
+            ctx.fillText(group.devices.length + ' HOSTS', subX + 6, mid + 11);
+
+            // A single leader from the subnet box to the first host of each row.
+            var first = nodes.filter(function (n) {
+                return (n.device.network_id || 'unassigned') === group.id;
+            })[0];
+            if (first) {
+                ctx.strokeStyle = COLORS.lineSoft;
+                ctx.beginPath();
+                ctx.moveTo(subX + 4, mid);
+                ctx.lineTo(first.x - 8, first.y);
+                ctx.stroke();
+            }
+        });
+    }
+
+    function drawRadialChrome() {
+        var cx = lw / 2;
+        var cy = lh / 2;
+
+        var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(lw, lh) * 0.28);
+        glow.addColorStop(0, 'rgba(74,222,128,0.14)');
+        glow.addColorStop(1, 'rgba(74,222,128,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.min(lw, lh) * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+
+        groups.forEach(function (group, gi) {
+            ctx.strokeStyle = 'rgba(74,222,128,' + Math.max(0.06, 0.18 - gi * 0.03) + ')';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 6]);
+            ctx.beginPath();
+            ctx.arc(cx, cy, group.ringR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            var a = group.ringAngle;
+            var lx = cx + Math.cos(a) * (group.ringR + 12);
+            var ly = cy + Math.sin(a) * (group.ringR + 12);
+
+            ctx.fillStyle = COLORS.accentDim;
+            ctx.font = '9px "IBM Plex Mono", monospace';
+            ctx.textAlign = Math.cos(a) < -0.2 ? 'right' : (Math.cos(a) > 0.2 ? 'left' : 'center');
+            ctx.fillText(group.label + ' · ' + group.devices.length,
+                lx, ly + (Math.sin(a) < 0 ? -4 : 10));
+        });
+
+        ctx.strokeStyle = COLORS.accentDim;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = COLORS.accent;
+        ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = 'rgba(74,222,128,0.85)';
+        ctx.font = '10px "IBM Plex Mono", monospace';
+        ctx.textAlign = 'center';
         ctx.fillText('GATEWAY', cx, cy + 40);
     }
 
-    function drawDevices() {
-        nodes.forEach(function (n, idx) {
-            var hov = (hitIdx === idx);
-            var active = n.status === 'online' || n.status === 'idle';
-            var r = hov ? (active ? 18 : 10) : (active ? 12 : 5);
+    function drawNode(n) {
+        var s = n.shape === 'square' ? 5 : 4.4;
 
-            if (n.status === 'online') {
-                var g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3.2);
-                g.addColorStop(0, C.nodeGlow);
-                g.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.beginPath(); ctx.arc(n.x, n.y, r * 3.2, 0, Math.PI * 2);
-                ctx.fillStyle = g; ctx.fill();
-            }
+        ctx.fillStyle = n.color;
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = 1;
 
-            hexPath(n.x, n.y, r, Math.PI / 6);
-            ctx.fillStyle = C.bg; ctx.fill();
-            ctx.strokeStyle = n.color; ctx.lineWidth = hov ? 2.5 : (active ? 2 : 1); ctx.stroke();
+        if (n.shape === 'square') {
+            ctx.fillRect(n.x - s / 2, n.y - s / 2, s, s);
+        } else if (n.shape === 'triangle') {
+            ctx.beginPath();
+            ctx.moveTo(n.x, n.y - s);
+            ctx.lineTo(n.x + s, n.y + s * 0.7);
+            ctx.lineTo(n.x - s, n.y + s * 0.7);
+            ctx.closePath();
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, s / 1.7, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-            if (n.status === 'online') {
-                ctx.beginPath(); ctx.arc(n.x, n.y, Math.min(3.5, r * 0.4), 0, Math.PI * 2);
-                ctx.fillStyle = n.color; ctx.fill();
-            } else {
-                var xs = r * 0.55;
-                ctx.strokeStyle = n.color; ctx.lineWidth = active ? 1.5 : 1;
-                ctx.beginPath();
-                ctx.moveTo(n.x - xs, n.y - xs); ctx.lineTo(n.x + xs, n.y + xs);
-                ctx.moveTo(n.x + xs, n.y - xs); ctx.lineTo(n.x - xs, n.y + xs);
-                ctx.stroke();
-            }
+        // A soft halo marks hosts with open ports — the ones worth looking at.
+        if (n.color === COLORS.accent && RC.openPorts(n.device).length > 0) {
+            ctx.globalAlpha = 0.25;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, s * 2.1, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
 
-            // Only label active (online/idle) nodes — offline labels flood the canvas
-            if (active) {
-                ctx.fillStyle = n.status === 'online' ? C.ipOnline : C.ipOffline;
-                ctx.font = '10px "Roboto Mono", monospace';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-                ctx.fillText(n.ip, n.x, n.y + r + 5);
-            }
-        });
+        if (hovered && hovered.id === n.id) {
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 12, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
     }
 
-    function drawBrackets() {
-        var px = 18, s = 22;
-        var yTop = 84;          // below the 73px glass navbar
-        var yBot = lh - 18;
-        ctx.strokeStyle = C.bracket; ctx.lineWidth = 1.5;
-        [
-            [px,      yTop,  1,  1],
-            [lw - px, yTop, -1,  1],
-            [px,      yBot,  1, -1],
-            [lw - px, yBot, -1, -1]
-        ].forEach(function (b) {
+    function drawSelection() {
+        if (!selectedId) return;
+
+        var target = nodes.filter(function (n) { return n.id === selectedId; })[0];
+        if (!target) return;
+
+        ctx.strokeStyle = COLORS.accent;
+        ctx.lineWidth = 1.4;
+
+        var b = 11;
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (corner) {
+            var sx = corner[0], sy = corner[1];
             ctx.beginPath();
-            ctx.moveTo(b[0] + b[2] * s, b[1]);
-            ctx.lineTo(b[0], b[1]);
-            ctx.lineTo(b[0], b[1] + b[3] * s);
+            ctx.moveTo(target.x + sx * b, target.y + sy * b - sy * 5);
+            ctx.lineTo(target.x + sx * b, target.y + sy * b);
+            ctx.lineTo(target.x + sx * b - sx * 5, target.y + sy * b);
             ctx.stroke();
         });
+
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, 20, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // Leader line, flipped so the label never runs off the near edge.
+        var side = target.x > lw / 2 ? -1 : 1;
+        ctx.beginPath();
+        ctx.moveTo(target.x + side * 13, target.y);
+        ctx.lineTo(target.x + side * 46, target.y - 14);
+        ctx.lineTo(target.x + side * 78, target.y - 14);
+        ctx.stroke();
+
+        ctx.fillStyle = COLORS.text;
+        ctx.font = '10px "IBM Plex Mono", monospace';
+        ctx.textAlign = side > 0 ? 'left' : 'right';
+        ctx.fillText(
+            target.device.ipv4 + '  ' + (RC.deviceName(target.device) || ''),
+            target.x + side * 84, target.y - 11);
     }
 
-    function drawStats() {
-        var on  = nodes.filter(function (n) { return n.status === 'online'; }).length;
-        var idle = nodes.filter(function (n) { return n.status === 'idle'; }).length;
-        var off = nodes.filter(function (n) { return n.status === 'offline'; }).length + hiddenOfflineCount;
-        var tot = nodes.length + hiddenOfflineCount;
-
-        if (tot === 0) {
-            ctx.fillStyle = C.emptyText;
-            ctx.font = '9px "Roboto Mono", monospace';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('RUN A SCAN TO POPULATE TOPOLOGY', lw / 2, lh - 32);
-            return;
-        }
-
-        // Everything on this network is offline and therefore filtered out —
-        // say so, rather than showing an empty canvas that reads as "no data".
-        if (nodes.length === 0) {
-            ctx.fillStyle = C.emptyText;
-            ctx.font = '9px "Roboto Mono", monospace';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText('NO DEVICES ONLINE — ' + hiddenOfflineCount + ' OFFLINE HIDDEN', lw / 2, lh - 32);
-        }
-
-        // x/y positioned below the glass navbar (73px) and inside the bracket inset
-        var x = 30, y = 90;
-        ctx.font = '9px "Orbitron", monospace';
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillStyle = C.statTotal; ctx.fillText('TOTAL:   ' + tot, x, y);
-        ctx.fillStyle = C.green;     ctx.fillText('ONLINE:  ' + on,  x, y + 15);
-        if (idle > 0) {
-            ctx.fillStyle = '#eab308'; ctx.fillText('IDLE:    ' + idle, x, y + 30);
-            ctx.fillStyle = C.statOff; ctx.fillText('OFFLINE: ' + off + (showOffline ? '' : ' (hidden)'), x, y + 45);
-        } else {
-            ctx.fillStyle = C.statOff; ctx.fillText('OFFLINE: ' + off + (showOffline ? '' : ' (hidden)'), x, y + 30);
-        }
+    function drawEmpty() {
+        ctx.fillStyle = COLORS.textFaint;
+        ctx.font = '11px "IBM Plex Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            filterText ? 'NO HOSTS MATCH THE FILTER' : 'NO HOSTS DISCOVERED YET',
+            lw / 2, lh / 2);
+        ctx.textBaseline = 'alphabetic';
     }
 
-    // Convert screen coords → world coords
+    /* ── Interaction ────────────────────────────────────────────────── */
+
     function toWorld(sx, sy) {
-        return { x: (sx - panX) / zoom, y: (sy - panY) / zoom };
+        return { x: (sx - view.panX) / view.zoom, y: (sy - view.panY) / view.zoom };
     }
 
     function hitTest(mx, my) {
         var w = toWorld(mx, my);
-        var r = 24 / zoom; // hit radius stays ~24 screen-px regardless of zoom
+        var r = 14 / view.zoom;   // stays ~14 screen px regardless of zoom
+
         for (var i = nodes.length - 1; i >= 0; i--) {
-            var n = nodes[i], dx = n.x - w.x, dy = n.y - w.y;
-            if (dx * dx + dy * dy < r * r) return i;
+            var dx = nodes[i].x - w.x;
+            var dy = nodes[i].y - w.y;
+            if (dx * dx + dy * dy < r * r) return nodes[i];
         }
-        return -1;
+        return null;
     }
 
-    function onWheel(e) {
-        e.preventDefault();
-        var rect = canvas.getBoundingClientRect();
-        var mx = e.clientX - rect.left;
-        var my = e.clientY - rect.top;
-
-        var delta = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-        var newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom * delta));
-
-        // Zoom toward cursor
-        panX = mx - (mx - panX) * (newZoom / zoom);
-        panY = my - (my - panY) * (newZoom / zoom);
-        zoom = newZoom;
-    }
-
-    function onTouchStart(e) {
-        if (e.touches.length === 2) {
-            var dx = e.touches[0].clientX - e.touches[1].clientX;
-            var dy = e.touches[0].clientY - e.touches[1].clientY;
-            pinchDist0 = Math.sqrt(dx * dx + dy * dy);
-            pinchZoom0 = zoom;
-        }
-    }
-
-    function onTouchMove(e) {
-        if (e.touches.length === 2 && pinchDist0 !== null) {
-            e.preventDefault();
-            var dx = e.touches[0].clientX - e.touches[1].clientX;
-            var dy = e.touches[0].clientY - e.touches[1].clientY;
-            var dist = Math.sqrt(dx * dx + dy * dy);
-            var rect = canvas.getBoundingClientRect();
-            var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-            var my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-            var newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, pinchZoom0 * dist / pinchDist0));
-            panX = mx - (mx - panX) * (newZoom / zoom);
-            panY = my - (my - panY) * (newZoom / zoom);
-            zoom = newZoom;
-        }
-    }
-
-    function drawZoomHint() {
-        if (zoom === 1) return;
-        ctx.fillStyle = C.statTotal;
-        ctx.font = '8px "Orbitron", monospace';
-        ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-        ctx.fillText(Math.round(zoom * 100) + '%  ·  dbl-click to reset', lw - 14, 22);
-    }
-
-    function makeEl(tag, styles, text) {
-        var el = document.createElement(tag);
-        Object.keys(styles).forEach(function (k) { el.style[k] = styles[k]; });
-        if (text !== undefined) el.textContent = text;
-        return el;
+    function onDown(e) {
+        drag = { x: e.clientX, y: e.clientY, panX: view.panX, panY: view.panY, moved: false };
+        canvas.style.cursor = 'grabbing';
     }
 
     function onMove(e) {
         var rect = canvas.getBoundingClientRect();
-        var mx = e.clientX - rect.left, my = e.clientY - rect.top;
-        var i = hitTest(mx, my);
-        hitIdx = i >= 0 ? i : null;
-        canvas.style.cursor = i >= 0 ? 'pointer' : 'default';
+        var mx = e.clientX - rect.left;
+        var my = e.clientY - rect.top;
 
-        var tip = document.getElementById('network-viz-tip');
-        if (!tip) return;
-        if (i < 0) { tip.style.display = 'none'; return; }
+        if (drag) {
+            var dx = e.clientX - drag.x;
+            var dy = e.clientY - drag.y;
+            if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+            view.panX = drag.panX + dx;
+            view.panY = drag.panY + dy;
+            hideTip();
+            return;
+        }
 
-        var n = nodes[i];
-        var pl = (mx + 14 + 190 > lw) ? mx - 200 : mx + 14;
-        tip.style.cssText = 'display:block;position:absolute;pointer-events:none;' +
-            'left:' + pl + 'px;top:' + (my - 12) + 'px;' +
-            'background:rgba(7,13,23,0.97);' +
-            'border:1px solid rgba(16,185,129,0.30);' +
-            'border-radius:4px;padding:8px 10px;z-index:100;max-width:190px;line-height:1.5;';
+        hovered = hitTest(mx, my);
+        canvas.style.cursor = hovered ? 'pointer' : 'crosshair';
 
-        tip.textContent = '';
+        if (hovered) showTip(hovered, mx, my);
+        else hideTip();
+    }
 
-        var ipColor = '#10b981';
-        var nameColor = '#d1d5db';
-        var macColor  = '#6b7280';
-
-        tip.appendChild(makeEl('div', { font: 'bold 10px Orbitron,monospace', color: ipColor }, n.ip));
-        if (n.label) tip.appendChild(makeEl('div', { font: "11px 'Roboto Condensed',sans-serif", color: nameColor, marginTop: '2px' }, n.label));
-        if (n.mac)   tip.appendChild(makeEl('div', { font: "9px 'Roboto Mono',monospace",        color: macColor,  marginTop: '1px' }, n.mac));
-
-        var meta = makeEl('div', { font: "9px 'Roboto Mono',monospace", marginTop: '5px' });
-        var statusSpan = makeEl('span', { color: n.color }, n.status || 'unknown');
-        var portsText = n.open > 0 ? n.open + ' open port' + (n.open > 1 ? 's' : '') : 'no open ports';
-        meta.appendChild(statusSpan);
-        meta.appendChild(document.createTextNode(' · ' + portsText));
-        tip.appendChild(meta);
+    function onUp() {
+        if (!drag) return;
+        // A drag that moved must not also register as a click on whatever node
+        // happened to be under the cursor when the button came up.
+        suppressClick = drag.moved;
+        drag = null;
+        canvas.style.cursor = hovered ? 'pointer' : 'crosshair';
     }
 
     function onLeave() {
-        hitIdx = null;
-        canvas.style.cursor = 'default';
-        var tip = document.getElementById('network-viz-tip');
-        if (tip) tip.style.display = 'none';
+        drag = null;
+        hovered = null;
+        hideTip();
+        canvas.style.cursor = 'crosshair';
     }
 
     function onClick(e) {
-        var rect = canvas.getBoundingClientRect();
-        var i = hitTest(e.clientX - rect.left, e.clientY - rect.top);
-        if (i >= 0 && typeof showNodeDropdown === 'function') {
-            showNodeDropdown(nodes[i].id, e.clientX, e.clientY);
+        if (suppressClick) {
+            suppressClick = false;
+            return;
         }
+
+        var rect = canvas.getBoundingClientRect();
+        var node = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+        if (!node) return;
+
+        selectedId = node.id;
+        if (onSelect) onSelect(node.id);
     }
 
-    window.initNetworkViz   = initNetworkViz;
-    // Goes through applyDeviceFilter rather than setDevices directly, so an
-    // externally-pushed device list still honours the offline filter.
-    window.updateNetworkViz = function (devices) {
-        allDevices = devices || [];
-        applyDeviceFilter();
-    };
-    window.setNetworkVizShowOffline = setShowOffline;
+    function onWheel(e) {
+        e.preventDefault();
+
+        var rect = canvas.getBoundingClientRect();
+        zoomAt(e.clientX - rect.left, e.clientY - rect.top,
+            Math.exp(-e.deltaY * 0.0016));
+    }
+
+    function onTouchStart(e) {
+        if (e.touches.length !== 2) return;
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinch = { dist: Math.sqrt(dx * dx + dy * dy), zoom: view.zoom };
+    }
+
+    function onTouchMove(e) {
+        if (e.touches.length !== 2 || !pinch) return;
+        e.preventDefault();
+
+        var dx = e.touches[0].clientX - e.touches[1].clientX;
+        var dy = e.touches[0].clientY - e.touches[1].clientY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+
+        var rect = canvas.getBoundingClientRect();
+        var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        var my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+        var target = pinch.zoom * dist / pinch.dist;
+        zoomAt(mx, my, target / view.zoom);
+    }
+
+    // zoomAt keeps the point under the cursor fixed while scaling around it.
+    function zoomAt(px, py, factor) {
+        var next = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, view.zoom * factor));
+        var scale = next / view.zoom;
+
+        view.panX = px - (px - view.panX) * scale;
+        view.panY = py - (py - view.panY) * scale;
+        view.zoom = next;
+
+        reportZoom();
+    }
+
+    function zoomBy(factor) {
+        zoomAt(lw / 2, lh / 2, factor);
+    }
+
+    function fit() {
+        view.zoom = 1;
+        view.panX = 0;
+        view.panY = 0;
+        reportZoom();
+    }
+
+    function reportZoom() {
+        var label = document.getElementById('rc-zoom-level');
+        if (label) label.textContent = Math.round(view.zoom * 100) + '%';
+    }
+
+    function showTip(node, mx, my) {
+        var tip = document.getElementById('rc-map-tip');
+        if (!tip) return;
+
+        var d = node.device;
+        var open = RC.openPorts(d);
+        var name = RC.deviceName(d);
+
+        var lines = ['<div style="color:var(--rc-accent);font-weight:600">' + RC.esc(d.ipv4) + '</div>'];
+        if (name) lines.push('<div style="color:var(--rc-text);margin-top:2px">' + RC.esc(name) + '</div>');
+        if (d.vendor) lines.push('<div style="color:var(--rc-text-3);font-size:10px;margin-top:1px">' + RC.esc(d.vendor) + '</div>');
+        lines.push('<div style="font-size:10px;margin-top:5px;color:var(--rc-text-4)">' +
+            '<span style="color:' + node.color + '">' + RC.esc((d.status || 'unknown').toUpperCase()) + '</span>' +
+            ' · ' + (open.length ? open.length + ' open' : 'no open ports') + '</div>');
+
+        tip.innerHTML = lines.join('');
+        tip.style.display = 'block';
+        tip.style.left = (mx + 14 + 200 > lw ? mx - 210 : mx + 14) + 'px';
+        tip.style.top = (my - 12) + 'px';
+    }
+
+    function hideTip() {
+        var tip = document.getElementById('rc-map-tip');
+        if (tip) tip.style.display = 'none';
+    }
+
+    /* ── External control ───────────────────────────────────────────── */
+
+    function setMode(next) {
+        if (!MODES.some(function (m) { return m.id === next; })) return;
+        mode = next;
+        RC.store.set('reconya.mapMode', next);
+        layout();
+    }
+
+    function setFilter(value) {
+        filterText = (value || '').toLowerCase().trim();
+    }
+
+    function setShowOffline(next) {
+        showOffline = !!next;
+        RC.store.set('reconya.showOffline', showOffline ? 'true' : 'false');
+    }
+
+    function setSelected(id) {
+        selectedId = id;
+    }
+
+    return (window.RCMap = {
+        init: init,
+        setData: setData,
+        setMode: setMode,
+        mode: function () { return mode; },
+        modes: function () { return MODES; },
+        setFilter: setFilter,
+        setShowOffline: setShowOffline,
+        showOffline: function () { return showOffline; },
+        setSelected: setSelected,
+        zoomIn: function () { zoomBy(1.3); },
+        zoomOut: function () { zoomBy(1 / 1.3); },
+        fit: fit
+    });
 })();

@@ -30,6 +30,14 @@ type NetworkRepository interface {
 	GetDeviceCount(ctx context.Context, networkID string) (int, error)
 }
 
+// DeviceStatusChange records one device whose status the status sweeper moved,
+// so callers can log the transition and evaluate alerts against it.
+type DeviceStatusChange struct {
+	ID     string
+	IPv4   string
+	Status models.DeviceStatus
+}
+
 // DeviceRepository defines the interface for device operations
 type DeviceRepository interface {
 	Repository
@@ -37,7 +45,7 @@ type DeviceRepository interface {
 	FindByIP(ctx context.Context, ip string) (*models.Device, error)
 	FindAll(ctx context.Context) ([]*models.Device, error)
 	CreateOrUpdate(ctx context.Context, device *models.Device) (*models.Device, error)
-	UpdateDeviceStatuses(ctx context.Context, timeout time.Duration) error
+	UpdateDeviceStatuses(ctx context.Context, timeout time.Duration) ([]DeviceStatusChange, error)
 	DeleteByID(ctx context.Context, id string) error
 }
 
@@ -74,6 +82,19 @@ type SettingsRepository interface {
 	FindByUserID(userID string) (*models.Settings, error)
 	Create(settings *models.Settings) error
 	Update(settings *models.Settings) error
+}
+
+// AlertRepository defines the interface for alert operations
+type AlertRepository interface {
+	Repository
+	Upsert(ctx context.Context, alert *models.Alert) error
+	FindByID(ctx context.Context, id string) (*models.Alert, error)
+	FindAll(ctx context.Context, query models.AlertQuery) ([]*models.Alert, error)
+	SetState(ctx context.Context, id string, state models.AlertState) error
+	AckAll(ctx context.Context) (int, error)
+	ResolveMissing(ctx context.Context, ruleID string, liveKeys []string) (int, error)
+	CountsBySeverity(ctx context.Context, states []models.AlertState) (models.AlertCounts, error)
+	DeleteByDeviceID(ctx context.Context, deviceID string) error
 }
 
 // RepositoryFactory creates repositories
@@ -118,6 +139,11 @@ func (f *RepositoryFactory) NewGeolocationRepository() *GeolocationRepository {
 // NewSettingsRepository creates a new settings repository
 func (f *RepositoryFactory) NewSettingsRepository() SettingsRepository {
 	return NewSQLiteSettingsRepository(f.SQLiteDB)
+}
+
+// NewAlertRepository creates a new alert repository
+func (f *RepositoryFactory) NewAlertRepository() AlertRepository {
+	return NewSQLiteAlertRepository(f.SQLiteDB)
 }
 
 // GenerateID generates a unique ID for a record

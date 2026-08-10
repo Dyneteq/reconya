@@ -102,10 +102,34 @@ func (m *DBManager) CreateOrUpdateDevice(repo DeviceRepository, ctx context.Cont
 	return result.(*models.Device), nil
 }
 
-// UpdateDeviceStatuses serializes access to device status updates
-func (m *DBManager) UpdateDeviceStatuses(repo DeviceRepository, ctx context.Context, timeout time.Duration) error {
-	return m.ExecuteOperation(func() error {
+// UpdateDeviceStatuses serializes access to device status updates and reports
+// which devices changed status
+func (m *DBManager) UpdateDeviceStatuses(repo DeviceRepository, ctx context.Context, timeout time.Duration) ([]DeviceStatusChange, error) {
+	result, err := m.ExecuteOperationWithResult(func() (interface{}, error) {
 		return repo.UpdateDeviceStatuses(ctx, timeout)
+	})
+	if err != nil {
+		return nil, err
+	}
+	changes, _ := result.([]DeviceStatusChange)
+	return changes, nil
+}
+
+// UpsertAlert serializes access to alert writes. Alert rules run from scan
+// goroutines, so their writes go through the same worker as every other
+// background write.
+func (m *DBManager) UpsertAlert(repo AlertRepository, ctx context.Context, alert *models.Alert) error {
+	return m.ExecuteOperation(func() error {
+		return repo.Upsert(ctx, alert)
+	})
+}
+
+// ResolveMissingAlerts serializes the auto-resolve pass that runs after each
+// rule evaluation
+func (m *DBManager) ResolveMissingAlerts(repo AlertRepository, ctx context.Context, ruleID string, liveKeys []string) error {
+	return m.ExecuteOperation(func() error {
+		_, err := repo.ResolveMissing(ctx, ruleID, liveKeys)
+		return err
 	})
 }
 
