@@ -16,7 +16,7 @@
     <meta name="description" content="Self-hosted network reconnaissance and asset discovery. reconYa sweeps your subnet, fingerprints what answers, and keeps a live map of it.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@800&display=swap">
     <style>
         :root { --acc: #24d17a; }
         * { box-sizing: border-box; }
@@ -45,13 +45,14 @@
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(36,209,122,.14);
         }
-        .logo-mark {
-            display: block; width: 143px; height: 21px;
-            background: var(--acc);
-            -webkit-mask: url(assets/reconya-logo.png) left center / contain no-repeat;
-            mask: url(assets/reconya-logo.png) left center / contain no-repeat;
+        .wordmark {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--acc);
+            font-family: 'Orbitron', 'JetBrains Mono', monospace;
+            font-size: 17px; font-weight: 800; letter-spacing: 0.5px;
         }
-        .logo-mark:hover { background: #6ff0ac; }
+        .wordmark svg { flex: none; }
+        a.wordmark:hover { color: #6ff0ac; }
         .nav-links {
             display: flex; align-items: center; gap: 28px;
             font-family: 'Chakra Petch', sans-serif; font-size: 14px;
@@ -424,7 +425,19 @@
 <body>
 
     <nav class="nav">
-        <a href="#top" aria-label="reconYa" class="logo-mark"></a>
+        <a href="#top" class="wordmark">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"></path>
+                <path d="M12 3c1.333 .333 2 2.333 2 6s-.667 5.667 -2 6"></path>
+                <path d="M12 3c-1.333 .333 -2 2.333 -2 6s.667 5.667 2 6"></path>
+                <path d="M6 9h12"></path>
+                <path d="M3 20h7"></path>
+                <path d="M14 20h7"></path>
+                <path d="M10 20a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                <path d="M12 15v3"></path>
+            </svg>
+            <span>reconYa</span>
+        </a>
         <div class="nav-links">
             <a href="#features" class="nlink">Features</a>
             <a href="#how" class="nlink">How it works</a>
@@ -768,7 +781,19 @@
     <footer>
         <div class="foot-grid">
             <div class="foot-about">
-                <div aria-label="reconYa" role="img" class="logo-mark" style="width: 156px; height: 23px;"></div>
+                <div class="wordmark">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"></path>
+                        <path d="M12 3c1.333 .333 2 2.333 2 6s-.667 5.667 -2 6"></path>
+                        <path d="M12 3c-1.333 .333 -2 2.333 -2 6s.667 5.667 2 6"></path>
+                        <path d="M6 9h12"></path>
+                        <path d="M3 20h7"></path>
+                        <path d="M14 20h7"></path>
+                        <path d="M10 20a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                        <path d="M12 15v3"></path>
+                    </svg>
+                    <span>reconYa</span>
+                </div>
                 <p>Self-hosted network reconnaissance and asset discovery. Your LAN, your data, your box.</p>
                 <p class="lic">Licensed under Creative Commons Attribution-NonCommercial 4.0 International.</p>
             </div>
