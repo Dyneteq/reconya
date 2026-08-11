@@ -48,10 +48,20 @@
         pingInternet();
         window.RCSuggestions.init();
 
+        if (isMap) {
+            window.RCSegments.load().then(renderSubnetsFromState);
+            window.RCSegments.onScopeChange(function () {
+                renderDock(window.RCDevices.state());
+            });
+        }
+
         every(POLL.devices, function () { window.RCDevices.load(); });
         every(POLL.scan, function () { window.RCScan.poll(); });
         every(POLL.alerts, function () { window.RCAlerts.load(); });
         every(POLL.metrics, loadMetrics);
+        every(POLL.metrics, function () {
+            if (isMap) window.RCSegments.load().then(renderSubnetsFromState);
+        });
         every(POLL.ping, pingInternet);
 
         if (isMap) startMapView();
@@ -166,7 +176,8 @@
         if (isMap) {
             window.RCMap.setData(state.devices, state.networks);
             renderDock(state);
-            renderSubnets(state);
+            window.RCSegments.render();
+            renderSubnetsFromState(state);
         }
         if (page === 'devices') renderHostsPage(state);
     }
@@ -184,6 +195,7 @@
         bindMapControls();
         bindDock();
         bindFeedTabs();
+        bindScanPlan();
 
         loadEvents();
         every(POLL.events, loadEvents);
@@ -258,47 +270,73 @@
         if (zoomFit) zoomFit.addEventListener('click', function () { window.RCMap.fit(); });
     }
 
-    // Per-network online/known, the honest version of the design's "SUBNET LOAD"
-    // panel: known hosts rather than allocated addresses, because that is what
-    // the scanner records.
-    function renderSubnets(state) {
+    // The SCAN PLAN list: one row per range (not per network — a network can
+    // own several), showing known/online hosts against the range's real
+    // address capacity and a running total across all active ranges. Each row
+    // toggles the range in or out of future scans.
+    function renderSubnetsFromState(state) {
         var container = RC.el('rc-subnets');
         if (!container) return;
 
-        var byNetwork = {};
-        state.devices.forEach(function (d) {
-            var key = d.network_id || 'unassigned';
-            if (!byNetwork[key]) byNetwork[key] = { total: 0, online: 0 };
-            byNetwork[key].total++;
-            if ((d.status || '').toLowerCase() === 'online') byNetwork[key].online++;
-        });
+        var byIP = {};
+        (state.devices || []).forEach(function (d) { byIP[d.ipv4] = d; });
 
-        var rows = Object.keys(byNetwork).map(function (key) {
-            var stat = byNetwork[key];
-            var pct = stat.total ? Math.round((stat.online / stat.total) * 100) : 0;
-            var color = pct >= 80 ? 'var(--rc-accent)'
-                : (pct >= 50 ? 'rgba(74,222,128,.6)' : 'var(--rc-amber)');
+        var runningTotal = 0;
+        var rows = [];
 
-            return '<div>' +
-                '<div class="rc-subnet__row">' +
-                    '<span class="rc-subnet__name">' + RC.esc(state.networks[key] || 'unassigned') + '</span>' +
-                    '<span class="rc-subnet__count">' + stat.online + ' / ' + stat.total + '</span>' +
-                '</div>' +
-                '<div class="rc-subnet__track"><div class="rc-subnet__fill" style="width:' +
-                    pct + '%;background:' + color + '"></div></div>' +
-                '</div>';
+        window.RCSegments.networks().forEach(function (n) {
+            (n.ranges || []).forEach(function (r) {
+                var known = 0, online = 0;
+                Object.keys(byIP).forEach(function (ip) {
+                    if (!RC.ipInCidr(ip, r.cidr)) return;
+                    known++;
+                    if ((byIP[ip].status || '').toLowerCase() === 'online') online++;
+                });
+
+                var capacity = RC.cidrSize(r.cidr);
+                if (r.active) runningTotal += capacity;
+
+                var pct = capacity ? Math.round((known / capacity) * 100) : 0;
+                var color = !r.active ? 'var(--rc-text-5)'
+                    : (pct >= 60 ? 'var(--rc-accent)' : (pct >= 20 ? 'rgba(74,222,128,.6)' : 'var(--rc-amber)'));
+
+                rows.push('<div data-network-id="' + RC.esc(n.id) + '" data-range-id="' + RC.esc(r.id) +
+                        '" style="cursor:pointer' + (r.active ? '' : ';opacity:.45') + '" title="click to ' +
+                        (r.active ? 'exclude from' : 'include in') + ' scans">' +
+                    '<div class="rc-subnet__row">' +
+                        '<span class="rc-subnet__name">' + RC.esc(r.label || r.cidr) + '</span>' +
+                        '<span class="rc-subnet__count">' + known + ' known / ' + capacity + '</span>' +
+                    '</div>' +
+                    '<div class="rc-subnet__track"><div class="rc-subnet__fill" style="width:' +
+                        pct + '%;background:' + color + '"></div></div>' +
+                    '</div>');
+            });
         });
 
         RC.render(container, rows.length
-            ? rows.join('')
-            : '<div style="font-size:11px;color:var(--rc-text-5)">No hosts discovered yet</div>');
+            ? rows.join('') + '<div style="font-size:10px;color:var(--rc-text-5);padding-top:4px">' +
+                runningTotal + ' addresses in active scan plan</div>'
+            : '<div style="font-size:11px;color:var(--rc-text-5)">No ranges configured yet</div>');
+    }
+
+    function bindScanPlan() {
+        RC.on(RC.el('rc-subnets'), 'click', '[data-range-id]', function (e, row) {
+            var networkId = row.getAttribute('data-network-id');
+            var rangeId = row.getAttribute('data-range-id');
+            RC.sendJSON('POST', '/api/networks/' + encodeURIComponent(networkId) +
+                '/ranges/' + encodeURIComponent(rangeId) + '/toggle')
+                .then(function () { return window.RCSegments.load(); })
+                .then(function () { renderSubnetsFromState(window.RCDevices.state()); })
+                .catch(function (err) { console.error('Failed to toggle range:', err); });
+        });
     }
 
     /* ── Dock ───────────────────────────────────────────────────────── */
 
     function visibleDevices(state) {
-        if (window.RCMap.showOffline()) return state.devices;
-        return state.devices.filter(function (d) {
+        var devices = window.RCSegments.filterDevices(state.devices);
+        if (window.RCMap.showOffline()) return devices;
+        return devices.filter(function (d) {
             return (d.status || '').toLowerCase() !== 'offline';
         });
     }

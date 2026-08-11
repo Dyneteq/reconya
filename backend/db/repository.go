@@ -28,6 +28,8 @@ type NetworkRepository interface {
 	CreateOrUpdate(ctx context.Context, network *models.Network) (*models.Network, error)
 	Delete(ctx context.Context, id string) error
 	GetDeviceCount(ctx context.Context, networkID string) (int, error)
+	SetRangeActive(ctx context.Context, rangeID string, active bool) error
+	UpdateRangeLastScanned(ctx context.Context, rangeID string, scannedAt time.Time) error
 }
 
 // DeviceStatusChange records one device whose status the status sweeper moved,
@@ -150,4 +152,3 @@ func (f *RepositoryFactory) NewAlertRepository() AlertRepository {
 func GenerateID() string {
 	return uuid.New().String()
 }
-

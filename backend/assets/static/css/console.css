@@ -658,6 +658,51 @@ textarea::placeholder {
     white-space: nowrap;
 }
 
+.rc-segments {
+    padding: 12px 12px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rc-segment {
+    flex: 1 1 auto;
+    min-width: 46px;
+    padding: 5px 7px;
+    background: var(--rc-wash);
+    border: 1px solid var(--rc-line-14);
+    border-left: 2px solid var(--rc-line-40);
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.rc-segment:hover {
+    background: var(--rc-wash-hi);
+}
+
+.rc-segment.is-active {
+    background: var(--rc-wash-hi);
+    border-left-color: var(--rc-accent);
+}
+
+.rc-segment.is-inactive {
+    opacity: 0.45;
+}
+
+.rc-segment__cidr {
+    display: block;
+    color: var(--rc-text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rc-segment__count {
+    display: block;
+    color: var(--rc-text-5);
+    margin-top: 2px;
+}
+
 .rc-subnets {
     padding: 12px;
     display: flex;

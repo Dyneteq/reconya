@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"reconya/models"
+	"strings"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func (r *SQLiteNetworkRepository) FindByID(ctx context.Context, id string) (*mod
 	var name, description, status sql.NullString
 	var lastScannedAt, createdAt, updatedAt sql.NullTime
 	var deviceCount sql.NullInt64
-	
+
 	err := row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -66,11 +67,26 @@ func (r *SQLiteNetworkRepository) FindByID(ctx context.Context, id string) (*mod
 		network.UpdatedAt = updatedAt.Time
 	}
 
+	ranges, err := r.loadRanges(ctx, network.ID)
+	if err != nil {
+		return nil, err
+	}
+	network.Ranges = ranges
+
 	return &network, nil
 }
 
-// FindByCIDR finds a network by CIDR
+// FindByCIDR finds a network owning a range (or its legacy single CIDR column) matching cidr
 func (r *SQLiteNetworkRepository) FindByCIDR(ctx context.Context, cidr string) (*models.Network, error) {
+	var networkID string
+	err := r.db.QueryRowContext(ctx, `SELECT network_id FROM network_ranges WHERE cidr = ? LIMIT 1`, cidr).Scan(&networkID)
+	if err == nil {
+		return r.FindByID(ctx, networkID)
+	}
+	if err != sql.ErrNoRows {
+		return nil, fmt.Errorf("error looking up network range by cidr: %w", err)
+	}
+
 	query := `SELECT id, name, cidr, description, status, last_scanned_at, device_count, created_at, updated_at FROM networks WHERE cidr = ?`
 	row := r.db.QueryRowContext(ctx, query, cidr)
 
@@ -78,8 +94,8 @@ func (r *SQLiteNetworkRepository) FindByCIDR(ctx context.Context, cidr string) (
 	var name, description, status sql.NullString
 	var lastScannedAt, createdAt, updatedAt sql.NullTime
 	var deviceCount sql.NullInt64
-	
-	err := row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt)
+
+	err = row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
@@ -108,6 +124,12 @@ func (r *SQLiteNetworkRepository) FindByCIDR(ctx context.Context, cidr string) (
 	if updatedAt.Valid {
 		network.UpdatedAt = updatedAt.Time
 	}
+
+	ranges, err := r.loadRanges(ctx, network.ID)
+	if err != nil {
+		return nil, err
+	}
+	network.Ranges = ranges
 
 	return &network, nil
 }
@@ -135,7 +157,7 @@ func (r *SQLiteNetworkRepository) FindAll(ctx context.Context) ([]*models.Networ
 		var network models.Network
 		var lastScannedAt sql.NullTime
 		var createdAtStr, updatedAtStr string
-		
+
 		err := rows.Scan(&network.ID, &network.Name, &network.CIDR, &network.Description, &network.Status, &lastScannedAt, &network.DeviceCount, &createdAtStr, &updatedAtStr)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning network: %w", err)
@@ -171,10 +193,86 @@ func (r *SQLiteNetworkRepository) FindAll(ctx context.Context) ([]*models.Networ
 		networks = append(networks, &network)
 	}
 
+	if err := r.attachRanges(ctx, networks); err != nil {
+		return nil, err
+	}
+
 	return networks, nil
 }
 
-// CreateOrUpdate creates or updates a network
+// loadRanges loads the ranges owned by a single network
+func (r *SQLiteNetworkRepository) loadRanges(ctx context.Context, networkID string) ([]models.NetworkRange, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, network_id, cidr, COALESCE(label, ''), active, last_scanned_at, created_at, updated_at
+		FROM network_ranges WHERE network_id = ? ORDER BY created_at ASC`, networkID)
+	if err != nil {
+		return nil, fmt.Errorf("error querying network_ranges: %w", err)
+	}
+	defer rows.Close()
+
+	var ranges []models.NetworkRange
+	for rows.Next() {
+		var nr models.NetworkRange
+		var active int
+		var lastScannedAt sql.NullTime
+		if err := rows.Scan(&nr.ID, &nr.NetworkID, &nr.CIDR, &nr.Label, &active, &lastScannedAt, &nr.CreatedAt, &nr.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("error scanning network_range: %w", err)
+		}
+		nr.Active = active != 0
+		if lastScannedAt.Valid {
+			nr.LastScannedAt = &lastScannedAt.Time
+		}
+		ranges = append(ranges, nr)
+	}
+	return ranges, nil
+}
+
+// attachRanges batch-loads ranges for a set of networks to avoid N+1 queries
+func (r *SQLiteNetworkRepository) attachRanges(ctx context.Context, networks []*models.Network) error {
+	if len(networks) == 0 {
+		return nil
+	}
+
+	byID := make(map[string]*models.Network, len(networks))
+	placeholders := make([]string, 0, len(networks))
+	args := make([]interface{}, 0, len(networks))
+	for _, n := range networks {
+		byID[n.ID] = n
+		placeholders = append(placeholders, "?")
+		args = append(args, n.ID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, network_id, cidr, COALESCE(label, ''), active, last_scanned_at, created_at, updated_at
+		FROM network_ranges WHERE network_id IN (%s) ORDER BY created_at ASC`, strings.Join(placeholders, ","))
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("error querying network_ranges: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var nr models.NetworkRange
+		var active int
+		var lastScannedAt sql.NullTime
+		if err := rows.Scan(&nr.ID, &nr.NetworkID, &nr.CIDR, &nr.Label, &active, &lastScannedAt, &nr.CreatedAt, &nr.UpdatedAt); err != nil {
+			return fmt.Errorf("error scanning network_range: %w", err)
+		}
+		nr.Active = active != 0
+		if lastScannedAt.Valid {
+			nr.LastScannedAt = &lastScannedAt.Time
+		}
+		if n, ok := byID[nr.NetworkID]; ok {
+			n.Ranges = append(n.Ranges, nr)
+		}
+	}
+	return nil
+}
+
+// CreateOrUpdate creates or updates a network, reconciling its ranges.
+// Ranges present in network.Ranges are upserted by CIDR; existing ranges
+// whose CIDR isn't in the incoming set are marked inactive rather than
+// deleted, so their last_scanned_at history survives an edit.
 func (r *SQLiteNetworkRepository) CreateOrUpdate(ctx context.Context, network *models.Network) (*models.Network, error) {
 	if network.ID == "" {
 		network.ID = GenerateID()
@@ -184,25 +282,141 @@ func (r *SQLiteNetworkRepository) CreateOrUpdate(ctx context.Context, network *m
 	if err != nil && err != ErrNotFound {
 		return nil, err
 	}
+	isNew := err == ErrNotFound
 
-	if err == ErrNotFound {
-		query := `INSERT INTO networks (id, name, cidr, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
-		_, err := r.db.ExecContext(ctx, query, network.ID, network.Name, network.CIDR, network.Description, network.Status, network.CreatedAt, network.UpdatedAt)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	if isNew {
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO networks (id, name, cidr, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			network.ID, network.Name, network.CIDR, network.Description, network.Status, network.CreatedAt, network.UpdatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error inserting network: %w", err)
 		}
 	} else {
-		query := `UPDATE networks SET name = ?, cidr = ?, description = ?, status = ?, updated_at = ? WHERE id = ?`
-		_, err := r.db.ExecContext(ctx, query, network.Name, network.CIDR, network.Description, network.Status, network.UpdatedAt, network.ID)
+		_, err = tx.ExecContext(ctx,
+			`UPDATE networks SET name = ?, cidr = ?, description = ?, status = ?, updated_at = ? WHERE id = ?`,
+			network.Name, network.CIDR, network.Description, network.Status, network.UpdatedAt, network.ID)
 		if err != nil {
 			return nil, fmt.Errorf("error updating network: %w", err)
 		}
 	}
 
+	if err := reconcileNetworkRanges(ctx, tx, network); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("error committing network update: %w", err)
+	}
+
+	ranges, err := r.loadRanges(ctx, network.ID)
+	if err != nil {
+		return nil, err
+	}
+	network.Ranges = ranges
+
 	return network, nil
 }
 
-// Delete deletes a network by ID
+func reconcileNetworkRanges(ctx context.Context, tx *sql.Tx, network *models.Network) error {
+	existingRows, err := tx.QueryContext(ctx, `SELECT id, cidr FROM network_ranges WHERE network_id = ?`, network.ID)
+	if err != nil {
+		return fmt.Errorf("error loading existing network_ranges: %w", err)
+	}
+	existingByCIDR := make(map[string]string) // cidr -> id
+	for existingRows.Next() {
+		var id, cidr string
+		if err := existingRows.Scan(&id, &cidr); err != nil {
+			existingRows.Close()
+			return fmt.Errorf("error scanning existing network_range: %w", err)
+		}
+		existingByCIDR[cidr] = id
+	}
+	existingRows.Close()
+
+	now := time.Now()
+	seen := make(map[string]bool)
+
+	for i := range network.Ranges {
+		nr := &network.Ranges[i]
+		seen[nr.CIDR] = true
+
+		if id, ok := existingByCIDR[nr.CIDR]; ok {
+			_, err = tx.ExecContext(ctx,
+				`UPDATE network_ranges SET label = ?, active = 1, updated_at = ? WHERE id = ?`,
+				nr.Label, now, id)
+			if err != nil {
+				return fmt.Errorf("error updating network_range: %w", err)
+			}
+			nr.ID = id
+		} else {
+			nr.ID = GenerateID()
+			_, err = tx.ExecContext(ctx,
+				`INSERT INTO network_ranges (id, network_id, cidr, label, active, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)`,
+				nr.ID, network.ID, nr.CIDR, nr.Label, now, now)
+			if err != nil {
+				return fmt.Errorf("error inserting network_range: %w", err)
+			}
+		}
+	}
+
+	for cidr, id := range existingByCIDR {
+		if !seen[cidr] {
+			_, err = tx.ExecContext(ctx,
+				`UPDATE network_ranges SET active = 0, updated_at = ? WHERE id = ?`, now, id)
+			if err != nil {
+				return fmt.Errorf("error deactivating network_range: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// SetRangeActive toggles whether a range is included in scans
+func (r *SQLiteNetworkRepository) SetRangeActive(ctx context.Context, rangeID string, active bool) error {
+	activeVal := 0
+	if active {
+		activeVal = 1
+	}
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE network_ranges SET active = ?, updated_at = ? WHERE id = ?`, activeVal, time.Now(), rangeID)
+	if err != nil {
+		return fmt.Errorf("error setting network_range active state: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking network_range update result: %w", err)
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// UpdateRangeLastScanned records when a range was last swept
+func (r *SQLiteNetworkRepository) UpdateRangeLastScanned(ctx context.Context, rangeID string, scannedAt time.Time) error {
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE network_ranges SET last_scanned_at = ?, updated_at = ? WHERE id = ?`, scannedAt, time.Now(), rangeID)
+	if err != nil {
+		return fmt.Errorf("error updating network_range last_scanned_at: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking network_range update result: %w", err)
+	}
+	if rows == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// Delete deletes a network by ID. network_ranges are removed via ON DELETE CASCADE.
 func (r *SQLiteNetworkRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM networks WHERE id = ?`
 	_, err := r.db.ExecContext(ctx, query, id)
@@ -216,13 +430,13 @@ func (r *SQLiteNetworkRepository) Delete(ctx context.Context, id string) error {
 func (r *SQLiteNetworkRepository) GetDeviceCount(ctx context.Context, networkID string) (int, error) {
 	query := `SELECT COUNT(*) FROM devices WHERE network_id = ?`
 	row := r.db.QueryRowContext(ctx, query, networkID)
-	
+
 	var count int
 	err := row.Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("error counting devices for network: %w", err)
 	}
-	
+
 	return count, nil
 }
 
@@ -272,7 +486,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	var lastSeenOnlineAt, portScanStartedAt, portScanEndedAt, webScanEndedAt sql.NullTime
 
 	err = row.Scan(
-		&device.ID, &device.Name, &comment, &device.IPv4, 
+		&device.ID, &device.Name, &comment, &device.IPv4,
 		&ipv6LinkLocal, &ipv6UniqueLocal, &ipv6Global, &ipv6Addresses,
 		&mac, &vendor, &deviceType,
 		&osName, &osVersion, &osFamily, &osConfidence,
@@ -290,7 +504,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	if networkID.Valid {
 		device.NetworkID = networkID.String
 	}
-	
+
 	if mac.Valid {
 		device.MAC = &mac.String
 	}
@@ -300,7 +514,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	if comment.Valid {
 		device.Comment = &comment.String
 	}
-	
+
 	// IPv6 fields
 	if ipv6LinkLocal.Valid {
 		device.IPv6LinkLocal = &ipv6LinkLocal.String
@@ -336,7 +550,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	if webScanEndedAt.Valid {
 		device.WebScanEndedAt = &webScanEndedAt.Time
 	}
-	
+
 	// Set OS information
 	if osName.Valid || osVersion.Valid || osFamily.Valid || osConfidence.Valid {
 		device.OS = &models.DeviceOS{}
@@ -371,12 +585,11 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		}
 		device.Ports = append(device.Ports, port)
 	}
-	
+
 	// Check for errors from iterating over rows
 	if err := portRows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over port rows: %w", err)
 	}
-	
 
 	// Load web services
 	webServicesQuery := `
@@ -396,7 +609,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		if err := webServiceRows.Scan(&ws.URL, &title, &server, &ws.StatusCode, &contentType, &size, &screenshot, &ws.Port, &ws.Protocol, &ws.ScannedAt); err != nil {
 			return nil, fmt.Errorf("error scanning web service: %w", err)
 		}
-		
+
 		if title.Valid {
 			ws.Title = title.String
 		}
@@ -412,7 +625,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		if screenshot.Valid {
 			ws.Screenshot = screenshot.String
 		}
-		
+
 		device.WebServices = append(device.WebServices, ws)
 	}
 
@@ -492,26 +705,26 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 	if deviceExists {
 		// Update existing device with the same IP address
 		device.ID = existingID
-		
+
 		// Get the existing created_at timestamp and preserve device type/OS if not provided
 		var createdAt time.Time
 		var existingDeviceType sql.NullString
 		var existingOsName, existingOsVersion, existingOsFamily sql.NullString
 		var existingOsConfidence sql.NullInt64
-		
-		err = tx.QueryRowContext(ctx, 
-			"SELECT created_at, device_type, os_name, os_version, os_family, os_confidence FROM devices WHERE id = ?", 
+
+		err = tx.QueryRowContext(ctx,
+			"SELECT created_at, device_type, os_name, os_version, os_family, os_confidence FROM devices WHERE id = ?",
 			device.ID).Scan(&createdAt, &existingDeviceType, &existingOsName, &existingOsVersion, &existingOsFamily, &existingOsConfidence)
 		if err != nil {
 			return nil, fmt.Errorf("error getting existing device data: %w", err)
 		}
 		device.CreatedAt = createdAt
-		
+
 		// Preserve existing device type if not provided in update
 		if device.DeviceType == "" && existingDeviceType.Valid {
 			device.DeviceType = models.DeviceType(existingDeviceType.String)
 		}
-		
+
 		// Preserve existing OS data if not provided in update
 		if device.OS == nil && (existingOsName.Valid || existingOsVersion.Valid || existingOsFamily.Valid || existingOsConfidence.Valid) {
 			device.OS = &models.DeviceOS{}
@@ -564,7 +777,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 		}
 
 		_, err = tx.ExecContext(ctx, query,
-			device.Name, nullableString(device.Comment), nullableString(device.MAC), nullableString(device.Vendor), 
+			device.Name, nullableString(device.Comment), nullableString(device.MAC), nullableString(device.Vendor),
 			string(device.DeviceType), osName, osVersion, osFamily, osConfidence,
 			device.Status, networkIDPtr, nullableString(device.Hostname),
 			device.UpdatedAt, nullableTime(device.LastSeenOnlineAt),
@@ -1123,7 +1336,7 @@ func (r *SQLiteSettingsRepository) FindByUserID(userID string) (*models.Settings
 
 	var settings models.Settings
 	var createdAt, updatedAt sql.NullTime
-	
+
 	err := row.Scan(&settings.ID, &settings.UserID, &settings.ScreenshotsEnabled, &createdAt, &updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -1146,24 +1359,24 @@ func (r *SQLiteSettingsRepository) FindByUserID(userID string) (*models.Settings
 func (r *SQLiteSettingsRepository) Create(settings *models.Settings) error {
 	query := `INSERT INTO settings (id, user_id, screenshots_enabled, created_at, updated_at) 
 			  VALUES (?, ?, ?, ?, ?)`
-	
-	_, err := r.db.Exec(query, settings.ID, settings.UserID, settings.ScreenshotsEnabled, 
+
+	_, err := r.db.Exec(query, settings.ID, settings.UserID, settings.ScreenshotsEnabled,
 		settings.CreatedAt, settings.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("error creating settings: %w", err)
 	}
-	
+
 	return nil
 }
 
 // Update updates existing settings
 func (r *SQLiteSettingsRepository) Update(settings *models.Settings) error {
 	query := `UPDATE settings SET screenshots_enabled = ?, updated_at = ? WHERE id = ?`
-	
+
 	_, err := r.db.Exec(query, settings.ScreenshotsEnabled, settings.UpdatedAt, settings.ID)
 	if err != nil {
 		return fmt.Errorf("error updating settings: %w", err)
 	}
-	
+
 	return nil
 }

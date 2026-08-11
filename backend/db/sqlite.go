@@ -425,6 +425,40 @@ func InitializeSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to create index on alerts.rule_id: %w", err)
 	}
 
+	// Create network_ranges table: a network can own multiple CIDR ranges so
+	// scans target only the real subnets in use instead of a covering supernet.
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS network_ranges (
+		id TEXT PRIMARY KEY,
+		network_id TEXT NOT NULL REFERENCES networks(id) ON DELETE CASCADE,
+		cidr TEXT NOT NULL,
+		label TEXT,
+		active INTEGER NOT NULL DEFAULT 1,
+		last_scanned_at TIMESTAMP,
+		created_at TIMESTAMP NOT NULL,
+		updated_at TIMESTAMP NOT NULL
+	)`)
+	if err != nil {
+		return fmt.Errorf("failed to create network_ranges table: %w", err)
+	}
+
+	_, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_network_ranges_network_id ON network_ranges(network_id)`)
+	if err != nil {
+		return fmt.Errorf("failed to create index on network_ranges.network_id: %w", err)
+	}
+
+	// Backfill: every pre-existing single-CIDR network gets one range row.
+	_, err = db.Exec(`
+	INSERT INTO network_ranges (id, network_id, cidr, label, active, last_scanned_at, created_at, updated_at)
+	SELECT lower(hex(randomblob(16))), id, cidr, NULL, 1, last_scanned_at,
+		COALESCE(created_at, CURRENT_TIMESTAMP), COALESCE(updated_at, CURRENT_TIMESTAMP)
+	FROM networks
+	WHERE cidr IS NOT NULL AND cidr != ''
+	AND NOT EXISTS (SELECT 1 FROM network_ranges WHERE network_ranges.network_id = networks.id)`)
+	if err != nil {
+		return fmt.Errorf("failed to backfill network_ranges: %w", err)
+	}
+
 	log.Println("Database schema initialized successfully")
 	return nil
 }

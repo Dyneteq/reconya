@@ -26,6 +26,15 @@
         return !!(current && current.id === network.id);
     }
 
+    function rangesSummary(network) {
+        var ranges = (network.ranges || []).filter(function (r) { return r.active; });
+        if (!ranges.length) return network.cidr || '—';
+        if (ranges.length <= 2) {
+            return ranges.map(function (r) { return r.cidr; }).join(', ');
+        }
+        return ranges[0].cidr + ' +' + (ranges.length - 1) + ' more';
+    }
+
     function renderPage() {
         var container = RC.el('rc-networks-page');
         if (!container) return;
@@ -38,7 +47,7 @@
         var rows = networks.map(function (n) {
             var scanning = isScanning(n);
             return '<tr data-network-id="' + RC.esc(n.id) + '">' +
-                '<td class="rc-code">' + RC.esc(n.cidr || '—') + '</td>' +
+                '<td class="rc-code">' + RC.esc(rangesSummary(n)) + '</td>' +
                 '<td style="color:var(--rc-text)">' + RC.esc(n.name || 'unnamed') + '</td>' +
                 '<td>' + RC.esc(n.description || '—') + '</td>' +
                 '<td style="text-align:right">' + RC.esc(String(n.device_count || 0)) + '</td>' +
@@ -64,12 +73,23 @@
 
     /* ── Dialog ─────────────────────────────────────────────────────── */
 
+    function rangeRow(range) {
+        range = range || {};
+        return '<div class="rc-range-row" style="display:flex;gap:6px;margin-bottom:6px">' +
+            '<input class="rc-range-cidr" value="' + RC.esc(range.cidr || '') + '" placeholder="192.168.1.0/24" style="flex:1">' +
+            '<input class="rc-range-label" value="' + RC.esc(range.label || '') + '" placeholder="label (optional)" style="flex:1">' +
+            '<button class="rc-btn rc-btn--danger" data-action="remove-range" type="button" style="padding:3px 8px">⌫</button>' +
+        '</div>';
+    }
+
     function networkForm(network) {
         network = network || {};
+        var ranges = (network.ranges && network.ranges.length) ? network.ranges : [{}];
         return '<div class="rc-form">' +
             '<div class="rc-field">' +
-                '<label for="rc-net-cidr">CIDR</label>' +
-                '<input id="rc-net-cidr" value="' + RC.esc(network.cidr || '') + '" placeholder="192.168.1.0/24">' +
+                '<label>Ranges</label>' +
+                '<div id="rc-net-ranges">' + ranges.map(rangeRow).join('') + '</div>' +
+                '<button class="rc-btn" id="rc-net-add-range" type="button" style="padding:3px 8px">+ ADD RANGE</button>' +
             '</div>' +
             '<div class="rc-field">' +
                 '<label for="rc-net-name">Name</label>' +
@@ -83,6 +103,34 @@
         '</div>';
     }
 
+    function bindRangeRows() {
+        var list = RC.el('rc-net-ranges');
+        var addBtn = RC.el('rc-net-add-range');
+        if (!list || !addBtn) return;
+
+        addBtn.addEventListener('click', function () {
+            list.insertAdjacentHTML('beforeend', rangeRow());
+        });
+
+        RC.on(list, 'click', '[data-action="remove-range"]', function (e, btn) {
+            var row = btn.closest('.rc-range-row');
+            if (row && list.children.length > 1) row.remove();
+        });
+    }
+
+    function collectRanges() {
+        var rows = document.querySelectorAll('#rc-net-ranges .rc-range-row');
+        var cidrs = [], labels = [];
+        rows.forEach(function (row) {
+            var cidr = (row.querySelector('.rc-range-cidr') || {}).value || '';
+            cidr = cidr.trim();
+            if (!cidr) return;
+            cidrs.push(cidr);
+            labels.push(((row.querySelector('.rc-range-label') || {}).value || '').trim());
+        });
+        return { cidrs: cidrs, labels: labels };
+    }
+
     function openNetworkDialog(networkId) {
         var network = networks.filter(function (n) { return n.id === networkId; })[0];
 
@@ -91,20 +139,21 @@
             body: networkForm(network),
             confirm: 'SAVE',
             onConfirm: function () {
-                var fields = {
-                    cidr: (RC.el('rc-net-cidr') || {}).value || '',
-                    name: (RC.el('rc-net-name') || {}).value || '',
-                    description: (RC.el('rc-net-desc') || {}).value || ''
-                };
+                var ranges = collectRanges();
+                var name = (RC.el('rc-net-name') || {}).value || '';
+                var description = (RC.el('rc-net-desc') || {}).value || '';
 
-                if (!fields.cidr.trim()) {
-                    RC.text('rc-net-error', 'A CIDR is required.');
+                if (!ranges.cidrs.length) {
+                    RC.text('rc-net-error', 'At least one CIDR range is required.');
                     return;
                 }
 
                 var url = network ? '/api/networks/' + encodeURIComponent(network.id) : '/api/networks';
                 var body = new URLSearchParams();
-                Object.keys(fields).forEach(function (k) { body.append(k, fields[k]); });
+                body.append('name', name);
+                body.append('description', description);
+                ranges.cidrs.forEach(function (c) { body.append('cidr', c); });
+                ranges.labels.forEach(function (l) { body.append('cidr_label', l); });
 
                 fetch(url, {
                     method: network ? 'PUT' : 'POST',
@@ -115,7 +164,7 @@
                     .then(function (r) { return r.json(); })
                     .then(function (res) {
                         if (!res.success) {
-                            RC.text('rc-net-error', res.message || 'Could not save this network.');
+                            RC.text('rc-net-error', res.message || res.error || 'Could not save this network.');
                             return;
                         }
                         closeDialog();
@@ -127,6 +176,8 @@
                     });
             }
         });
+
+        bindRangeRows();
     }
 
     function deleteNetwork(networkId) {
