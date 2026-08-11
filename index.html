@@ -328,6 +328,8 @@
         .plan-biz .plan-price { align-items: flex-end; gap: 16px; margin: 20px 0 8px; }
         .plan-biz .plan-price .big { font-size: 80px; line-height: .9; color: #f2f7f3; }
         .plan-biz .plan-price .per { font-size: 13px; line-height: 1.5; color: #6d7a71; padding-bottom: 8px; }
+        .plan-biz .plan-price.quote .big { font-size: 38px; line-height: 1.15; }
+        .plan-biz-note { margin: 0; max-width: 40ch; font-size: 13px; line-height: 1.6; color: #6d7a71; }
         .plan-biz > p { margin: 0 0 30px; max-width: 52ch; font-size: 16px; color: #9aa79e; }
         .plan-biz .plan-feats { grid-template-columns: 1fr 1fr; gap: 14px 28px; margin-bottom: 34px; font-size: 15px; color: #9aa79e; }
         .plan-biz .plan-feats div { gap: 12px; }
@@ -416,6 +418,7 @@
             .faq p { padding-right: 0; }
             .plan-biz { padding: 36px 26px 38px; }
             .plan-biz .plan-price .big { font-size: 56px; }
+            .plan-biz .plan-price.quote .big { font-size: 30px; }
             .plan-biz .plan-feats { grid-template-columns: 1fr; }
             .foot-bottom { flex-direction: column; gap: 8px; }
         }
@@ -468,7 +471,7 @@
                     <a href="#install" class="btn-outline">One-line install</a>
                     <a href="#pricing" class="btn-dashed">
                         Commercial licence
-                        <span class="price">$249/yr</span>
+                        <span class="price">on request</span>
                     </a>
                 </div>
                 <p class="hero-note">Free for personal and homelab use. Businesses need a licence.</p>
@@ -692,21 +695,19 @@
                 <article class="plan plan-biz">
                     <i class="plan-ribbon">For business</i>
                     <div class="plan-kicker">Commercial licence</div>
-                    <div class="plan-price">
-                        <span class="big">$249</span>
-                        <span class="per">per year<br>per organisation</span>
+                    <div class="plan-price quote">
+                        <span class="big">Pricing on request</span>
                     </div>
                     <p>Covers every employee, every host and every subnet you run it on. Consultancies and MSPs included: scan your clients under the same licence.</p>
                     <div class="plan-feats">
-                        <div><span class="m">&#9656;</span> Commercial and client work permitted</div>
-                        <div><span class="m">&#9656;</span> Unlimited seats, hosts and networks</div>
-                        <div><span class="m">&#9656;</span> Priority on bugs and issues</div>
-                        <div><span class="m">&#9656;</span> Invoice and VAT details on request</div>
-                        <div><span class="m">&#9656;</span> Site and multi-year terms available</div>
-                        <div><span class="m">&#9656;</span> Redistribution terms on request</div>
+                        <div><span class="m">&#9656;</span> Embed, redistribute or run reconYa commercially, free of the CC BY-NC non-commercial clause</div>
+                        <div><span class="m">&#9656;</span> Priority support, direct line to the maintainer</div>
+                        <div><span class="m">&#9656;</span> Custom integrations for your stack</div>
+                        <div><span class="m">&#9656;</span> Deployment help on your fleet</div>
                     </div>
                     <div class="plan-biz-cta">
-                        <a href="mailto:dyneteq@gmail.com?subject=reconYa%20commercial%20licence">Request a licence</a>
+                        <a href="https://github.com/Dyneteq/reconya/discussions/new?category=q-a&title=Licensing%20question" target="_blank" rel="noopener">Ask about licensing</a>
+                        <p class="plan-biz-note">Open a licensing thread on GitHub and a person answers, usually within a working day.</p>
                     </div>
                 </article>
             </div>
@@ -811,7 +812,7 @@
                     <a href="#install">Install</a>
                     <a href="#pricing">Pricing</a>
                     <a href="#faq">FAQ</a>
-                    <a href="mailto:dyneteq@gmail.com">Commercial licence</a>
+                    <a href="https://github.com/Dyneteq/reconya/discussions/new?category=q-a&title=Licensing%20question" target="_blank" rel="noopener">Commercial licence</a>
                 </div>
             </div>
             <div>
