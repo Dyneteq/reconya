@@ -20,6 +20,8 @@ The topology map itself (`network-viz.js`) is a `<canvas>` (not SVG), fed by wha
 
 **Clicking a device node opens the side drawer, not a modal or dropdown.** The drawer (`#rc-drawer`, OVERVIEW/PORTS/HISTORY/NOTES tabs) is a persistent panel slid into view via a CSS class toggle on the shell, populated by fetching `/api/devices/{id}/modal` (named for a historical modal implementation; it now backs the drawer). `dialog.js` (the shared `#rc-dialog` popup) is reserved for things that genuinely interrupt: adding/editing/deleting a network and the About panel, it is explicitly not used for device inspection anymore.
 
+**The SCAN PLAN panel (`#rc-subnets`, `console.js`'s `renderSubnetsFromState`) is per-range, not per-network.** A network with several CIDR ranges gets one row per range, each showing known/online hosts against the range's real address capacity (`RC.cidrSize`, computed client-side from the CIDR prefix rather than a server round-trip) and a running total across all active ranges. Clicking a row toggles that range in or out of future scans (`POST /api/networks/{id}/ranges/{rangeId}/toggle`), a persisted change, distinct from the segment tiles above it. `segments.js` renders those tiles (`#rc-segments`, one per range, fed by `/api/networks`) as a separate, purely client-side, ephemeral filter: clicking one scopes the device dock to that range's CIDR via `RC.ipInCidr` until clicked again or the page reloads, it does not touch the range's active state.
+
 ## Devices (`/devices`)
 
 `APIDeviceList` scopes results to the active network server-side (filters by `NetworkID` when one is selected), specifically so a response never leaks another network's device inventory to the client. Response includes the device list, the screenshots-enabled flag, and the network list for the network filter.
@@ -28,9 +30,11 @@ Only `name` and `comment` are editable via `PUT /api/devices/{id}` (`APIUpdateDe
 
 ## Networks (`/networks`)
 
-Table of networks (CIDR, name, description, host count, last-scanned, scanning state) with per-row edit/delete/scan actions and an "add network" action, all routed through the shared dialog for the add/edit form.
+Table of networks (ranges, name, description, host count, last-scanned, scanning state) with per-row edit/delete/scan actions and an "add network" action, all routed through the shared dialog for the add/edit form. The CIDR column shows every active range's CIDR (comma-joined, collapsing to `"<first> +N more"` past two) rather than a single value.
 
-**Detected-network suggestions are applied automatically, with no confirmation prompt.** Every 15 seconds, the console diffs `GET /api/detected-networks` against the existing network list and silently `POST`s any CIDR that's missing to `/api/network-suggestion`, auto-named `"Network <cidr>"`. This is a deliberate console-side behavior, not a bug, if you're asked to add a confirm-before-adding step, that's new UX, not a fix to existing behavior.
+**The add/edit dialog (`network-list.js`) has a repeatable range list, not a single CIDR input.** Each row is a CIDR + optional label pair with a remove button; "+ ADD RANGE" appends another empty row. On submit, non-empty rows are collected into parallel `cidr[]`/`cidr_label[]` form fields (`application/x-www-form-urlencoded`, repeated keys), which `parseNetworkRangeForm` on the backend zips back into ranges. At least one CIDR is required; editing an existing network seeds one row per current range.
+
+**Detected-network suggestions are applied automatically, with no confirmation prompt.** Every 15 seconds, the console diffs `GET /api/detected-networks` against the existing network list and silently `POST`s any CIDR that's missing to `/api/network-suggestion`, auto-named `"Network <cidr>"`. "Already known" is checked against every range of every existing network (`networkOwnsCIDR` in `network-suggestions.js`), not just a network's legacy single-CIDR mirror field, otherwise a multi-range network could get a redundant duplicate suggested for a range that isn't its first one. This auto-add path always creates a new one-range network (mirrors `NetworkService.FindOrCreate`), it never appends a detected CIDR as an additional range onto an existing network, if you're asked to change that, it's new behavior, not a bug fix.
 
 ## Logs (`/logs`)
 

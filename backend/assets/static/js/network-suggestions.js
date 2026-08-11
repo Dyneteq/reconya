@@ -10,6 +10,14 @@
     var detected = [];
     var timer = null;
 
+    // A network can own several ranges, so "already known" means matching any
+    // of them, not just the legacy single-CIDR mirror field. The mirror is
+    // checked too as a fallback for responses that predate the ranges array.
+    function networkOwnsCIDR(network, cidr) {
+        if (network.cidr === cidr) return true;
+        return (network.ranges || []).some(function (r) { return r.cidr === cidr; });
+    }
+
     function checkForNetworkSuggestions() {
         return Promise.all([
             RC.getJSON('/api/detected-networks').catch(function () { return []; }),
@@ -19,7 +27,7 @@
             var existing = (results[1] && results[1].networks) || [];
 
             var missing = detected.filter(function (n) {
-                return !existing.some(function (e) { return e.cidr === n.cidr; });
+                return !existing.some(function (e) { return networkOwnsCIDR(e, n.cidr); });
             });
 
             if (missing.length) return addDetected(missing);
