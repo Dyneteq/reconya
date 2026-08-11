@@ -111,6 +111,61 @@ func TestDeviceService_CreateOrUpdateWithDelta_Addressing(t *testing.T) {
 	})
 }
 
+func TestDeviceService_CreateOrUpdateWithDelta_FirstSeenAtIsImmutable(t *testing.T) {
+	deviceService, networkService := newDeviceServiceStack(t)
+
+	net, err := networkService.Create("Office", []string{"10.0.1.0/24"}, nil, "", nil)
+	require.NoError(t, err)
+
+	first := testutils.CreateTestDeviceWithIP("10.0.1.50")
+	first.ID = ""
+	first.MAC = nil
+	first.NetworkID = net.ID
+	saved, _, err := deviceService.CreateOrUpdateWithDelta(first)
+	require.NoError(t, err)
+	require.False(t, saved.FirstSeenAt.IsZero(), "first sighting must set first_seen_at")
+	firstSeen := saved.FirstSeenAt
+
+	// A later sweep re-discovers the same IP with a bare struct, exactly like a
+	// real ping-sweep result.
+	resweep := testutils.CreateTestDeviceWithIP("10.0.1.50")
+	resweep.ID = ""
+	resweep.MAC = nil
+	resweep.NetworkID = net.ID
+	resaved, _, err := deviceService.CreateOrUpdateWithDelta(resweep)
+	require.NoError(t, err)
+
+	assert.True(t, firstSeen.Equal(resaved.FirstSeenAt), "first_seen_at must never change once set")
+	assert.False(t, resaved.UpdatedAt.Equal(resaved.FirstSeenAt), "updated_at should have moved on from the original sighting")
+}
+
+func TestDeviceService_CreateOrUpdateWithDelta_DiscoveryMethodUpdatesEachSweep(t *testing.T) {
+	deviceService, networkService := newDeviceServiceStack(t)
+
+	net, err := networkService.Create("Office", []string{"10.0.1.0/24"}, nil, "", nil)
+	require.NoError(t, err)
+
+	first := testutils.CreateTestDeviceWithIP("10.0.1.51")
+	first.ID = ""
+	first.MAC = nil
+	first.NetworkID = net.ID
+	first.DiscoveryMethod = models.DiscoveryMethodICMP
+	saved, _, err := deviceService.CreateOrUpdateWithDelta(first)
+	require.NoError(t, err)
+	assert.Equal(t, models.DiscoveryMethodICMP, saved.DiscoveryMethod)
+
+	// Unlike favorite/ignored/addressing, discovery_method is not preserved: the
+	// most recent sweep's signal always wins.
+	resweep := testutils.CreateTestDeviceWithIP("10.0.1.51")
+	resweep.ID = ""
+	resweep.MAC = nil
+	resweep.NetworkID = net.ID
+	resweep.DiscoveryMethod = models.DiscoveryMethodARP
+	resaved, _, err := deviceService.CreateOrUpdateWithDelta(resweep)
+	require.NoError(t, err)
+	assert.Equal(t, models.DiscoveryMethodARP, resaved.DiscoveryMethod, "discovery_method must reflect the latest sweep, not the first one")
+}
+
 func TestDeviceService_EligibleForPortScan_Ignored(t *testing.T) {
 	deviceService, _ := newDeviceServiceStack(t)
 

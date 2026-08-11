@@ -4,7 +4,7 @@ How a discovered host becomes a `Device` row: vendor lookup, hostname resolution
 
 ## Device Model
 
-`models.Device` (`backend/models/device.go`) carries identity (`IPv4`, three IPv6 address fields plus `IPv6Addresses []string`, `MAC`, `Vendor`, `Hostname`), `Status` (`unknown`/`online`/`idle`/`offline`), `DeviceType`, an embedded `OS` struct (`Name`/`Version`/`Family`/`Confidence`), scan-state timestamps (`LastSeenOnlineAt`, `PortScanStartedAt`, `PortScanEndedAt`, `WebScanEndedAt`), and three user-curation flags: `IsFavorite`, `Ignored`, `Addressing` (see below).
+`models.Device` (`backend/models/device.go`) carries identity (`IPv4`, three IPv6 address fields plus `IPv6Addresses []string`, `MAC`, `Vendor`, `Hostname`), `Status` (`unknown`/`online`/`idle`/`offline`), `DeviceType`, an embedded `OS` struct (`Name`/`Version`/`Family`/`Confidence`), scan-state timestamps (`LastSeenOnlineAt`, `PortScanStartedAt`, `PortScanEndedAt`, `WebScanEndedAt`), three user-curation flags: `IsFavorite`, `Ignored`, `Addressing` (see below), and two long-term tracking fields: `FirstSeenAt`, `DiscoveryMethod` (see below).
 
 ## Curation Flags (Favorite / Ignore / Addressing)
 
@@ -15,6 +15,13 @@ Three per-device fields, all editable via `PUT /api/devices/{id}` (`is_favorite`
 - **`Addressing`** (`""`/`static`/`dhcp`): annotates how a device's address is assigned. It's derived automatically from the owning `Network.StaticRanges` (a list of CIDRs, edited per-network alongside the scan ranges): a device whose IP falls inside one of them gets `static`, otherwise `dhcp` once at least one static range is configured, or `""` if the network has none configured. A manual override (set via the drawer's ADDRESSING control) always wins and is preserved across future sweeps, exactly like a user-set `Name`/`Comment`, see the preserve logic below.
 
 Because a ping-sweep-built `models.Device{}` always carries the zero value for these three fields, `CreateOrUpdateWithDelta` (below) always carries `IsFavorite`/`Ignored` forward from the existing record, and re-derives `Addressing` from the network's `StaticRanges` only when the existing value is still `""` (unset) — a manual override is never clobbered by a later sweep.
+
+## Long-Term Tracking (First Seen / Discovery Method)
+
+Two per-device fields, both read-only (not part of `PUT /api/devices/{id}`, unlike the curation flags above) and surfaced in the drawer's OVERVIEW tab:
+
+- **`FirstSeenAt`** (timestamp): set once, the first time `CreateOrUpdateWithDelta` sees a device it has no existing record for (by IP, or by MAC on an IP change), and never touched again — `setTimestamps` and the repository's update-path preserve both enforce this, the same "preserve unless still zero" shape `CreatedAt` uses. Distinct from `CreatedAt`, which is documented as upsert-preserved but carries no explicit immutability contract; `FirstSeenAt` is that contract made concrete. Existing rows from before this column existed are backfilled once from `created_at` (see [database.md](database.md)).
+- **`DiscoveryMethod`** (`""`/`icmp`/`arp`/`tcp`): which signal corroborated the *most recent* sighting, per the same trust ordering the ping sweep already uses (see [00-network-scanning.md](00-network-scanning.md)) — ICMP and ARP are trusted directly, TCP only when off-link. Set in `NativeScanner.scanIP`, threaded through `ScanResult.Method` into the freshly-built `models.Device`, and persisted unconditionally on every sweep (no preserve logic, unlike the curation flags): it reflects "how was this device last found," not "how was it first found."
 
 `DeviceType` declares 14 values (`router`, `switch`, `nas`, `printer`, `camera`, `server`, `workstation`, `laptop`, `mobile`, `iot`, `access_point`, `firewall`, `voip`, `unknown`), but the classification logic (below) can only ever produce 8 of them: `router`, `nas`, `printer`, `camera`, `mobile`, `server`, `workstation`, `voip`. `switch`, `laptop`, `iot`, `access_point`, and `firewall` exist in the enum with no code path that assigns them, they're either reserved for future heuristics or manual/API-only use, not something you'll see appear from a scan today.
 

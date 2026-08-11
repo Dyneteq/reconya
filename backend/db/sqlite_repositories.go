@@ -475,7 +475,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	       mac, vendor, device_type, os_name, os_version, os_family, os_confidence,
 	       status, network_id, hostname, created_at, updated_at, last_seen_online_at,
 	       port_scan_started_at, port_scan_ended_at, web_scan_ended_at,
-	       is_favorite, ignored, addressing
+	       is_favorite, ignored, addressing, first_seen_at, discovery_method
 	FROM devices WHERE id = ?`
 
 	row := tx.QueryRowContext(ctx, query, id)
@@ -494,6 +494,8 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	var lastSeenOnlineAt, portScanStartedAt, portScanEndedAt, webScanEndedAt sql.NullTime
 	var isFavorite, ignored int
 	var addressing sql.NullString
+	var firstSeenAt sql.NullTime
+	var discoveryMethod sql.NullString
 
 	err = row.Scan(
 		&device.ID, &device.Name, &comment, &device.IPv4,
@@ -502,7 +504,7 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		&osName, &osVersion, &osFamily, &osConfidence,
 		&device.Status, &networkID, &hostname, &device.CreatedAt, &device.UpdatedAt,
 		&lastSeenOnlineAt, &portScanStartedAt, &portScanEndedAt, &webScanEndedAt,
-		&isFavorite, &ignored, &addressing,
+		&isFavorite, &ignored, &addressing, &firstSeenAt, &discoveryMethod,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -514,6 +516,12 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	device.Ignored = ignored != 0
 	if addressing.Valid {
 		device.Addressing = models.Addressing(addressing.String)
+	}
+	if firstSeenAt.Valid {
+		device.FirstSeenAt = firstSeenAt.Time
+	}
+	if discoveryMethod.Valid {
+		device.DiscoveryMethod = models.DiscoveryMethod(discoveryMethod.String)
 	}
 
 	// Set the network ID
@@ -722,19 +730,27 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 		// Update existing device with the same IP address
 		device.ID = existingID
 
-		// Get the existing created_at timestamp and preserve device type/OS if not provided
+		// Get the existing created_at/first_seen_at timestamps and preserve device type/OS if not provided
 		var createdAt time.Time
+		var existingFirstSeenAt sql.NullTime
 		var existingDeviceType sql.NullString
 		var existingOsName, existingOsVersion, existingOsFamily sql.NullString
 		var existingOsConfidence sql.NullInt64
 
 		err = tx.QueryRowContext(ctx,
-			"SELECT created_at, device_type, os_name, os_version, os_family, os_confidence FROM devices WHERE id = ?",
-			device.ID).Scan(&createdAt, &existingDeviceType, &existingOsName, &existingOsVersion, &existingOsFamily, &existingOsConfidence)
+			"SELECT created_at, first_seen_at, device_type, os_name, os_version, os_family, os_confidence FROM devices WHERE id = ?",
+			device.ID).Scan(&createdAt, &existingFirstSeenAt, &existingDeviceType, &existingOsName, &existingOsVersion, &existingOsFamily, &existingOsConfidence)
 		if err != nil {
 			return nil, fmt.Errorf("error getting existing device data: %w", err)
 		}
 		device.CreatedAt = createdAt
+		// first_seen_at is immutable after insert, unlike discovery_method:
+		// always take the stored value regardless of what the caller passed.
+		if existingFirstSeenAt.Valid {
+			device.FirstSeenAt = existingFirstSeenAt.Time
+		} else {
+			device.FirstSeenAt = createdAt
+		}
 
 		// Preserve existing device type if not provided in update
 		if device.DeviceType == "" && existingDeviceType.Valid {
@@ -764,7 +780,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 			status = ?, network_id = ?, hostname = ?, updated_at = ?, last_seen_online_at = ?,
 			port_scan_started_at = ?, port_scan_ended_at = ?, web_scan_ended_at = ?,
 			ipv6_link_local = ?, ipv6_unique_local = ?, ipv6_global = ?, ipv6_addresses = ?,
-			is_favorite = ?, ignored = ?, addressing = ?
+			is_favorite = ?, ignored = ?, addressing = ?, first_seen_at = ?, discovery_method = ?
 		WHERE id = ?`
 
 		// Prepare OS fields
@@ -800,7 +816,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 			device.UpdatedAt, nullableTime(device.LastSeenOnlineAt),
 			nullableTime(device.PortScanStartedAt), nullableTime(device.PortScanEndedAt), nullableTime(device.WebScanEndedAt),
 			nullableString(device.IPv6LinkLocal), nullableString(device.IPv6UniqueLocal), nullableString(device.IPv6Global), ipv6AddressesJSON,
-			device.IsFavorite, device.Ignored, string(device.Addressing),
+			device.IsFavorite, device.Ignored, string(device.Addressing), device.FirstSeenAt, string(device.DiscoveryMethod),
 			device.ID,
 		)
 		if err != nil {
@@ -828,6 +844,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 			device.ID = GenerateID()
 		}
 		device.CreatedAt = now
+		device.FirstSeenAt = now
 
 		query := `
 		INSERT INTO devices (id, name, comment, ipv4, mac, vendor, device_type,
@@ -835,8 +852,8 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 			status, network_id, hostname, created_at, updated_at, last_seen_online_at,
 			port_scan_started_at, port_scan_ended_at, web_scan_ended_at,
 			ipv6_link_local, ipv6_unique_local, ipv6_global, ipv6_addresses,
-			is_favorite, ignored, addressing)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			is_favorite, ignored, addressing, first_seen_at, discovery_method)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 		// Prepare OS fields for insert
 		var osName, osVersion, osFamily sql.NullString
@@ -871,7 +888,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 			device.CreatedAt, device.UpdatedAt, nullableTime(device.LastSeenOnlineAt),
 			nullableTime(device.PortScanStartedAt), nullableTime(device.PortScanEndedAt), nullableTime(device.WebScanEndedAt),
 			nullableString(device.IPv6LinkLocal), nullableString(device.IPv6UniqueLocal), nullableString(device.IPv6Global), ipv6AddressesJSON,
-			device.IsFavorite, device.Ignored, string(device.Addressing),
+			device.IsFavorite, device.Ignored, string(device.Addressing), device.FirstSeenAt, string(device.DiscoveryMethod),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error inserting device: %w", err)

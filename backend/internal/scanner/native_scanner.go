@@ -37,7 +37,10 @@ type ScanResult struct {
 	MAC      string
 	Vendor   string
 	Hostname string
-	Error    error
+	// Method records which signal corroborated Online (see scanIP), empty when
+	// the host wasn't found online at all.
+	Method models.DiscoveryMethod
+	Error  error
 }
 
 func NewNativeScanner() *NativeScanner {
@@ -114,8 +117,9 @@ func (s *NativeScanner) ScanNetwork(network string) ([]models.Device, error) {
 	for result := range resultChan {
 		if result.Online {
 			device := models.Device{
-				IPv4:   result.IP,
-				Status: models.DeviceStatusOnline,
+				IPv4:            result.IP,
+				Status:          models.DeviceStatusOnline,
+				DiscoveryMethod: result.Method,
 			}
 
 			// Add MAC address if available
@@ -184,6 +188,17 @@ func (s *NativeScanner) scanIP(ip string) ScanResult {
 	result.RTT = rtt
 
 	if online {
+		// Priority mirrors the trust ordering above: ICMP and ARP are trusted
+		// directly, TCP is the weaker off-link-only signal.
+		switch {
+		case icmpOK:
+			result.Method = models.DiscoveryMethodICMP
+		case mac != "":
+			result.Method = models.DiscoveryMethodARP
+		case tcpOK:
+			result.Method = models.DiscoveryMethodTCP
+		}
+
 		result.MAC = mac
 		result.Vendor = vendor
 		if s.enableHostnameLookup {

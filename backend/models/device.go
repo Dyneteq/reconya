@@ -43,40 +43,55 @@ const (
 	AddressingDHCP    Addressing = "dhcp"
 )
 
+// DiscoveryMethod records which signal corroborated a device as online during
+// its most recent sweep. Unlike the curation flags (IsFavorite/Ignored/
+// Addressing), it is never user-set and is overwritten on every sighting, not
+// preserved across upserts.
+type DiscoveryMethod string
+
+const (
+	DiscoveryMethodUnknown DiscoveryMethod = ""
+	DiscoveryMethodICMP    DiscoveryMethod = "icmp"
+	DiscoveryMethodARP     DiscoveryMethod = "arp"
+	DiscoveryMethodTCP     DiscoveryMethod = "tcp"
+)
+
 type DeviceOS struct {
-	Name       string  `bson:"name,omitempty" json:"name,omitempty"`
-	Version    string  `bson:"version,omitempty" json:"version,omitempty"`
-	Family     string  `bson:"family,omitempty" json:"family,omitempty"`
-	Confidence int     `bson:"confidence,omitempty" json:"confidence,omitempty"`
+	Name       string `bson:"name,omitempty" json:"name,omitempty"`
+	Version    string `bson:"version,omitempty" json:"version,omitempty"`
+	Family     string `bson:"family,omitempty" json:"family,omitempty"`
+	Confidence int    `bson:"confidence,omitempty" json:"confidence,omitempty"`
 }
 
 type Device struct {
-	ID                string        `bson:"_id,omitempty" json:"id"`
-	Name              string        `bson:"name" json:"name"`
-	Comment           *string       `bson:"comment,omitempty" json:"comment,omitempty"`
-	IPv4              string        `bson:"ipv4" json:"ipv4"`
-	IPv6LinkLocal     *string       `bson:"ipv6_link_local,omitempty" json:"ipv6_link_local,omitempty"`
-	IPv6UniqueLocal   *string       `bson:"ipv6_unique_local,omitempty" json:"ipv6_unique_local,omitempty"`
-	IPv6Global        *string       `bson:"ipv6_global,omitempty" json:"ipv6_global,omitempty"`
-	IPv6Addresses     []string      `bson:"ipv6_addresses,omitempty" json:"ipv6_addresses,omitempty"`
-	MAC               *string       `bson:"mac,omitempty" json:"mac,omitempty"`
-	Vendor            *string       `bson:"vendor,omitempty" json:"vendor,omitempty"`
-	DeviceType        DeviceType    `bson:"device_type,omitempty" json:"device_type,omitempty"`
-	OS                *DeviceOS     `bson:"os,omitempty" json:"os,omitempty"`
-	Status            DeviceStatus  `bson:"status" json:"status"`
-	NetworkID         string        `bson:"network_id,omitempty" json:"network_id,omitempty"`
-	Ports             []Port        `bson:"ports,omitempty" json:"ports,omitempty"`
-	Hostname          *string       `bson:"hostname,omitempty" json:"hostname,omitempty"`
-	WebServices       []WebService  `bson:"web_services,omitempty" json:"web_services,omitempty"`
-	CreatedAt         time.Time     `bson:"created_at" json:"created_at"`
-	UpdatedAt         time.Time     `bson:"updated_at" json:"updated_at"`
-	LastSeenOnlineAt  *time.Time    `bson:"last_seen_online_at,omitempty" json:"last_seen_online_at,omitempty"`
-	PortScanStartedAt *time.Time    `bson:"port_scan_started_at,omitempty" json:"port_scan_started_at,omitempty"`
-	PortScanEndedAt   *time.Time    `bson:"port_scan_ended_at,omitempty" json:"port_scan_ended_at,omitempty"`
-	WebScanEndedAt    *time.Time    `bson:"web_scan_ended_at,omitempty" json:"web_scan_ended_at,omitempty"`
-	IsFavorite        bool          `bson:"is_favorite" json:"is_favorite"`
-	Ignored           bool          `bson:"ignored" json:"ignored"`
-	Addressing        Addressing    `bson:"addressing,omitempty" json:"addressing,omitempty"`
+	ID                string          `bson:"_id,omitempty" json:"id"`
+	Name              string          `bson:"name" json:"name"`
+	Comment           *string         `bson:"comment,omitempty" json:"comment,omitempty"`
+	IPv4              string          `bson:"ipv4" json:"ipv4"`
+	IPv6LinkLocal     *string         `bson:"ipv6_link_local,omitempty" json:"ipv6_link_local,omitempty"`
+	IPv6UniqueLocal   *string         `bson:"ipv6_unique_local,omitempty" json:"ipv6_unique_local,omitempty"`
+	IPv6Global        *string         `bson:"ipv6_global,omitempty" json:"ipv6_global,omitempty"`
+	IPv6Addresses     []string        `bson:"ipv6_addresses,omitempty" json:"ipv6_addresses,omitempty"`
+	MAC               *string         `bson:"mac,omitempty" json:"mac,omitempty"`
+	Vendor            *string         `bson:"vendor,omitempty" json:"vendor,omitempty"`
+	DeviceType        DeviceType      `bson:"device_type,omitempty" json:"device_type,omitempty"`
+	OS                *DeviceOS       `bson:"os,omitempty" json:"os,omitempty"`
+	Status            DeviceStatus    `bson:"status" json:"status"`
+	NetworkID         string          `bson:"network_id,omitempty" json:"network_id,omitempty"`
+	Ports             []Port          `bson:"ports,omitempty" json:"ports,omitempty"`
+	Hostname          *string         `bson:"hostname,omitempty" json:"hostname,omitempty"`
+	WebServices       []WebService    `bson:"web_services,omitempty" json:"web_services,omitempty"`
+	CreatedAt         time.Time       `bson:"created_at" json:"created_at"`
+	UpdatedAt         time.Time       `bson:"updated_at" json:"updated_at"`
+	FirstSeenAt       time.Time       `bson:"first_seen_at" json:"first_seen_at"`
+	DiscoveryMethod   DiscoveryMethod `bson:"discovery_method,omitempty" json:"discovery_method,omitempty"`
+	LastSeenOnlineAt  *time.Time      `bson:"last_seen_online_at,omitempty" json:"last_seen_online_at,omitempty"`
+	PortScanStartedAt *time.Time      `bson:"port_scan_started_at,omitempty" json:"port_scan_started_at,omitempty"`
+	PortScanEndedAt   *time.Time      `bson:"port_scan_ended_at,omitempty" json:"port_scan_ended_at,omitempty"`
+	WebScanEndedAt    *time.Time      `bson:"web_scan_ended_at,omitempty" json:"web_scan_ended_at,omitempty"`
+	IsFavorite        bool            `bson:"is_favorite" json:"is_favorite"`
+	Ignored           bool            `bson:"ignored" json:"ignored"`
+	Addressing        Addressing      `bson:"addressing,omitempty" json:"addressing,omitempty"`
 }
 
 func (d *Device) HasIPv6() bool {
