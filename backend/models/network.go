@@ -26,6 +26,7 @@ type Network struct {
 	LastScannedAt *time.Time     `bson:"last_scanned_at" json:"last_scanned_at"`
 	DeviceCount   int            `bson:"device_count" json:"device_count"`
 	Ranges        []NetworkRange `bson:"ranges,omitempty" json:"ranges"`
+	StaticRanges  []string       `bson:"static_ranges,omitempty" json:"static_ranges,omitempty"`
 	CreatedAt     time.Time      `bson:"created_at" json:"created_at"`
 	UpdatedAt     time.Time      `bson:"updated_at" json:"updated_at"`
 }
@@ -67,6 +68,45 @@ func ValidateNetworkRanges(cidrs []string) error {
 		}
 	}
 	return nil
+}
+
+// ValidateStaticRanges validates a set of CIDR strings intended for a
+// network's static-address ranges. Unlike ValidateNetworkRanges, an empty
+// set is valid (it just means no static ranges are defined).
+func ValidateStaticRanges(cidrs []string) error {
+	for _, cidr := range cidrs {
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			return fmt.Errorf("invalid static range %q: %w", cidr, err)
+		}
+	}
+	return nil
+}
+
+// AddressingForIP derives a Device's Addressing from this network's
+// StaticRanges: static if the IP falls inside one of them, dhcp if ranges
+// are configured but the IP falls outside all of them, and unknown if no
+// static ranges are configured at all.
+func (n *Network) AddressingForIP(ip string) Addressing {
+	if len(n.StaticRanges) == 0 {
+		return AddressingUnknown
+	}
+
+	testIP := net.ParseIP(ip)
+	if testIP == nil {
+		return AddressingUnknown
+	}
+
+	for _, cidr := range n.StaticRanges {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			continue
+		}
+		if ipNet.Contains(testIP) {
+			return AddressingStatic
+		}
+	}
+
+	return AddressingDHCP
 }
 
 func (n *Network) IsIPv4Enabled() bool {

@@ -22,6 +22,8 @@
     };
 
     var RISKY_PORTS = ['21', '23', '445', '3389', '5900', '9100'];
+    var ADDRESSING_LABELS = { '': 'UNKNOWN', 'static': 'STATIC', 'dhcp': 'DHCP' };
+    var ADDRESSING_CYCLE = { '': 'static', 'static': 'dhcp', 'dhcp': '' };
 
     function onDevices(fn) {
         state.listeners.push(fn);
@@ -59,6 +61,10 @@
         return t.toUpperCase();
     }
 
+    function addressingLabel(addressing) {
+        return ADDRESSING_LABELS[addressing || ''] || 'UNKNOWN';
+    }
+
     function portsLabel(device) {
         var open = RC.openPorts(device);
         if (!open.length) return '—';
@@ -73,7 +79,9 @@
 
         return '<div class="rc-devices__row' + selected + '" data-device-id="' + RC.esc(device.id) + '">' +
             '<span class="rc-cell--addr" style="color:' + color + '">' +
-                '<span class="rc-dot" style="background:' + color + '"></span>' + RC.esc(device.ipv4 || '—') +
+                '<span class="rc-dot" style="background:' + color + '"></span>' +
+                (device.is_favorite ? '<span title="Favorite" style="color:var(--rc-amber)">★ </span>' : '') +
+                RC.esc(device.ipv4 || '—') +
             '</span>' +
             '<span class="rc-cell--host">' + RC.esc(RC.deviceName(device) || '—') + '</span>' +
             '<span class="rc-cell--vendor">' + RC.esc(device.vendor || '—') + '</span>' +
@@ -165,15 +173,80 @@
         RC.text('rc-d-ip', device.ipv4 || '—');
         RC.text('rc-d-sub', [RC.deviceName(device) || 'no hostname', device.vendor || 'unknown vendor'].join(' · '));
 
+        syncFlagButtons(device);
         syncTabs();
 
         var body = RC.el('rc-d-body');
         if (!body) return;
 
-        if (state.tab === 'overview') RC.render(body, overviewHTML(device));
+        if (state.tab === 'overview') {
+            RC.render(body, overviewHTML(device));
+            bindAddressingCycle(device);
+        }
         else if (state.tab === 'ports') RC.render(body, portsHTML(device));
         else if (state.tab === 'history') renderHistory(device);
         else if (state.tab === 'notes') renderNotes(device);
+    }
+
+    // Reflects is_favorite/ignored on the two drawer-head flag buttons —
+    // same text/color-swap pattern console.js uses for the SHOW OFFLINE toggle.
+    function syncFlagButtons(device) {
+        var favorite = RC.el('rc-d-favorite');
+        if (favorite) {
+            favorite.textContent = device.is_favorite ? '★' : '☆';
+            favorite.style.color = device.is_favorite ? 'var(--rc-amber)' : '';
+        }
+        var ignore = RC.el('rc-d-ignore');
+        if (ignore) {
+            ignore.style.color = device.ignored ? 'var(--rc-red)' : '';
+            ignore.style.opacity = device.ignored ? '1' : '.5';
+        }
+    }
+
+    function toggleFavorite() {
+        if (!state.detail) return;
+        var device = state.detail;
+        RC.sendJSON('PUT', '/api/devices/' + encodeURIComponent(device.id), {
+            is_favorite: !device.is_favorite
+        }).then(function () {
+            device.is_favorite = !device.is_favorite;
+            syncFlagButtons(device);
+            loadDevices();
+        }).catch(function (err) {
+            console.error('Failed to toggle favorite:', err);
+        });
+    }
+
+    function toggleIgnore() {
+        if (!state.detail) return;
+        var device = state.detail;
+        RC.sendJSON('PUT', '/api/devices/' + encodeURIComponent(device.id), {
+            ignored: !device.ignored
+        }).then(function () {
+            device.ignored = !device.ignored;
+            syncFlagButtons(device);
+            loadDevices();
+        }).catch(function (err) {
+            console.error('Failed to toggle ignore:', err);
+        });
+    }
+
+    function bindAddressingCycle(device) {
+        var el = RC.el('rc-d-addressing');
+        if (!el) return;
+
+        el.addEventListener('click', function () {
+            var next = ADDRESSING_CYCLE[device.addressing || ''];
+            RC.sendJSON('PUT', '/api/devices/' + encodeURIComponent(device.id), {
+                addressing: next
+            }).then(function () {
+                device.addressing = next;
+                el.textContent = addressingLabel(next);
+                loadDevices();
+            }).catch(function (err) {
+                console.error('Failed to update addressing:', err);
+            });
+        });
     }
 
     function overviewHTML(device) {
@@ -192,7 +265,10 @@
 
         var html = '<dl class="rc-kv">' + rows.map(function (r) {
             return '<dt>' + RC.esc(r[0]) + '</dt><dd>' + RC.esc(r[1]) + '</dd>';
-        }).join('') + '</dl>';
+        }).join('') +
+            '<dt>ADDRESSING</dt><dd><span id="rc-d-addressing" style="cursor:pointer;border-bottom:1px dotted var(--rc-text-4)" title="Click to change">' +
+                RC.esc(addressingLabel(device.addressing)) + '</span></dd>' +
+        '</dl>';
 
         html += '<div class="rc-section"><span>OPEN PORTS</span><span style="color:var(--rc-text-5)">' +
             open.length + ' FOUND</span></div>';
@@ -433,6 +509,12 @@
     function bindDrawer() {
         var close = RC.el('rc-d-close');
         if (close) close.addEventListener('click', closeDrawer);
+
+        var favorite = RC.el('rc-d-favorite');
+        if (favorite) favorite.addEventListener('click', toggleFavorite);
+
+        var ignore = RC.el('rc-d-ignore');
+        if (ignore) ignore.addEventListener('click', toggleIgnore);
 
         var tabs = RC.el('rc-d-tabs');
         if (tabs) {

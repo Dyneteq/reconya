@@ -225,6 +225,42 @@ func TestHostUnreachable(t *testing.T) {
 	})
 }
 
+func TestIgnoredDevicesNeverFireStatefulRules(t *testing.T) {
+	t.Run("unidentified_host", func(t *testing.T) {
+		d := &models.Device{
+			ID: "d1", IPv4: "10.20.2.83", NetworkID: "net-1", Ignored: true,
+			Status: models.DeviceStatusOnline,
+			MAC:    ptr("9A:3F:C1:07:B4:5E"),
+		}
+		assert.Empty(t, findByRule(EvaluateStateful(input(d)), RuleUnidentifiedHost))
+	})
+
+	t.Run("duplicate_mac", func(t *testing.T) {
+		mac := ptr("AA:BB:CC:DD:EE:FF")
+		a := &models.Device{ID: "d1", IPv4: "10.20.3.19", NetworkID: "net-1", Status: models.DeviceStatusOnline, MAC: mac, Ignored: true}
+		b := &models.Device{ID: "d2", IPv4: "10.20.3.20", NetworkID: "net-1", Status: models.DeviceStatusOnline, MAC: mac, Ignored: true}
+		assert.Empty(t, findByRule(EvaluateStateful(input(a, b)), RuleDuplicateMAC))
+	})
+
+	t.Run("risky_port", func(t *testing.T) {
+		d := &models.Device{
+			ID: "d1", IPv4: "10.20.3.19", NetworkID: "net-1", Ignored: true,
+			Status: models.DeviceStatusOnline,
+			Ports:  []models.Port{{Number: "9100", Protocol: "tcp", State: "open", Service: "jetdirect"}},
+		}
+		assert.Empty(t, findByRule(EvaluateStateful(input(d)), RuleRiskyPort))
+	})
+
+	t.Run("host_unreachable", func(t *testing.T) {
+		d := &models.Device{
+			ID: "d1", IPv4: "10.20.3.41", NetworkID: "net-1", Ignored: true,
+			Status:           models.DeviceStatusOffline,
+			LastSeenOnlineAt: at(baseNow.Add(-8 * time.Hour)),
+		}
+		assert.Empty(t, findByRule(EvaluateStateful(input(d)), RuleHostUnreachable))
+	})
+}
+
 func TestEvaluateStatefulIsStableAndSkipsNils(t *testing.T) {
 	in := input(
 		nil,

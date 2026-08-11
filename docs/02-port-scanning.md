@@ -8,8 +8,8 @@ Per-device port scanning and the web-service/screenshot capture that follows it.
 
 **Two trigger paths, with different guarantees:**
 
-- **Automatic**, after a ping sweep: for each newly-processed device, if `DeviceService.EligibleForPortScan` returns true, the scan runs as a background goroutine.
-- **Manual**, via the console's RESCAN HOST button (`POST /api/devices/{id}/rescan`): runs the scan unconditionally, **bypassing the eligibility/cooldown check entirely**. A manual rescan always fires regardless of how recently the device was last scanned.
+- **Automatic**, after a ping sweep: for each newly-processed device, if `DeviceService.EligibleForPortScan` returns true, the scan runs as a background goroutine. `EligibleForPortScan` also returns `false` unconditionally for a device with `Ignored == true` (see [01-device-identification.md](01-device-identification.md#curation-flags-favorite--ignore--addressing)), independent of the cooldown check below, an ignored device is never auto-port-scanned.
+- **Manual**, via the console's RESCAN HOST button (`POST /api/devices/{id}/rescan`): runs the scan unconditionally, **bypassing the eligibility/cooldown check entirely**. A manual rescan always fires regardless of how recently the device was last scanned, or whether it's ignored.
 
 Scanning itself is a pure-Go TCP connect scan (`backend/internal/scanner`, no `nmap` dependency), up to 100 concurrent workers, 500ms dial timeout per port. Every open port gets a service label from a static ~130-entry port-to-name table, applied unconditionally, it's a lookup table, not a live probe. A smaller hardcoded subset of ports (21, 22, 23, 25, 80, 110, 143, 443, 587, 993, 995, 3306, 5432, 6379, 8080) additionally gets a banner grab (HTTP HEAD for the HTTP-ish ports, raw read otherwise; TLS ports like 443/8443 are explicitly skipped, grabbing a TLS banner would need a handshake this scanner doesn't implement).
 

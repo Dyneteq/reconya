@@ -29,15 +29,15 @@ func (r *SQLiteNetworkRepository) Close() error {
 
 // FindByID finds a network by ID
 func (r *SQLiteNetworkRepository) FindByID(ctx context.Context, id string) (*models.Network, error) {
-	query := `SELECT id, name, cidr, description, status, last_scanned_at, device_count, created_at, updated_at FROM networks WHERE id = ?`
+	query := `SELECT id, name, cidr, description, status, last_scanned_at, device_count, created_at, updated_at, static_ranges FROM networks WHERE id = ?`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var network models.Network
-	var name, description, status sql.NullString
+	var name, description, status, staticRanges sql.NullString
 	var lastScannedAt, createdAt, updatedAt sql.NullTime
 	var deviceCount sql.NullInt64
 
-	err := row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt)
+	err := row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt, &staticRanges)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
@@ -66,6 +66,7 @@ func (r *SQLiteNetworkRepository) FindByID(ctx context.Context, id string) (*mod
 	if updatedAt.Valid {
 		network.UpdatedAt = updatedAt.Time
 	}
+	network.StaticRanges = unmarshalStringSlice(staticRanges)
 
 	ranges, err := r.loadRanges(ctx, network.ID)
 	if err != nil {
@@ -87,15 +88,15 @@ func (r *SQLiteNetworkRepository) FindByCIDR(ctx context.Context, cidr string) (
 		return nil, fmt.Errorf("error looking up network range by cidr: %w", err)
 	}
 
-	query := `SELECT id, name, cidr, description, status, last_scanned_at, device_count, created_at, updated_at FROM networks WHERE cidr = ?`
+	query := `SELECT id, name, cidr, description, status, last_scanned_at, device_count, created_at, updated_at, static_ranges FROM networks WHERE cidr = ?`
 	row := r.db.QueryRowContext(ctx, query, cidr)
 
 	var network models.Network
-	var name, description, status sql.NullString
+	var name, description, status, staticRanges sql.NullString
 	var lastScannedAt, createdAt, updatedAt sql.NullTime
 	var deviceCount sql.NullInt64
 
-	err = row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt)
+	err = row.Scan(&network.ID, &name, &network.CIDR, &description, &status, &lastScannedAt, &deviceCount, &createdAt, &updatedAt, &staticRanges)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
@@ -124,6 +125,7 @@ func (r *SQLiteNetworkRepository) FindByCIDR(ctx context.Context, cidr string) (
 	if updatedAt.Valid {
 		network.UpdatedAt = updatedAt.Time
 	}
+	network.StaticRanges = unmarshalStringSlice(staticRanges)
 
 	ranges, err := r.loadRanges(ctx, network.ID)
 	if err != nil {
@@ -136,15 +138,16 @@ func (r *SQLiteNetworkRepository) FindByCIDR(ctx context.Context, cidr string) (
 
 // FindAll finds all networks
 func (r *SQLiteNetworkRepository) FindAll(ctx context.Context) ([]*models.Network, error) {
-	query := `SELECT id, 
-		COALESCE(name, '') as name, 
-		cidr, 
-		COALESCE(description, '') as description, 
-		COALESCE(status, 'active') as status, 
-		last_scanned_at, 
-		COALESCE(device_count, 0) as device_count, 
-		COALESCE(created_at, datetime('now')) as created_at, 
-		COALESCE(updated_at, datetime('now')) as updated_at 
+	query := `SELECT id,
+		COALESCE(name, '') as name,
+		cidr,
+		COALESCE(description, '') as description,
+		COALESCE(status, 'active') as status,
+		last_scanned_at,
+		COALESCE(device_count, 0) as device_count,
+		COALESCE(created_at, datetime('now')) as created_at,
+		COALESCE(updated_at, datetime('now')) as updated_at,
+		static_ranges
 	FROM networks ORDER BY created_at DESC`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
@@ -157,11 +160,13 @@ func (r *SQLiteNetworkRepository) FindAll(ctx context.Context) ([]*models.Networ
 		var network models.Network
 		var lastScannedAt sql.NullTime
 		var createdAtStr, updatedAtStr string
+		var staticRanges sql.NullString
 
-		err := rows.Scan(&network.ID, &network.Name, &network.CIDR, &network.Description, &network.Status, &lastScannedAt, &network.DeviceCount, &createdAtStr, &updatedAtStr)
+		err := rows.Scan(&network.ID, &network.Name, &network.CIDR, &network.Description, &network.Status, &lastScannedAt, &network.DeviceCount, &createdAtStr, &updatedAtStr, &staticRanges)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning network: %w", err)
 		}
+		network.StaticRanges = unmarshalStringSlice(staticRanges)
 
 		if lastScannedAt.Valid {
 			network.LastScannedAt = &lastScannedAt.Time
@@ -290,17 +295,19 @@ func (r *SQLiteNetworkRepository) CreateOrUpdate(ctx context.Context, network *m
 	}
 	defer tx.Rollback()
 
+	staticRangesJSON := marshalStringSlice(network.StaticRanges)
+
 	if isNew {
 		_, err = tx.ExecContext(ctx,
-			`INSERT INTO networks (id, name, cidr, description, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			network.ID, network.Name, network.CIDR, network.Description, network.Status, network.CreatedAt, network.UpdatedAt)
+			`INSERT INTO networks (id, name, cidr, description, status, created_at, updated_at, static_ranges) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			network.ID, network.Name, network.CIDR, network.Description, network.Status, network.CreatedAt, network.UpdatedAt, staticRangesJSON)
 		if err != nil {
 			return nil, fmt.Errorf("error inserting network: %w", err)
 		}
 	} else {
 		_, err = tx.ExecContext(ctx,
-			`UPDATE networks SET name = ?, cidr = ?, description = ?, status = ?, updated_at = ? WHERE id = ?`,
-			network.Name, network.CIDR, network.Description, network.Status, network.UpdatedAt, network.ID)
+			`UPDATE networks SET name = ?, cidr = ?, description = ?, status = ?, updated_at = ?, static_ranges = ? WHERE id = ?`,
+			network.Name, network.CIDR, network.Description, network.Status, network.UpdatedAt, staticRangesJSON, network.ID)
 		if err != nil {
 			return nil, fmt.Errorf("error updating network: %w", err)
 		}
@@ -466,8 +473,9 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	query := `
 	SELECT id, name, comment, ipv4, ipv6_link_local, ipv6_unique_local, ipv6_global, ipv6_addresses,
 	       mac, vendor, device_type, os_name, os_version, os_family, os_confidence,
-	       status, network_id, hostname, created_at, updated_at, last_seen_online_at, 
-	       port_scan_started_at, port_scan_ended_at, web_scan_ended_at
+	       status, network_id, hostname, created_at, updated_at, last_seen_online_at,
+	       port_scan_started_at, port_scan_ended_at, web_scan_ended_at,
+	       is_favorite, ignored, addressing
 	FROM devices WHERE id = ?`
 
 	row := tx.QueryRowContext(ctx, query, id)
@@ -484,6 +492,8 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 	var osConfidence sql.NullInt64
 	var networkID sql.NullString
 	var lastSeenOnlineAt, portScanStartedAt, portScanEndedAt, webScanEndedAt sql.NullTime
+	var isFavorite, ignored int
+	var addressing sql.NullString
 
 	err = row.Scan(
 		&device.ID, &device.Name, &comment, &device.IPv4,
@@ -492,12 +502,18 @@ func (r *SQLiteDeviceRepository) FindByID(ctx context.Context, id string) (*mode
 		&osName, &osVersion, &osFamily, &osConfidence,
 		&device.Status, &networkID, &hostname, &device.CreatedAt, &device.UpdatedAt,
 		&lastSeenOnlineAt, &portScanStartedAt, &portScanEndedAt, &webScanEndedAt,
+		&isFavorite, &ignored, &addressing,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("error scanning device: %w", err)
+	}
+	device.IsFavorite = isFavorite != 0
+	device.Ignored = ignored != 0
+	if addressing.Valid {
+		device.Addressing = models.Addressing(addressing.String)
 	}
 
 	// Set the network ID
@@ -743,11 +759,12 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 		}
 
 		query := `
-		UPDATE devices SET name = ?, comment = ?, mac = ?, vendor = ?, device_type = ?, 
+		UPDATE devices SET name = ?, comment = ?, mac = ?, vendor = ?, device_type = ?,
 			os_name = ?, os_version = ?, os_family = ?, os_confidence = ?,
-			status = ?, network_id = ?, hostname = ?, updated_at = ?, last_seen_online_at = ?, 
+			status = ?, network_id = ?, hostname = ?, updated_at = ?, last_seen_online_at = ?,
 			port_scan_started_at = ?, port_scan_ended_at = ?, web_scan_ended_at = ?,
-			ipv6_link_local = ?, ipv6_unique_local = ?, ipv6_global = ?, ipv6_addresses = ?
+			ipv6_link_local = ?, ipv6_unique_local = ?, ipv6_global = ?, ipv6_addresses = ?,
+			is_favorite = ?, ignored = ?, addressing = ?
 		WHERE id = ?`
 
 		// Prepare OS fields
@@ -783,6 +800,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 			device.UpdatedAt, nullableTime(device.LastSeenOnlineAt),
 			nullableTime(device.PortScanStartedAt), nullableTime(device.PortScanEndedAt), nullableTime(device.WebScanEndedAt),
 			nullableString(device.IPv6LinkLocal), nullableString(device.IPv6UniqueLocal), nullableString(device.IPv6Global), ipv6AddressesJSON,
+			device.IsFavorite, device.Ignored, string(device.Addressing),
 			device.ID,
 		)
 		if err != nil {
@@ -812,12 +830,13 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 		device.CreatedAt = now
 
 		query := `
-		INSERT INTO devices (id, name, comment, ipv4, mac, vendor, device_type, 
+		INSERT INTO devices (id, name, comment, ipv4, mac, vendor, device_type,
 			os_name, os_version, os_family, os_confidence,
-			status, network_id, hostname, created_at, updated_at, last_seen_online_at, 
+			status, network_id, hostname, created_at, updated_at, last_seen_online_at,
 			port_scan_started_at, port_scan_ended_at, web_scan_ended_at,
-			ipv6_link_local, ipv6_unique_local, ipv6_global, ipv6_addresses)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			ipv6_link_local, ipv6_unique_local, ipv6_global, ipv6_addresses,
+			is_favorite, ignored, addressing)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 		// Prepare OS fields for insert
 		var osName, osVersion, osFamily sql.NullString
@@ -852,6 +871,7 @@ func (r *SQLiteDeviceRepository) CreateOrUpdate(ctx context.Context, device *mod
 			device.CreatedAt, device.UpdatedAt, nullableTime(device.LastSeenOnlineAt),
 			nullableTime(device.PortScanStartedAt), nullableTime(device.PortScanEndedAt), nullableTime(device.WebScanEndedAt),
 			nullableString(device.IPv6LinkLocal), nullableString(device.IPv6UniqueLocal), nullableString(device.IPv6Global), ipv6AddressesJSON,
+			device.IsFavorite, device.Ignored, string(device.Addressing),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error inserting device: %w", err)
@@ -1312,6 +1332,32 @@ func nullableInt64(i *int64) sql.NullInt64 {
 		return sql.NullInt64{}
 	}
 	return sql.NullInt64{Int64: *i, Valid: true}
+}
+
+// marshalStringSlice JSON-encodes a string slice for storage in a TEXT
+// column, same convention as devices.ipv6_addresses. An empty slice is
+// stored as NULL rather than "[]".
+func marshalStringSlice(values []string) sql.NullString {
+	if len(values) == 0 {
+		return sql.NullString{}
+	}
+	if jsonBytes, err := json.Marshal(values); err == nil {
+		return sql.NullString{String: string(jsonBytes), Valid: true}
+	}
+	return sql.NullString{}
+}
+
+// unmarshalStringSlice decodes a JSON-array TEXT column back into a string
+// slice, returning nil if the column is empty or invalid.
+func unmarshalStringSlice(value sql.NullString) []string {
+	if !value.Valid || value.String == "" {
+		return nil
+	}
+	var values []string
+	if err := json.Unmarshal([]byte(value.String), &values); err != nil {
+		return nil
+	}
+	return values
 }
 
 // SQLiteSettingsRepository implements the SettingsRepository interface for SQLite

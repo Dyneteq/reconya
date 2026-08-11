@@ -54,7 +54,7 @@ func (h *DeviceHandlers) UpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedDevice, err := h.Service.UpdateDevice(deviceID, updateData.Name, updateData.Comment)
+	updatedDevice, err := h.Service.UpdateDevice(deviceID, updateData.Name, updateData.Comment, nil, nil, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -109,7 +109,7 @@ func evalUnidentifiedHosts(in EvalInput) []Finding {
 	var findings []Finding
 
 	for _, d := range in.Devices {
-		if d == nil || d.Status == models.DeviceStatusOffline {
+		if d == nil || d.Status == models.DeviceStatusOffline || d.Ignored {
 			continue
 		}
 		if hasText(d.Vendor) || hasText(d.Hostname) || d.Name != "" {
@@ -150,7 +150,7 @@ func evalDuplicateMACs(in EvalInput) []Finding {
 	byMAC := map[string][]*models.Device{}
 
 	for _, d := range in.Devices {
-		if d == nil || d.MAC == nil || d.Status == models.DeviceStatusOffline {
+		if d == nil || d.MAC == nil || d.Status == models.DeviceStatusOffline || d.Ignored {
 			continue
 		}
 		mac := normaliseMAC(*d.MAC)
@@ -199,7 +199,7 @@ func evalRiskyPorts(in EvalInput) []Finding {
 	var findings []Finding
 
 	for _, d := range in.Devices {
-		if d == nil || d.Status == models.DeviceStatusOffline {
+		if d == nil || d.Status == models.DeviceStatusOffline || d.Ignored {
 			continue
 		}
 
@@ -238,7 +238,7 @@ func evalHostUnreachable(in EvalInput) []Finding {
 	var findings []Finding
 
 	for _, d := range in.Devices {
-		if d == nil || d.Status != models.DeviceStatusOffline || d.LastSeenOnlineAt == nil {
+		if d == nil || d.Status != models.DeviceStatusOffline || d.LastSeenOnlineAt == nil || d.Ignored {
 			continue
 		}
 

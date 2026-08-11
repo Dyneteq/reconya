@@ -201,6 +201,7 @@
         every(POLL.events, loadEvents);
 
         syncOfflineToggle();
+        syncIgnoredToggle();
     }
 
     function renderModeMenu() {
@@ -335,9 +336,15 @@
 
     function visibleDevices(state) {
         var devices = window.RCSegments.filterDevices(state.devices);
-        if (window.RCMap.showOffline()) return devices;
+        var showOffline = window.RCMap.showOffline();
+        var showIgnored = window.RCMap.showIgnored();
+
         return devices.filter(function (d) {
-            return (d.status || '').toLowerCase() !== 'offline';
+            // Favorite devices stay visible even when offline and the global
+            // toggle is off.
+            if (!showOffline && !d.is_favorite && (d.status || '').toLowerCase() === 'offline') return false;
+            if (!showIgnored && d.ignored) return false;
+            return true;
         });
     }
 
@@ -375,6 +382,18 @@
                 renderDock(state);
             });
         }
+
+        var ignoredToggle = RC.el('rc-ignored-toggle');
+        if (ignoredToggle) {
+            ignoredToggle.addEventListener('click', function () {
+                window.RCMap.setShowIgnored(!window.RCMap.showIgnored());
+                syncIgnoredToggle();
+
+                var state = window.RCDevices.state();
+                window.RCMap.setData(state.devices, state.networks);
+                renderDock(state);
+            });
+        }
     }
 
     function syncOfflineToggle() {
@@ -383,6 +402,15 @@
         if (!toggle) return;
 
         toggle.textContent = 'SHOW OFFLINE: ' + (on ? 'ON' : 'OFF');
+        toggle.style.color = on ? 'var(--rc-accent)' : 'var(--rc-text-4)';
+    }
+
+    function syncIgnoredToggle() {
+        var on = window.RCMap.showIgnored();
+        var toggle = RC.el('rc-ignored-toggle');
+        if (!toggle) return;
+
+        toggle.textContent = 'SHOW IGNORED: ' + (on ? 'ON' : 'OFF');
         toggle.style.color = on ? 'var(--rc-accent)' : 'var(--rc-text-4)';
     }
 

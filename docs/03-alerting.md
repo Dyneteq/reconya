@@ -14,6 +14,8 @@ Alert rules run in `backend/internal/alert/`. Pure detection logic (`rules.go`) 
 
 Six rule IDs: `new_device`, `unidentified_host`, `duplicate_mac`, `new_port`, `risky_port`, `host_unreachable`. Four of them (`unidentified_host`, `duplicate_mac`, `risky_port`, `host_unreachable`) are "stateful" and re-evaluated from scratch on every pass; `new_device` and `new_port` are event-triggered one-shots. See [database.md](database.md#alerts-upsert-pattern) for why this split matters for the dedupe key.
 
+**A device with `Ignored == true` never fires any of the six rules** (see [01-device-identification.md](01-device-identification.md#curation-flags-favorite--ignore--addressing)): all four stateful `eval*` functions skip it in their per-device loop, and `scan.ScanManager` skips both `RecordNewDevice` and `RecordNewPorts` for it. The device is still swept and its status still updates, it just never generates a finding.
+
 ### unidentified_host
 
 Fires when a *non-offline* device has **all** of: no vendor string, no hostname, no user-assigned name, zero open ports, **and** a locally-administered (randomized) MAC bit set. A randomized MAC alone is normal (many devices randomize for privacy) and is not treated as suspicious by itself; it only counts alongside a total absence of any other identifying signal. Severity `critical`. Dedupe key: `unidentified_host:<device_id>`.

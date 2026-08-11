@@ -459,6 +459,29 @@ func InitializeSchema(db *sql.DB) error {
 		return fmt.Errorf("failed to backfill network_ranges: %w", err)
 	}
 
+	// Per-device curation flags (issue #134): favorite/always-show-online,
+	// ignore (skip port scans and alerts), and addressing annotation.
+	_, err = db.Exec(`ALTER TABLE devices ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0`)
+	if err != nil {
+		log.Printf("Note: devices.is_favorite column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`ALTER TABLE devices ADD COLUMN ignored INTEGER NOT NULL DEFAULT 0`)
+	if err != nil {
+		log.Printf("Note: devices.ignored column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`ALTER TABLE devices ADD COLUMN addressing TEXT NOT NULL DEFAULT ''`)
+	if err != nil {
+		log.Printf("Note: devices.addressing column might already exist: %v", err)
+	}
+
+	// Per-network static IP ranges, used to derive each device's addressing.
+	_, err = db.Exec(`ALTER TABLE networks ADD COLUMN static_ranges TEXT`)
+	if err != nil {
+		log.Printf("Note: networks.static_ranges column might already exist: %v", err)
+	}
+
 	log.Println("Database schema initialized successfully")
 	return nil
 }

@@ -88,3 +88,32 @@ func TestValidateNetworkRanges(t *testing.T) {
 	assert.Error(t, ValidateNetworkRanges([]string{"not-a-cidr"}))
 	assert.Error(t, ValidateNetworkRanges([]string{"10.0.1.0/24", "garbage"}))
 }
+
+func TestValidateStaticRanges(t *testing.T) {
+	assert.NoError(t, ValidateStaticRanges(nil), "no static ranges configured is valid")
+	assert.NoError(t, ValidateStaticRanges([]string{}))
+	assert.NoError(t, ValidateStaticRanges([]string{"10.0.1.0/28"}))
+	assert.Error(t, ValidateStaticRanges([]string{"not-a-cidr"}))
+}
+
+func TestNetwork_AddressingForIP(t *testing.T) {
+	t.Run("no static ranges configured", func(t *testing.T) {
+		n := &Network{}
+		assert.Equal(t, AddressingUnknown, n.AddressingForIP("10.0.1.5"))
+	})
+
+	t.Run("IP inside a static range", func(t *testing.T) {
+		n := &Network{StaticRanges: []string{"10.0.1.0/28"}}
+		assert.Equal(t, AddressingStatic, n.AddressingForIP("10.0.1.5"))
+	})
+
+	t.Run("IP outside all configured ranges is dhcp", func(t *testing.T) {
+		n := &Network{StaticRanges: []string{"10.0.1.0/28"}}
+		assert.Equal(t, AddressingDHCP, n.AddressingForIP("10.0.1.200"))
+	})
+
+	t.Run("unparseable IP is unknown", func(t *testing.T) {
+		n := &Network{StaticRanges: []string{"10.0.1.0/28"}}
+		assert.Equal(t, AddressingUnknown, n.AddressingForIP("not-an-ip"))
+	})
+}

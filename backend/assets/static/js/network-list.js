@@ -99,8 +99,25 @@
                 '<label for="rc-net-desc">Description</label>' +
                 '<input id="rc-net-desc" value="' + RC.esc(network.description || '') + '" placeholder="optional">' +
             '</div>' +
+            '<div class="rc-field">' +
+                '<label for="rc-net-static-ranges">Static ranges</label>' +
+                '<textarea id="rc-net-static-ranges" rows="3" placeholder="192.168.1.1/28 (one CIDR per line)">' +
+                    RC.esc((network.static_ranges || []).join('\n')) +
+                '</textarea>' +
+                '<div style="font-size:11px;color:var(--rc-text-4);margin-top:2px">' +
+                    'Devices inside these ranges are annotated STATIC; everything else in this network is DHCP.' +
+                '</div>' +
+            '</div>' +
             '<div id="rc-net-error" style="color:var(--rc-red);font-size:11px"></div>' +
         '</div>';
+    }
+
+    function collectStaticRanges() {
+        var field = RC.el('rc-net-static-ranges');
+        if (!field) return [];
+        return field.value.split('\n')
+            .map(function (line) { return line.trim(); })
+            .filter(function (line) { return line !== ''; });
     }
 
     function bindRangeRows() {
@@ -154,6 +171,7 @@
                 body.append('description', description);
                 ranges.cidrs.forEach(function (c) { body.append('cidr', c); });
                 ranges.labels.forEach(function (l) { body.append('cidr_label', l); });
+                collectStaticRanges().forEach(function (r) { body.append('static_range', r); });
 
                 fetch(url, {
                     method: network ? 'PUT' : 'POST',

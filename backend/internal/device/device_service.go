@@ -125,6 +125,22 @@ func (s *DeviceService) CreateOrUpdateWithDelta(device *models.Device) (*models.
 		if (device.Comment == nil || *device.Comment == "") && existingDevice.Comment != nil && *existingDevice.Comment != "" {
 			device.Comment = existingDevice.Comment
 		}
+
+		// Curation flags (issue #134) are user-set and a fresh sweep result never
+		// carries them; always carry the existing values forward.
+		device.IsFavorite = existingDevice.IsFavorite
+		device.Ignored = existingDevice.Ignored
+
+		// Addressing: a manual override always wins. Otherwise re-derive it below
+		// from the network's static ranges, since ranges may have changed since
+		// the last sweep.
+		if existingDevice.Addressing != models.AddressingUnknown {
+			device.Addressing = existingDevice.Addressing
+		} else {
+			device.Addressing = network.AddressingForIP(device.IPv4)
+		}
+	} else {
+		device.Addressing = network.AddressingForIP(device.IPv4)
 	}
 
 	// Leave device name empty if not explicitly set
@@ -188,6 +204,10 @@ func (s *DeviceService) setTimestamps(device, existingDevice *models.Device, cur
 func (s *DeviceService) EligibleForPortScan(device *models.Device) bool {
 	if device == nil {
 		log.Println("Warning: Attempted to check port scan eligibility for a nil device")
+		return false
+	}
+
+	if device.Ignored {
 		return false
 	}
 
@@ -501,8 +521,11 @@ func (s *DeviceService) UpdateDeviceStatuses() ([]db.DeviceStatusChange, error) 
 	return s.dbManager.UpdateDeviceStatuses(s.repository, ctx, 3*time.Minute)
 }
 
-// PerformDeviceFingerprinting analyzes device characteristics to determine type and OS
-func (s *DeviceService) UpdateDevice(deviceID string, name *string, comment *string) (*models.Device, error) {
+// UpdateDevice applies the given fields to a device. Each parameter is a
+// pointer so callers can distinguish "not provided" (nil, leave untouched)
+// from a provided zero value (false/""), which matters for IsFavorite/
+// Ignored/Addressing since those are meaningful at their zero value.
+func (s *DeviceService) UpdateDevice(deviceID string, name *string, comment *string, isFavorite *bool, ignored *bool, addressing *models.Addressing) (*models.Device, error) {
 	ctx := context.Background()
 
 	device, err := s.repository.FindByID(ctx, deviceID)
@@ -515,6 +538,15 @@ func (s *DeviceService) UpdateDevice(deviceID string, name *string, comment *str
 	}
 	if comment != nil {
 		device.Comment = comment
+	}
+	if isFavorite != nil {
+		device.IsFavorite = *isFavorite
+	}
+	if ignored != nil {
+		device.Ignored = *ignored
+	}
+	if addressing != nil {
+		device.Addressing = *addressing
 	}
 
 	updatedDevice, err := s.repository.CreateOrUpdate(ctx, device)

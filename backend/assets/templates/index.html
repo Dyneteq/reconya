@@ -244,6 +244,7 @@
                     <span class="rc-dock__meta" id="rc-dock-meta"></span>
                     <div class="rc-spacer"></div>
                     <span class="rc-dock__meta" id="rc-offline-toggle" style="cursor:pointer">SHOW OFFLINE: OFF</span>
+                    <span class="rc-dock__meta" id="rc-ignored-toggle" style="cursor:pointer">SHOW IGNORED: OFF</span>
                 </div>
                 <div class="rc-devices__head">
                     <span>ADDRESS</span><span>HOSTNAME</span><span>VENDOR</span><span>ROLE</span><span>PORTS</span><span class="rc-cell--right">SEEN</span>
@@ -280,6 +281,8 @@
                 <div class="rc-drawer__ip" id="rc-d-ip">—</div>
                 <div class="rc-drawer__sub" id="rc-d-sub">—</div>
             </div>
+            <span class="rc-close" id="rc-d-favorite" title="Favorite: keeps this host visible even when offline and hidden">☆</span>
+            <span class="rc-close" id="rc-d-ignore" title="Ignore: skip port scans and alerts for this host">🚫</span>
             <span class="rc-close" id="rc-d-close">✕</span>
         </div>
 
