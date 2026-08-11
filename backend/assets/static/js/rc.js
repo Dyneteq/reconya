@@ -164,6 +164,48 @@ window.RC = (function () {
         return (parseInt(hex.slice(0, 2), 16) & 0x02) !== 0;
     }
 
+    // ipToInt/ipInCidr/cidrSize are IPv4-only, matching network_ranges (IPv6
+    // networks stay single-prefix and don't use the ranges table).
+    function ipToInt(ip) {
+        var parts = String(ip || '').split('.');
+        if (parts.length !== 4) return null;
+        var n = 0;
+        for (var i = 0; i < 4; i++) {
+            var octet = Number(parts[i]);
+            if (isNaN(octet) || octet < 0 || octet > 255) return null;
+            n = (n << 8) | octet;
+        }
+        return n >>> 0;
+    }
+
+    function ipInCidr(ip, cidr) {
+        var parts = String(cidr || '').split('/');
+        if (parts.length !== 2) return false;
+
+        var base = ipToInt(parts[0]);
+        var prefix = Number(parts[1]);
+        var target = ipToInt(ip);
+        if (base === null || target === null || isNaN(prefix) || prefix < 0 || prefix > 32) return false;
+
+        if (prefix === 0) return true;
+        var mask = (0xFFFFFFFF << (32 - prefix)) >>> 0;
+        return (base & mask) === (target & mask);
+    }
+
+    // Usable host count (excludes network/broadcast addresses for /0-/30, as
+    // real allocatable capacity is what the Scan Plan panel wants to show).
+    function cidrSize(cidr) {
+        var parts = String(cidr || '').split('/');
+        if (parts.length !== 2) return 0;
+        var prefix = Number(parts[1]);
+        if (isNaN(prefix) || prefix < 0 || prefix > 32) return 0;
+
+        var hostBits = 32 - prefix;
+        if (hostBits === 0) return 1;
+        if (hostBits === 1) return 2;
+        return Math.pow(2, hostBits) - 2;
+    }
+
     // Small localStorage wrapper — private-mode browsers throw on write.
     var store = {
         get: function (key, fallback) {
@@ -216,6 +258,8 @@ window.RC = (function () {
         severityNames: severityNames,
         isInfra: isInfra,
         isUnidentified: isUnidentified,
+        ipInCidr: ipInCidr,
+        cidrSize: cidrSize,
         timeAgo: timeAgo,
         clockTime: clockTime,
         dateTime: dateTime,

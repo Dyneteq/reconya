@@ -23,17 +23,25 @@ func NewNetworkService(networkRepo db.NetworkRepository, cfg *config.Config, dbM
 	}
 }
 
-func (s *NetworkService) Create(name, cidr, description string) (*models.Network, error) {
+// Create creates a network owning one or more CIDR ranges. labels is optional
+// and, if provided, must be the same length as cidrs.
+func (s *NetworkService) Create(name string, cidrs []string, labels []string, description string) (*models.Network, error) {
+	if err := models.ValidateNetworkRanges(cidrs); err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
+	ranges := buildRanges(cidrs, labels, now)
 	network := &models.Network{
 		Name:        name,
-		CIDR:        cidr,
+		CIDR:        ranges[0].CIDR,
 		Description: description,
 		Status:      "active",
+		Ranges:      ranges,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	log.Printf("NetworkService.Create: Creating network with CIDR=%s, Name=%s", cidr, name)
+	log.Printf("NetworkService.Create: Creating network with %d range(s), Name=%s", len(cidrs), name)
 	result, err := s.dbManager.CreateOrUpdateNetwork(s.Repository, context.Background(), network)
 	if err != nil {
 		log.Printf("NetworkService.Create: Error from dbManager: %v", err)
@@ -43,10 +51,30 @@ func (s *NetworkService) Create(name, cidr, description string) (*models.Network
 	return result, nil
 }
 
+func buildRanges(cidrs []string, labels []string, now time.Time) []models.NetworkRange {
+	ranges := make([]models.NetworkRange, len(cidrs))
+	for i, cidr := range cidrs {
+		label := ""
+		if i < len(labels) {
+			label = labels[i]
+		}
+		ranges[i] = models.NetworkRange{
+			CIDR:      cidr,
+			Label:     label,
+			Active:    true,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+	}
+	return ranges
+}
+
+// FindOrCreate is used by network auto-discovery, which only ever deals with
+// a single detected subnet.
 func (s *NetworkService) FindOrCreate(cidr string) (*models.Network, error) {
 	network, err := s.Repository.FindByCIDR(context.Background(), cidr)
 	if err == db.ErrNotFound {
-		return s.Create("", cidr, "")
+		return s.Create("", []string{cidr}, nil, "")
 	}
 	if err != nil {
 		return nil, err
@@ -76,7 +104,6 @@ func (s *NetworkService) FindByCIDR(cidr string) (*models.Network, error) {
 	return network, nil
 }
 
-
 func (s *NetworkService) FindAll() ([]models.Network, error) {
 	log.Printf("NetworkService.FindAll: Fetching all networks")
 	networks, err := s.Repository.FindAll(context.Background())
@@ -84,7 +111,7 @@ func (s *NetworkService) FindAll() ([]models.Network, error) {
 		log.Printf("NetworkService.FindAll: Error from repository: %v", err)
 		return nil, err
 	}
-	
+
 	log.Printf("NetworkService.FindAll: Found %d networks", len(networks))
 	result := make([]models.Network, len(networks))
 	for i, network := range networks {
@@ -94,7 +121,14 @@ func (s *NetworkService) FindAll() ([]models.Network, error) {
 	return result, nil
 }
 
-func (s *NetworkService) Update(id, name, cidr, description string) (*models.Network, error) {
+// Update replaces a network's name/ranges/description. labels is optional
+// and, if provided, must be the same length as cidrs. Existing ranges whose
+// CIDR matches one in cidrs keep their id and last_scanned_at history.
+func (s *NetworkService) Update(id, name string, cidrs []string, labels []string, description string) (*models.Network, error) {
+	if err := models.ValidateNetworkRanges(cidrs); err != nil {
+		return nil, err
+	}
+
 	network, err := s.FindByID(id)
 	if err != nil {
 		return nil, err
@@ -102,13 +136,26 @@ func (s *NetworkService) Update(id, name, cidr, description string) (*models.Net
 	if network == nil {
 		return nil, db.ErrNotFound
 	}
-	
+
+	now := time.Now()
 	network.Name = name
-	network.CIDR = cidr
+	network.Ranges = buildRanges(cidrs, labels, now)
+	network.CIDR = network.Ranges[0].CIDR
 	network.Description = description
-	network.UpdatedAt = time.Now()
-	
+	network.UpdatedAt = now
+
 	return s.dbManager.CreateOrUpdateNetwork(s.Repository, context.Background(), network)
+}
+
+// SetRangeActive includes or excludes a range from future scans without
+// losing its scan history.
+func (s *NetworkService) SetRangeActive(rangeID string, active bool) error {
+	return s.Repository.SetRangeActive(context.Background(), rangeID, active)
+}
+
+// MarkRangeScanned records when a range was last swept.
+func (s *NetworkService) MarkRangeScanned(rangeID string, scannedAt time.Time) error {
+	return s.Repository.UpdateRangeLastScanned(context.Background(), rangeID, scannedAt)
 }
 
 func (s *NetworkService) Delete(id string) error {
@@ -117,13 +164,13 @@ func (s *NetworkService) Delete(id string) error {
 
 func (s *NetworkService) GetDeviceCount(networkID string) (int, error) {
 	log.Printf("NetworkService.GetDeviceCount: Counting devices for network %s", networkID)
-	
+
 	count, err := s.Repository.GetDeviceCount(context.Background(), networkID)
 	if err != nil {
 		log.Printf("NetworkService.GetDeviceCount: Error counting devices: %v", err)
 		return 0, err
 	}
-	
+
 	log.Printf("NetworkService.GetDeviceCount: Found %d devices for network %s", count, networkID)
 	return count, nil
 }

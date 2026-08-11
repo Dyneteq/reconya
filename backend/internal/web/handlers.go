@@ -70,7 +70,6 @@ type NetworkInfo struct {
 	OfflineDevices int
 }
 
-
 func NewWebHandler(
 	deviceService *device.DeviceService,
 	eventLogService *eventlog.EventLogService,
@@ -178,8 +177,6 @@ func (h *WebHandler) Index(w http.ResponseWriter, r *http.Request) {
 	h.ServePage("dashboard")(w, r)
 }
 
-
-
 func (h *WebHandler) Devices(w http.ResponseWriter, r *http.Request) {
 	h.ServePage("devices")(w, r)
 }
@@ -262,7 +259,6 @@ func (h *WebHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-
 func (h *WebHandler) APIDeviceModal(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	user := h.getUserFromSession(session)
@@ -289,7 +285,7 @@ func (h *WebHandler) APIDeviceModal(w http.ResponseWriter, r *http.Request) {
 	screenshotsEnabled := h.settingsService.AreScreenshotsEnabled(fmt.Sprintf("%d", user.ID))
 
 	// Debug logging for IPv6 fields
-	log.Printf("Device %s IPv6 data: LinkLocal=%v, UniqueLocal=%v, Global=%v, Addresses=%v", 
+	log.Printf("Device %s IPv6 data: LinkLocal=%v, UniqueLocal=%v, Global=%v, Addresses=%v",
 		device.ID, device.IPv6LinkLocal, device.IPv6UniqueLocal, device.IPv6Global, device.IPv6Addresses)
 
 	// Return JSON response
@@ -400,7 +396,6 @@ func (h *WebHandler) APIDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-
 func (h *WebHandler) APIPingInternet(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	if user := h.getUserFromSession(session); user == nil {
@@ -478,7 +473,6 @@ func (h *WebHandler) APIEventLogsTable(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
-
 
 // Helper methods
 func (h *WebHandler) getUserFromSession(session *sessions.Session) *models.User {
@@ -634,7 +628,7 @@ func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": "Unauthorized",
+			"error":   "Unauthorized",
 			"success": false,
 		})
 		return
@@ -646,7 +640,7 @@ func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": "Failed to retrieve devices",
+			"error":   "Failed to retrieve devices",
 			"success": false,
 		})
 		return
@@ -693,14 +687,14 @@ func (h *WebHandler) APIDeviceList(w http.ResponseWriter, r *http.Request) {
 		"screenshotsEnabled": screenshotsEnabled,
 		"networks":           networkMap,
 		"activeNetworkId":    activeNetworkID,
-		"success":           true,
+		"success":            true,
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode JSON response in APIDeviceList: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": "Failed to encode response",
+			"error":   "Failed to encode response",
 			"success": false,
 		})
 	}
@@ -766,7 +760,7 @@ func (h *WebHandler) APINetworks(w http.ResponseWriter, r *http.Request) {
 		log.Printf("APINetworks: Error getting networks: %v", err)
 		networksSlice = []models.Network{} // Ensure it's an empty slice, not nil
 	}
-	
+
 	log.Printf("APINetworks: Retrieved %d networks from service", len(networksSlice))
 
 	// Convert to pointer slice for template
@@ -780,7 +774,7 @@ func (h *WebHandler) APINetworks(w http.ResponseWriter, r *http.Request) {
 
 	// Get scan state for network selection highlighting
 	scanState := h.scanManager.GetState()
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
 		"networks":  networks,
@@ -792,6 +786,29 @@ func (h *WebHandler) APINetworks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// parseNetworkRangeForm reads the repeated cidr/cidr_label fields submitted by
+// the /networks page's repeatable range-row form. Blank CIDR rows (from an
+// empty trailing "add range" row) are dropped; labels are paired with cidrs
+// by position and default to "" if the arrays are uneven.
+func parseNetworkRangeForm(r *http.Request) (cidrs []string, labels []string) {
+	rawCidrs := r.Form["cidr"]
+	rawLabels := r.Form["cidr_label"]
+
+	for i, c := range rawCidrs {
+		c = strings.TrimSpace(c)
+		if c == "" {
+			continue
+		}
+		cidrs = append(cidrs, c)
+		label := ""
+		if i < len(rawLabels) {
+			label = strings.TrimSpace(rawLabels[i])
+		}
+		labels = append(labels, label)
+	}
+
+	return cidrs, labels
+}
 
 func (h *WebHandler) APICreateNetwork(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
@@ -807,29 +824,16 @@ func (h *WebHandler) APICreateNetwork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := strings.TrimSpace(r.FormValue("name"))
-	cidr := strings.TrimSpace(r.FormValue("cidr"))
+	cidrs, labels := parseNetworkRangeForm(r)
 	description := strings.TrimSpace(r.FormValue("description"))
-	
-	log.Printf("APICreateNetwork: Received request - name=%s, cidr=%s, description=%s", name, cidr, description)
 
-	// Validate CIDR
-	if cidr == "" {
+	log.Printf("APICreateNetwork: Received request - name=%s, cidrs=%v, description=%s", name, cidrs, description)
+
+	if err := models.ValidateNetworkRanges(cidrs); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": "CIDR address is required",
-		}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	// Validate CIDR format
-	_, _, err := net.ParseCIDR(cidr)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		response := map[string]interface{}{
-			"success": false,
-			"error": "Invalid CIDR format. Please use format like 192.168.1.0/24",
+			"error":   err.Error(),
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -837,13 +841,13 @@ func (h *WebHandler) APICreateNetwork(w http.ResponseWriter, r *http.Request) {
 
 	// Create network
 	log.Printf("APICreateNetwork: Calling networkService.Create")
-	network, err := h.networkService.Create(name, cidr, description)
+	network, err := h.networkService.Create(name, cidrs, labels, description)
 	if err != nil {
 		log.Printf("APICreateNetwork: Error creating network: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": fmt.Sprintf("Failed to create network: %v", err),
+			"error":   fmt.Sprintf("Failed to create network: %v", err),
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -882,39 +886,26 @@ func (h *WebHandler) APIUpdateNetwork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := strings.TrimSpace(r.FormValue("name"))
-	cidr := strings.TrimSpace(r.FormValue("cidr"))
+	cidrs, labels := parseNetworkRangeForm(r)
 	description := strings.TrimSpace(r.FormValue("description"))
 
-	// Validate CIDR
-	if cidr == "" {
+	if err := models.ValidateNetworkRanges(cidrs); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": "CIDR address is required",
-		}
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-
-	// Validate CIDR format
-	_, _, err := net.ParseCIDR(cidr)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		response := map[string]interface{}{
-			"success": false,
-			"error": "Invalid CIDR format. Please use format like 192.168.1.0/24",
+			"error":   err.Error(),
 		}
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
 	// Update network
-	network, err := h.networkService.Update(networkID, name, cidr, description)
+	network, err := h.networkService.Update(networkID, name, cidrs, labels, description)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": fmt.Sprintf("Failed to update network: %v", err),
+			"error":   fmt.Sprintf("Failed to update network: %v", err),
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -958,7 +949,7 @@ func (h *WebHandler) APIDeleteNetwork(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			response := map[string]interface{}{
 				"success": false,
-				"error": "Cannot delete network: a scan is currently running on this network. Please stop the scan first.",
+				"error":   "Cannot delete network: a scan is currently running on this network. Please stop the scan first.",
 			}
 			json.NewEncoder(w).Encode(response)
 			return
@@ -971,7 +962,7 @@ func (h *WebHandler) APIDeleteNetwork(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": "Network not found",
+			"error":   "Network not found",
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -983,7 +974,7 @@ func (h *WebHandler) APIDeleteNetwork(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": fmt.Sprintf("Failed to check network devices: %v", err),
+			"error":   fmt.Sprintf("Failed to check network devices: %v", err),
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -993,7 +984,7 @@ func (h *WebHandler) APIDeleteNetwork(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": fmt.Sprintf("Cannot delete network: %d devices are still using this network. Please remove or reassign devices first.", deviceCount),
+			"error":   fmt.Sprintf("Cannot delete network: %d devices are still using this network. Please remove or reassign devices first.", deviceCount),
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -1010,7 +1001,7 @@ func (h *WebHandler) APIDeleteNetwork(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"success": false,
-			"error": errorMsg,
+			"error":   errorMsg,
 		}
 		json.NewEncoder(w).Encode(response)
 		return
@@ -1030,8 +1021,64 @@ func (h *WebHandler) APIDeleteNetwork(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// APIToggleNetworkRange flips a range's active flag, including or excluding
+// it from future scans. The range keeps its scan history either way.
+func (h *WebHandler) APIToggleNetworkRange(w http.ResponseWriter, r *http.Request) {
+	session, _ := h.sessionStore.Get(r, "reconya-session")
+	user := h.getUserFromSession(session)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
+	vars := mux.Vars(r)
+	networkID := vars["id"]
+	rangeID := vars["rangeId"]
+
+	network, err := h.networkService.FindByID(networkID)
+	if err != nil || network == nil {
+		http.Error(w, "Network not found", http.StatusNotFound)
+		return
+	}
+
+	var target *models.NetworkRange
+	for i := range network.Ranges {
+		if network.Ranges[i].ID == rangeID {
+			target = &network.Ranges[i]
+			break
+		}
+	}
+	if target == nil {
+		http.Error(w, "Range not found", http.StatusNotFound)
+		return
+	}
+
+	if err := h.networkService.SetRangeActive(rangeID, !target.Active); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   fmt.Sprintf("Failed to update range: %v", err),
+		})
+		return
+	}
+
+	updated, err := h.networkService.FindByID(networkID)
+	if err != nil || updated == nil {
+		http.Error(w, "Network not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"network": updated,
+	})
+}
 
 // APIScanStatus returns the current scan status
 func (h *WebHandler) APIScanStatus(w http.ResponseWriter, r *http.Request) {
@@ -1050,7 +1097,7 @@ func (h *WebHandler) APIScanStatus(w http.ResponseWriter, r *http.Request) {
 // APIScanStart starts scanning a network
 func (h *WebHandler) APIScanStart(w http.ResponseWriter, r *http.Request) {
 	log.Printf("APIScanStart: Request received, method=%s", r.Method)
-	
+
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	user := h.getUserFromSession(session)
 	if user == nil {
@@ -1061,7 +1108,7 @@ func (h *WebHandler) APIScanStart(w http.ResponseWriter, r *http.Request) {
 
 	networkID := r.FormValue("network-selector")
 	log.Printf("APIScanStart: Network ID from form: '%s'", networkID)
-	
+
 	if networkID == "" {
 		log.Printf("APIScanStart: No network ID provided")
 		w.Header().Set("Content-Type", "application/json")
@@ -1188,7 +1235,6 @@ func (h *WebHandler) APIScanControl(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 // APIScanSelectNetwork sets the selected network (without starting scan)
 // APIDashboardMetrics returns JSON data for dashboard metrics
 func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request) {
@@ -1218,7 +1264,7 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 				devices[i] = &devicesSlice[i]
 			}
 		}
-		networkCIDR = currentNetwork.CIDR
+		networkCIDR = currentNetwork.GetDisplayName()
 	} else {
 		// If no network is selected, show all devices
 		devices, err = h.deviceService.FindAll()
@@ -1288,13 +1334,13 @@ func (h *WebHandler) APIDashboardMetrics(w http.ResponseWriter, r *http.Request)
 	}
 
 	metrics := map[string]interface{}{
-		"networkRange":    networkCIDR,
-		"publicIP":        publicIP,
-		"location":        location,
-		"devicesFound":    len(devices),
-		"devicesOnline":   networkMapData.NetworkInfo.OnlineDevices,
-		"devicesOffline":  networkMapData.NetworkInfo.OfflineDevices,
-		"saturation":      saturation,
+		"networkRange":   networkCIDR,
+		"publicIP":       publicIP,
+		"location":       location,
+		"devicesFound":   len(devices),
+		"devicesOnline":  networkMapData.NetworkInfo.OnlineDevices,
+		"devicesOffline": networkMapData.NetworkInfo.OfflineDevices,
+		"saturation":     saturation,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1360,7 +1406,6 @@ func (h *WebHandler) APIAbout(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 // APISettings returns the settings page
 func (h *WebHandler) APISettings(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
@@ -1407,7 +1452,7 @@ func (h *WebHandler) APISettingsScreenshots(w http.ResponseWriter, r *http.Reque
 	// Parse the enabled parameter - checkbox sends value when checked, nothing when unchecked
 	enabledStr := r.FormValue("screenshots_enabled")
 	enabled := enabledStr == "true" || enabledStr == "on"
-	
+
 	log.Printf("Screenshot settings update: enabled=%s, parsed=%v", enabledStr, enabled)
 
 	// Update settings
@@ -1428,7 +1473,7 @@ func (h *WebHandler) APISettingsScreenshots(w http.ResponseWriter, r *http.Reque
 	}
 
 	log.Printf("Updated screenshot settings for user %d: enabled=%v", user.ID, enabled)
-	
+
 	// Return JSON success response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -1486,7 +1531,7 @@ func (h *WebHandler) APINetworkSuggestion(w http.ResponseWriter, r *http.Request
 	name := fmt.Sprintf("Network %s", cidr)
 	description := "Auto-detected network"
 
-	network, err := h.networkService.Create(name, cidr, description)
+	network, err := h.networkService.Create(name, []string{cidr}, nil, description)
 	if err != nil {
 		log.Printf("Failed to create suggested network %s: %v", cidr, err)
 		http.Error(w, fmt.Sprintf("Failed to create network: %v", err), http.StatusInternalServerError)
@@ -1509,8 +1554,6 @@ func (h *WebHandler) APINetworkSuggestion(w http.ResponseWriter, r *http.Request
 func (h *WebHandler) getVersion() string {
 	return h.version
 }
-
-
 
 // templateFuncMap returns the helpers available to the HTML templates.
 // Extracted from NewWebHandler so the helpers can be unit-tested directly.

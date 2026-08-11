@@ -11,6 +11,7 @@ import (
 	"reconya/internal/scanner"
 	"reconya/models"
 	"sync"
+	"time"
 )
 
 type PingSweepService struct {
@@ -44,6 +45,7 @@ func NewPingSweepService(
 
 	return service
 }
+
 // Run method is deprecated - use the scan manager to control scanning
 // This method is kept for compatibility but should not be called directly
 func (s *PingSweepService) Run() {
@@ -61,6 +63,56 @@ func (s *PingSweepService) ExecuteSweepScanCommand(network string) ([]models.Dev
 	log.Printf("Network scan succeeded. Found %d devices", len(devices))
 
 	return devices, nil
+}
+
+// ExecuteSweepScanForRanges sweeps each active range of a network in turn,
+// merging the results into one device list keyed by IP. Ranges are scanned
+// sequentially rather than concurrently: the native scanner's ARP cache is a
+// single package-global snapshot that gets reset at the start of every
+// ScanNetwork call, so parallel range scans would race and corrupt each
+// other's ARP resolution.
+func (s *PingSweepService) ExecuteSweepScanForRanges(ranges []models.NetworkRange) ([]models.Device, error) {
+	var perRange [][]models.Device
+
+	for _, r := range ranges {
+		devices, err := s.executeWithFallback(r.CIDR)
+		if err != nil {
+			log.Printf("Range scan failed for %s: %v", r.CIDR, err)
+			continue
+		}
+		perRange = append(perRange, devices)
+
+		if s.NetworkService != nil && r.ID != "" {
+			if err := s.NetworkService.MarkRangeScanned(r.ID, time.Now()); err != nil {
+				log.Printf("Failed to record last_scanned_at for range %s: %v", r.CIDR, err)
+			}
+		}
+	}
+
+	result := mergeDevicesByIP(perRange...)
+
+	log.Printf("Multi-range scan succeeded across %d range(s). Found %d unique devices", len(ranges), len(result))
+
+	return result, nil
+}
+
+// mergeDevicesByIP flattens multiple ranges' scan results into one list,
+// keyed by IP so a host visible from more than one range (overlapping
+// ranges, or a broadcast/gateway address shared across subnets) is only
+// reported once. Later batches win on conflict.
+func mergeDevicesByIP(batches ...[]models.Device) []models.Device {
+	merged := make(map[string]models.Device)
+	for _, batch := range batches {
+		for _, d := range batch {
+			merged[d.IPv4] = d
+		}
+	}
+
+	result := make([]models.Device, 0, len(merged))
+	for _, d := range merged {
+		result = append(result, d)
+	}
+	return result
 }
 
 // executeWithFallback performs network scan using native Go scanner
