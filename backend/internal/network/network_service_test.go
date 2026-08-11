@@ -25,7 +25,7 @@ func newTestService(t *testing.T) *network.NetworkService {
 func TestNetworkService_Create_MultipleRanges(t *testing.T) {
 	svc := newTestService(t)
 
-	n, err := svc.Create("Office", []string{"10.0.1.0/24", "10.0.2.0/24"}, []string{"floor 1", "floor 2"}, "desc")
+	n, err := svc.Create("Office", []string{"10.0.1.0/24", "10.0.2.0/24"}, []string{"floor 1", "floor 2"}, "desc", nil)
 	require.NoError(t, err)
 
 	assert.Len(t, n.Ranges, 2)
@@ -43,24 +43,24 @@ func TestNetworkService_Create_MultipleRanges(t *testing.T) {
 func TestNetworkService_Create_RejectsInvalidCIDR(t *testing.T) {
 	svc := newTestService(t)
 
-	_, err := svc.Create("Office", []string{"not-a-cidr"}, nil, "")
+	_, err := svc.Create("Office", []string{"not-a-cidr"}, nil, "", nil)
 	assert.Error(t, err)
 
-	_, err = svc.Create("Office", nil, nil, "")
+	_, err = svc.Create("Office", nil, nil, "", nil)
 	assert.Error(t, err)
 }
 
 func TestNetworkService_Update_PreservesRangeIDAcrossEdit(t *testing.T) {
 	svc := newTestService(t)
 
-	created, err := svc.Create("Office", []string{"10.0.1.0/24", "10.0.2.0/24"}, nil, "")
+	created, err := svc.Create("Office", []string{"10.0.1.0/24", "10.0.2.0/24"}, nil, "", nil)
 	require.NoError(t, err)
 
 	originalRangeID := created.Ranges[0].ID
 	require.NotEmpty(t, originalRangeID)
 
 	// Update keeps 10.0.1.0/24, drops 10.0.2.0/24, adds 10.0.3.0/24.
-	updated, err := svc.Update(created.ID, "Office", []string{"10.0.1.0/24", "10.0.3.0/24"}, nil, "")
+	updated, err := svc.Update(created.ID, "Office", []string{"10.0.1.0/24", "10.0.3.0/24"}, nil, "", nil)
 	require.NoError(t, err)
 
 	var kept, dropped, added *string
@@ -95,7 +95,7 @@ func TestNetworkService_Update_PreservesRangeIDAcrossEdit(t *testing.T) {
 func TestNetworkService_SetRangeActive(t *testing.T) {
 	svc := newTestService(t)
 
-	created, err := svc.Create("Office", []string{"10.0.1.0/24"}, nil, "")
+	created, err := svc.Create("Office", []string{"10.0.1.0/24"}, nil, "", nil)
 	require.NoError(t, err)
 	rangeID := created.Ranges[0].ID
 
@@ -112,6 +112,30 @@ func TestNetworkService_SetRangeActive(t *testing.T) {
 	reloaded, err = svc.FindByID(created.ID)
 	require.NoError(t, err)
 	assert.True(t, reloaded.Ranges[0].Active)
+}
+
+func TestNetworkService_StaticRanges_RoundTrip(t *testing.T) {
+	svc := newTestService(t)
+
+	created, err := svc.Create("Office", []string{"10.0.1.0/24"}, nil, "", []string{"10.0.1.0/28", "10.0.1.128/28"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"10.0.1.0/28", "10.0.1.128/28"}, created.StaticRanges)
+
+	reloaded, err := svc.FindByID(created.ID)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"10.0.1.0/28", "10.0.1.128/28"}, reloaded.StaticRanges)
+
+	// Updating with an empty set clears it.
+	updated, err := svc.Update(created.ID, "Office", []string{"10.0.1.0/24"}, nil, "", nil)
+	require.NoError(t, err)
+	assert.Empty(t, updated.StaticRanges)
+}
+
+func TestNetworkService_StaticRanges_RejectsInvalidCIDR(t *testing.T) {
+	svc := newTestService(t)
+
+	_, err := svc.Create("Office", []string{"10.0.1.0/24"}, nil, "", []string{"not-a-cidr"})
+	assert.Error(t, err)
 }
 
 func TestNetworkService_FindOrCreate_SingleRange(t *testing.T) {

@@ -32,6 +32,17 @@ const (
 	DeviceTypeVoIP        DeviceType = "voip"
 )
 
+// Addressing annotates how a device's IP address is assigned. It is derived
+// from the owning network's static ranges (see Network.StaticRanges) but can
+// be overridden per device; once set manually it is preserved across sweeps.
+type Addressing string
+
+const (
+	AddressingUnknown Addressing = ""
+	AddressingStatic  Addressing = "static"
+	AddressingDHCP    Addressing = "dhcp"
+)
+
 type DeviceOS struct {
 	Name       string  `bson:"name,omitempty" json:"name,omitempty"`
 	Version    string  `bson:"version,omitempty" json:"version,omitempty"`
@@ -63,6 +74,9 @@ type Device struct {
 	PortScanStartedAt *time.Time    `bson:"port_scan_started_at,omitempty" json:"port_scan_started_at,omitempty"`
 	PortScanEndedAt   *time.Time    `bson:"port_scan_ended_at,omitempty" json:"port_scan_ended_at,omitempty"`
 	WebScanEndedAt    *time.Time    `bson:"web_scan_ended_at,omitempty" json:"web_scan_ended_at,omitempty"`
+	IsFavorite        bool          `bson:"is_favorite" json:"is_favorite"`
+	Ignored           bool          `bson:"ignored" json:"ignored"`
+	Addressing        Addressing    `bson:"addressing,omitempty" json:"addressing,omitempty"`
 }
 
 func (d *Device) HasIPv6() bool {

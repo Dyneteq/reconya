@@ -349,8 +349,10 @@ func (sm *ScanManager) runSingleScan() {
 
 		// Raise the event-shaped alerts while we still know what changed — the
 		// stored row has just been overwritten, so this is the last moment at
-		// which "first sighting" and "newly opened port" are knowable.
-		if sm.alertService != nil && delta != nil {
+		// which "first sighting" and "newly opened port" are knowable. Ignored
+		// devices still get their presence recorded above; they just don't
+		// raise alerts.
+		if sm.alertService != nil && delta != nil && !updatedDevice.Ignored {
 			if delta.IsNew {
 				sm.alertService.RecordNewDevice(context.Background(), updatedDevice, network.GetDisplayName())
 			}

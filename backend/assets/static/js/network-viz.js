@@ -58,6 +58,7 @@
     var hovered = null;
     var selectedId = null;
     var showOffline = false;
+    var showIgnored = false;
     var filterText = '';
     var mode = 'TREE';
     var onSelect = null;
@@ -74,6 +75,7 @@
         mode = RC.store.get('reconya.mapMode', 'TREE');
         if (!MODES.some(function (m) { return m.id === mode; })) mode = 'TREE';
         showOffline = RC.store.get('reconya.showOffline', 'false') === 'true';
+        showIgnored = RC.store.get('reconya.showIgnored', 'false') === 'true';
 
         resize();
         if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
@@ -112,7 +114,10 @@
 
     function setData(allDevices, networkCIDRs) {
         var filtered = (allDevices || []).filter(function (d) {
-            if (!showOffline && (d.status || '').toLowerCase() === 'offline') return false;
+            // Favorite devices stay on the map even when offline and the
+            // global toggle is off.
+            if (!showOffline && !d.is_favorite && (d.status || '').toLowerCase() === 'offline') return false;
+            if (!showIgnored && d.ignored) return false;
             return matchesFilter(d);
         });
 
@@ -716,6 +721,11 @@
         RC.store.set('reconya.showOffline', showOffline ? 'true' : 'false');
     }
 
+    function setShowIgnored(next) {
+        showIgnored = !!next;
+        RC.store.set('reconya.showIgnored', showIgnored ? 'true' : 'false');
+    }
+
     function setSelected(id) {
         selectedId = id;
     }
@@ -729,6 +739,8 @@
         setFilter: setFilter,
         setShowOffline: setShowOffline,
         showOffline: function () { return showOffline; },
+        setShowIgnored: setShowIgnored,
+        showIgnored: function () { return showIgnored; },
         setSelected: setSelected,
         zoomIn: function () { zoomBy(1.3); },
         zoomOut: function () { zoomBy(1 / 1.3); },

@@ -24,22 +24,28 @@ func NewNetworkService(networkRepo db.NetworkRepository, cfg *config.Config, dbM
 }
 
 // Create creates a network owning one or more CIDR ranges. labels is optional
-// and, if provided, must be the same length as cidrs.
-func (s *NetworkService) Create(name string, cidrs []string, labels []string, description string) (*models.Network, error) {
+// and, if provided, must be the same length as cidrs. staticRanges is
+// optional; devices whose IP falls inside one of them are annotated
+// "static" addressing, "dhcp" otherwise (see Network.AddressingForIP).
+func (s *NetworkService) Create(name string, cidrs []string, labels []string, description string, staticRanges []string) (*models.Network, error) {
 	if err := models.ValidateNetworkRanges(cidrs); err != nil {
+		return nil, err
+	}
+	if err := models.ValidateStaticRanges(staticRanges); err != nil {
 		return nil, err
 	}
 
 	now := time.Now()
 	ranges := buildRanges(cidrs, labels, now)
 	network := &models.Network{
-		Name:        name,
-		CIDR:        ranges[0].CIDR,
-		Description: description,
-		Status:      "active",
-		Ranges:      ranges,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		Name:         name,
+		CIDR:         ranges[0].CIDR,
+		Description:  description,
+		Status:       "active",
+		Ranges:       ranges,
+		StaticRanges: staticRanges,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	log.Printf("NetworkService.Create: Creating network with %d range(s), Name=%s", len(cidrs), name)
 	result, err := s.dbManager.CreateOrUpdateNetwork(s.Repository, context.Background(), network)
@@ -74,7 +80,7 @@ func buildRanges(cidrs []string, labels []string, now time.Time) []models.Networ
 func (s *NetworkService) FindOrCreate(cidr string) (*models.Network, error) {
 	network, err := s.Repository.FindByCIDR(context.Background(), cidr)
 	if err == db.ErrNotFound {
-		return s.Create("", []string{cidr}, nil, "")
+		return s.Create("", []string{cidr}, nil, "", nil)
 	}
 	if err != nil {
 		return nil, err
@@ -121,11 +127,15 @@ func (s *NetworkService) FindAll() ([]models.Network, error) {
 	return result, nil
 }
 
-// Update replaces a network's name/ranges/description. labels is optional
-// and, if provided, must be the same length as cidrs. Existing ranges whose
-// CIDR matches one in cidrs keep their id and last_scanned_at history.
-func (s *NetworkService) Update(id, name string, cidrs []string, labels []string, description string) (*models.Network, error) {
+// Update replaces a network's name/ranges/description/static ranges. labels
+// is optional and, if provided, must be the same length as cidrs. Existing
+// ranges whose CIDR matches one in cidrs keep their id and last_scanned_at
+// history. staticRanges is optional; see Create.
+func (s *NetworkService) Update(id, name string, cidrs []string, labels []string, description string, staticRanges []string) (*models.Network, error) {
 	if err := models.ValidateNetworkRanges(cidrs); err != nil {
+		return nil, err
+	}
+	if err := models.ValidateStaticRanges(staticRanges); err != nil {
 		return nil, err
 	}
 
@@ -142,6 +152,7 @@ func (s *NetworkService) Update(id, name string, cidrs []string, labels []string
 	network.Ranges = buildRanges(cidrs, labels, now)
 	network.CIDR = network.Ranges[0].CIDR
 	network.Description = description
+	network.StaticRanges = staticRanges
 	network.UpdatedAt = now
 
 	return s.dbManager.CreateOrUpdateNetwork(s.Repository, context.Background(), network)

@@ -310,10 +310,16 @@ func (h *WebHandler) APIUpdateDevice(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	deviceID := vars["id"]
 
-	// Parse JSON body
+	// Parse JSON body. IsFavorite/Ignored/Addressing are pointers so a field
+	// absent from the request (nil) is distinguishable from an explicit
+	// false/"" value, unlike the empty-string-means-unset convention used
+	// for Name/Comment below.
 	var data struct {
-		Name    string `json:"name"`
-		Comment string `json:"comment"`
+		Name       string  `json:"name"`
+		Comment    string  `json:"comment"`
+		IsFavorite *bool   `json:"is_favorite"`
+		Ignored    *bool   `json:"ignored"`
+		Addressing *string `json:"addressing"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
@@ -330,7 +336,19 @@ func (h *WebHandler) APIUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		commentPtr = &data.Comment
 	}
 
-	device, err := h.deviceService.UpdateDevice(deviceID, namePtr, commentPtr)
+	var addressingPtr *models.Addressing
+	if data.Addressing != nil {
+		switch models.Addressing(*data.Addressing) {
+		case models.AddressingUnknown, models.AddressingStatic, models.AddressingDHCP:
+			addressing := models.Addressing(*data.Addressing)
+			addressingPtr = &addressing
+		default:
+			http.Error(w, "Invalid addressing value: must be \"\", \"static\", or \"dhcp\"", http.StatusBadRequest)
+			return
+		}
+	}
+
+	device, err := h.deviceService.UpdateDevice(deviceID, namePtr, commentPtr, data.IsFavorite, data.Ignored, addressingPtr)
 	if err != nil {
 		log.Printf("Failed to update device %s: %v", deviceID, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -810,6 +828,21 @@ func parseNetworkRangeForm(r *http.Request) (cidrs []string, labels []string) {
 	return cidrs, labels
 }
 
+// parseStaticRangesForm reads the repeated static_range fields submitted by
+// the network edit dialog's static-ranges textarea (one CIDR per line, blank
+// lines dropped). These annotate device addressing, not scan targets.
+func parseStaticRangesForm(r *http.Request) []string {
+	var ranges []string
+	for _, cidr := range r.Form["static_range"] {
+		cidr = strings.TrimSpace(cidr)
+		if cidr == "" {
+			continue
+		}
+		ranges = append(ranges, cidr)
+	}
+	return ranges
+}
+
 func (h *WebHandler) APICreateNetwork(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "reconya-session")
 	user := h.getUserFromSession(session)
@@ -826,6 +859,7 @@ func (h *WebHandler) APICreateNetwork(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	cidrs, labels := parseNetworkRangeForm(r)
 	description := strings.TrimSpace(r.FormValue("description"))
+	staticRanges := parseStaticRangesForm(r)
 
 	log.Printf("APICreateNetwork: Received request - name=%s, cidrs=%v, description=%s", name, cidrs, description)
 
@@ -839,9 +873,19 @@ func (h *WebHandler) APICreateNetwork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := models.ValidateStaticRanges(staticRanges); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	// Create network
 	log.Printf("APICreateNetwork: Calling networkService.Create")
-	network, err := h.networkService.Create(name, cidrs, labels, description)
+	network, err := h.networkService.Create(name, cidrs, labels, description, staticRanges)
 	if err != nil {
 		log.Printf("APICreateNetwork: Error creating network: %v", err)
 		w.Header().Set("Content-Type", "application/json")
@@ -888,6 +932,7 @@ func (h *WebHandler) APIUpdateNetwork(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	cidrs, labels := parseNetworkRangeForm(r)
 	description := strings.TrimSpace(r.FormValue("description"))
+	staticRanges := parseStaticRangesForm(r)
 
 	if err := models.ValidateNetworkRanges(cidrs); err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -899,8 +944,18 @@ func (h *WebHandler) APIUpdateNetwork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := models.ValidateStaticRanges(staticRanges); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
 	// Update network
-	network, err := h.networkService.Update(networkID, name, cidrs, labels, description)
+	network, err := h.networkService.Update(networkID, name, cidrs, labels, description, staticRanges)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
@@ -1531,7 +1586,7 @@ func (h *WebHandler) APINetworkSuggestion(w http.ResponseWriter, r *http.Request
 	name := fmt.Sprintf("Network %s", cidr)
 	description := "Auto-detected network"
 
-	network, err := h.networkService.Create(name, []string{cidr}, nil, description)
+	network, err := h.networkService.Create(name, []string{cidr}, nil, description, nil)
 	if err != nil {
 		log.Printf("Failed to create suggested network %s: %v", cidr, err)
 		http.Error(w, fmt.Sprintf("Failed to create network: %v", err), http.StatusInternalServerError)
