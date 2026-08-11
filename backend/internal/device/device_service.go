@@ -198,6 +198,11 @@ func (s *DeviceService) setTimestamps(device, existingDevice *models.Device, cur
 	} else {
 		device.CreatedAt = existingDevice.CreatedAt
 	}
+	if existingDevice == nil || existingDevice.FirstSeenAt.IsZero() {
+		device.FirstSeenAt = currentTime
+	} else {
+		device.FirstSeenAt = existingDevice.FirstSeenAt
+	}
 	device.UpdatedAt = currentTime
 }
 

@@ -482,6 +482,26 @@ func InitializeSchema(db *sql.DB) error {
 		log.Printf("Note: networks.static_ranges column might already exist: %v", err)
 	}
 
+	// Long-term device tracking (issue #133): first_seen_at is set once and
+	// never touched again; discovery_method reflects the most recent sweep's
+	// corroborating signal (icmp/arp/tcp).
+	_, err = db.Exec(`ALTER TABLE devices ADD COLUMN first_seen_at TIMESTAMP`)
+	if err != nil {
+		log.Printf("Note: devices.first_seen_at column might already exist: %v", err)
+	}
+
+	_, err = db.Exec(`ALTER TABLE devices ADD COLUMN discovery_method TEXT`)
+	if err != nil {
+		log.Printf("Note: devices.discovery_method column might already exist: %v", err)
+	}
+
+	// Backfill: pre-existing rows never had a distinct first-seen moment
+	// recorded, created_at is the closest available approximation.
+	_, err = db.Exec(`UPDATE devices SET first_seen_at = created_at WHERE first_seen_at IS NULL`)
+	if err != nil {
+		log.Printf("Note: devices.first_seen_at backfill failed: %v", err)
+	}
+
 	log.Println("Database schema initialized successfully")
 	return nil
 }

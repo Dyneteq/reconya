@@ -42,6 +42,8 @@ ICMP (tried unprivileged first via a UDP-datagram ICMP socket, falling back to a
 
 TCP probing tries 12 common ports (80, 443, 22, 21, 23, 25, 53, 135, 139, 445, 3389, 8080) in parallel with a short per-dial timeout, returning on the first success. MAC resolution reads the OS ARP table, and if that misses, sends a throwaway UDP packet to provoke an ARP resolution before re-checking. Hostname resolution tries, in order: reverse DNS, NetBIOS (`nmblookup`/`nbtstat`), mDNS (`<name>.local`), and HTTP banner headers (`Server`/`Location`), SNMP is present as an unimplemented stub.
 
+Whichever signal wins the `online` decision is recorded as `models.DiscoveryMethod` (`icmp`/`arp`/`tcp`, priority in that order) on the `ScanResult` and carried into the device row as `discovery_method`, overwritten on every sweep, see [01-device-identification.md](01-device-identification.md#long-term-tracking-first-seen--discovery-method).
+
 Vendor lookup uses a small built-in OUI map by default; if `VENDOR_LOOKUP_ONLINE_ENABLED=true`, unresolved OUIs fall back to a call to `api.macvendors.com` per discovered device, this is an outbound call and stays off by default, see [architecture.md](architecture.md#network-isolation).
 
 ## Primary NIC Detection and Network Suggestions

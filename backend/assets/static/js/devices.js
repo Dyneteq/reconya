@@ -65,6 +65,12 @@
         return ADDRESSING_LABELS[addressing || ''] || 'UNKNOWN';
     }
 
+    var DISCOVERY_LABELS = { icmp: 'ICMP', arp: 'ARP', tcp: 'TCP' };
+
+    function discoveryLabel(method) {
+        return DISCOVERY_LABELS[method || ''] || '—';
+    }
+
     function portsLabel(device) {
         var open = RC.openPorts(device);
         if (!open.length) return '—';
@@ -259,7 +265,8 @@
             ['SUBNET', state.networks[device.network_id] || '—'],
             ['ROLE', roleLabel(device)],
             ['OS GUESS', os || 'no fingerprint'],
-            ['FIRST SEEN', RC.dateTime(device.created_at)],
+            ['DISCOVERY', discoveryLabel(device.discovery_method)],
+            ['FIRST SEEN', RC.dateTime(device.first_seen_at || device.created_at)],
             ['LAST SEEN', RC.timeAgo(device.last_seen_online_at) + ' ago']
         ];
 
