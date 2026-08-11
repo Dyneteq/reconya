@@ -14,7 +14,7 @@ reconYa discovers and monitors devices on your local network with real-time upda
 - **Port scanning** - top-ports scans with service detection and banner grabbing, run by background workers
 - **Alerting** - new devices, new or risky open ports, unreachable hosts, duplicate MACs, and unidentified hosts raise acknowledgeable alerts
 - **Web console** - server-rendered dashboard with topology map, host list, and live event log
-- **Multi-network support** - manage several networks with CIDR configuration
+- **Multi-network support** - manage several networks, each spanning one or more CIDR ranges, scanned independently and toggled in or out without losing history
 - **Zero outbound calls by default** - all external lookups are opt-in (see [Network isolation](#network-isolation))
 
 ## Community
