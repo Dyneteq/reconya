@@ -57,7 +57,8 @@ All of them recover from panics individually and log rather than crash the proce
 ## Data Model Hierarchy
 
 ```
-Network (CIDR)
+Network (1+ CIDR ranges)
+  ├─ NetworkRange (CIDR, label, active flag, last_scanned_at)
   └─ Device (IPv4/MAC/vendor/status/hostname)
        ├─ Port (open ports, service, banner)
        ├─ WebService (screenshot metadata for HTTP(S) ports)

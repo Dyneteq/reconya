@@ -24,7 +24,8 @@ There is no down-migration or rollback path: this is an intentionally append-onl
 
 | Table | Purpose |
 |---|---|
-| `networks` | CIDR ranges the app knows about; `status`, `device_count`, `last_scanned_at` are denormalized for the networks page |
+| `networks` | Named groups of CIDR ranges the app knows about; `status`, `device_count`, `last_scanned_at` are denormalized for the networks page. `cidr` is a legacy single-CIDR column, kept in sync with the network's first range for backward compatibility, actual scan targets live in `network_ranges` |
+| `network_ranges` | The CIDR ranges owned by a network (`network_id` FK, `ON DELETE CASCADE`), each independently toggleable via `active` without losing its `last_scanned_at` history. A network with one range is the common case; multiple ranges let a scan target several real subnets instead of one covering supernet |
 | `devices` | One row per discovered host: identity (IPv4/MAC/vendor/hostname), status, OS fingerprint fields, IPv6 addresses, scan timestamps. `ipv4` is uniquely indexed |
 | `ports` | Open ports found on a device (`device_id` FK), one row per port |
 | `event_logs` | Append-only activity feed (status transitions, scan events); indexed on `created_at DESC` since the UI always reads "latest N" |

@@ -4,9 +4,9 @@ Device discovery: how a "scan" actually runs, how the sweep decides a host is al
 
 ## Network Model and Selection
 
-`models.Network` (`backend/models/network.go`) is mostly just `CIDR` plus display metadata (`Name`, `Description`, `Status`, `LastScannedAt`, `DeviceCount`). It also has `IPv6Prefix`/`AddressFamily` fields and dual-stack helper methods, but nothing else in the codebase actually uses them for scan targeting: IPv6 discovery works off live neighbor-discovery data, not this field, and the "network to scan" is always the network's `CIDR`.
+`models.Network` (`backend/models/network.go`) owns one or more `NetworkRange`s (`backend/db` table `network_ranges`), each just a `CIDR` plus a `Label` and an independent `Active`/`LastScannedAt` state. The network's own `CIDR` field is a legacy single-value mirror of the first range, kept for backward compatibility (older code paths, `FindByCIDR` lookups), but the actual scan targets are `network.ActiveRanges()`. It also has `IPv6Prefix`/`AddressFamily` fields and dual-stack helper methods, but nothing else in the codebase actually uses them for scan targeting: IPv6 discovery works off live neighbor-discovery data, not this field.
 
-`NetworkService.Create` is an unconditional upsert; `FindOrCreate` looks up by CIDR first and only creates on a miss. `Delete` (the HTTP handler, not the service) refuses to delete a network with a scan currently running against it or with any devices still attached, and translates the resulting SQLite foreign-key error into a friendlier message.
+`NetworkService.Create`/`Update` take `cidrs []string` (plus optional per-range `labels`) rather than a single CIDR, and are an unconditional upsert; `FindOrCreate` still takes a single CIDR (used by auto-discovery, which only ever detects one subnet at a time) and looks it up against any range before creating a one-range network on a miss. Editing a network's ranges never deletes a dropped range row, it's marked `Active: false` so its `LastScannedAt` history survives, matching existing rows are matched and reused by CIDR so their id and history carry over. `Delete` (the HTTP handler, not the service) refuses to delete a network with a scan currently running against it or with any devices still attached, and translates the resulting SQLite foreign-key error into a friendlier message; its ranges cascade-delete with it.
 
 **"Selected network" is scan-manager state, not a network property.** `scan.ScanManager` tracks `SelectedNetwork` (what the UI picked) separately from `CurrentNetwork` (what's actively being scanned right now); `GetSelectedOrCurrentNetwork()` returns whichever applies. At startup, the primary-NIC detection goroutine (below) preselects the network matching the machine's own LAN, so a scan started with no explicit selection targets the network the machine is actually on rather than whichever network row happens to sort first.
 
@@ -18,7 +18,7 @@ Each sweep iteration (`runSingleScan`):
 
 1. Checks the stop signal (cooperative cancellation between steps, not context cancellation).
 2. Logs a `PingSweep` start event.
-3. Runs the actual sweep (`PingSweepService.ExecuteSweepScanCommand`, see below) against the network's CIDR.
+3. Runs the actual sweep (`PingSweepService.ExecuteSweepScanForRanges`, see below) against the network's active ranges.
 4. For every discovered device, calls `DeviceService.CreateOrUpdateWithDelta`. If the delta says the device is new or has newly-opened ports, fires the corresponding alert immediately (`RecordNewDevice`/`RecordNewPorts`), because this is the last point at which "first sighting" is knowable, the row is about to be overwritten in place. See [03-alerting.md](03-alerting.md).
 5. Logs a `DeviceOnline` event per discovered device, and enqueues devices eligible for a port scan (`DeviceService.EligibleForPortScan`) as background goroutines.
 6. Logs a second `PingSweep` event carrying the actual elapsed duration for this iteration (measured fresh each pass, not against the session's overall start time, which would otherwise grow by 30 seconds on every iteration).
@@ -28,7 +28,9 @@ The reported "scan count" (`/api/scan/status`) is not the in-memory loop counter
 
 ## The Ping Sweep
 
-Device discovery is a pure-Go implementation (`backend/internal/scanner`, `golang.org/x/net/icmp`), no `ping`, `nmap`, or `arp-scan` binaries are shelled out to for the sweep itself. `ScanNetwork(cidr)` enumerates every host address in the CIDR (excluding the network and broadcast addresses), invalidates the cached ARP table so a sweep never opens against entries left from a previous network, and fans the address list out to 50 concurrent worker goroutines.
+Device discovery is a pure-Go implementation (`backend/internal/scanner`, `golang.org/x/net/icmp`), no `ping`, `nmap`, or `arp-scan` binaries are shelled out to for the sweep itself. `ScanNetwork(cidr)` enumerates every host address in a single CIDR (excluding the network and broadcast addresses), invalidates the cached ARP table so a sweep never opens against entries left from a previous network, and fans the address list out to 50 concurrent worker goroutines.
+
+**Multi-range networks are swept sequentially, not in parallel.** `PingSweepService.ExecuteSweepScanForRanges` loops each active range through `ScanNetwork` one at a time, since the ARP cache above is a single package-global snapshot reset at the start of every call, concurrent range scans would race and corrupt each other's ARP resolution. Results are merged across ranges keyed by IP (`mergeDevicesByIP`), so a host visible from more than one range is only reported once, and each range's `last_scanned_at` is recorded as it completes.
 
 **A host counts as online only if corroborated**, per-IP:
 

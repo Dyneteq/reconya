@@ -531,7 +531,7 @@
                 <span class="sec-num">01</span>
                 <h2>What it does</h2>
             </div>
-            <p class="sec-sub">Six jobs, done properly. No agents to install on anything, no cloud account, no telemetry phoning home.</p>
+            <p class="sec-sub">Seven jobs, done properly. No agents to install on anything, no cloud account, no telemetry phoning home.</p>
             <div class="feat-grid">
                 <article class="feat-card">
                     <div class="feat-top">
@@ -580,6 +580,14 @@
                     </div>
                     <h3>Event timeline</h3>
                     <p>Every sweep, every appearance, every disappearance, timestamped, so you can answer "when did that show up?"</p>
+                </article>
+                <article class="feat-card">
+                    <div class="feat-top">
+                        <span class="icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="10" height="4"/><rect x="3" y="10" width="17" height="4"/><rect x="3" y="16" width="6" height="4"/></svg></span>
+                        <span class="tag">SEG</span>
+                    </div>
+                    <h3>Multi-range networks</h3>
+                    <p>One network, several subnets. List the CIDR blocks you actually use and scan them on their own schedule, not a covering supernet nobody asked for.</p>
                 </article>
             </div>
         </div>
@@ -739,7 +747,7 @@
                 </details>
                 <details class="faq">
                     <summary>Can it watch more than one subnet?<span class="plus">+</span></summary>
-                    <p>You can define multiple target networks and scan them in turn, as long as the host it runs on can actually route to each one.</p>
+                    <p>Two ways: define multiple target networks and scan them in turn, or give one network several CIDR ranges (two floors that don't share a supernet, say) and it sweeps each in turn and merges the results into one inventory. Either way, the host it runs on has to actually route to each range.</p>
                 </details>
                 <details class="faq">
                     <summary>Is it really free?<span class="plus">+</span></summary>
