@@ -13,6 +13,12 @@
  * Node shape encodes role, fill encodes status. The internet node and packet
  * animation the old map drew are gone: the design has no internet node, and
  * that state now lives in the top bar.
+ *
+ * Each device earns a persistent slot within its network on first sight (see
+ * assignSlots) and keeps it across polls, and a network's band/ring capacity
+ * eases toward its live device count instead of snapping. A host flapping
+ * on or offline therefore moves (or removes) only itself, rather than
+ * reshuffling every other node on the map.
  */
 (function () {
     'use strict';
@@ -55,6 +61,7 @@
     var nodes = [];            // laid-out, animated node records
     var groups = [];           // one per network, in display order
     var devices = [];          // filtered device set currently drawn
+    var slotState = {};        // per-network device -> slot assignments, see assignSlots()
     var hovered = null;
     var selectedId = null;
     var showOffline = false;
@@ -147,10 +154,63 @@
 
     /* ── Layout ─────────────────────────────────────────────────────── */
 
+    // Devices earn a slot within their network the first time they are seen,
+    // and keep it for as long as they keep appearing in the device set. A
+    // device dropping out (offline, filtered, deleted) frees its slot for
+    // reuse but does not shift its neighbours into the gap, and a group's
+    // capacity (its slot count) eases toward the live device count rather
+    // than snapping to it. Together these stop one host flapping from
+    // reshuffling every other host's position, on this network or any other,
+    // which is what read as the whole map "flickering".
+    function assignSlots(group) {
+        var state = slotState[group.id];
+        if (!state) state = slotState[group.id] = { indexById: {}, maxIndex: -1, capacity: 0 };
+
+        var presentIds = {};
+        var used = {};
+        group.devices.forEach(function (d) {
+            presentIds[d.id] = true;
+            var idx = state.indexById[d.id];
+            if (idx != null) used[idx] = true;
+        });
+
+        group.devices.forEach(function (d) {
+            if (state.indexById[d.id] != null) return;
+            var idx = 0;
+            while (used[idx]) idx++;
+            state.indexById[d.id] = idx;
+            used[idx] = true;
+            if (idx > state.maxIndex) state.maxIndex = idx;
+        });
+
+        // Forget devices no longer present so their slot can be reused and
+        // the map does not grow without bound.
+        Object.keys(state.indexById).forEach(function (id) {
+            if (!presentIds[id]) delete state.indexById[id];
+        });
+
+        var target = Math.max(1, state.maxIndex + 1);
+        state.capacity = state.capacity ? state.capacity + (target - state.capacity) * 0.25 : target;
+
+        group.slotOf = state.indexById;
+        group.capacity = state.capacity;
+    }
+
+    function pruneSlotState() {
+        var liveIds = {};
+        groups.forEach(function (g) { liveIds[g.id] = true; });
+        Object.keys(slotState).forEach(function (id) {
+            if (!liveIds[id]) delete slotState[id];
+        });
+    }
+
     // Nodes keep their animated position across relayouts so devices glide to a
     // new spot rather than snapping when the mode or the device set changes.
     function layout() {
         if (!lw || !lh) return;
+
+        pruneSlotState();
+        groups.forEach(assignSlots);
 
         var previous = {};
         nodes.forEach(function (n) { previous[n.id] = n; });
@@ -210,11 +270,12 @@
         }
     }
 
-    // TREE — gateway, a core switch, one band per network sized by host count,
-    // and each band's hosts laid out as rows.
+    // TREE — gateway, a core switch, one band per network sized by (eased)
+    // slot capacity, and each band's hosts laid out as rows by their
+    // persistent slot so a device keeps its row/column across polls.
     function layoutTree() {
         var placed = [];
-        var total = devices.length || 1;
+        var totalCapacity = groups.reduce(function (sum, g) { return sum + g.capacity; }, 0) || 1;
         var usable = lh - 120;
         var top = 60;
 
@@ -224,19 +285,20 @@
 
         var cursor = top;
         groups.forEach(function (group) {
-            var bandH = Math.max(48, usable * (group.devices.length / total));
+            var bandH = Math.max(48, usable * (group.capacity / totalCapacity));
             var mid = cursor + bandH / 2;
 
             group.bandMid = mid;
             group.bandTop = cursor;
             group.bandH = bandH;
 
-            var rows = Math.ceil(group.devices.length / perRow) || 1;
+            var rows = Math.ceil(group.capacity / perRow) || 1;
             var rowH = Math.min(15, Math.max(9, (bandH - 14) / rows));
 
-            group.devices.forEach(function (d, i) {
-                var row = Math.floor(i / perRow);
-                var col = i % perRow;
+            group.devices.forEach(function (d) {
+                var slot = group.slotOf[d.id];
+                var row = Math.floor(slot / perRow);
+                var col = slot % perRow;
                 placed.push(nodeRecord(d,
                     swarmX + col * 15 + 6,
                     mid - (rows * rowH) / 2 + row * rowH + rowH / 2));
@@ -248,8 +310,9 @@
         return placed;
     }
 
-    // RADIAL — one ring per network, radius growing outward, hosts spread evenly
-    // around each ring with a small deterministic jitter so they do not comb.
+    // RADIAL — one ring per network, radius growing outward, hosts spread
+    // evenly around each ring by their persistent slot (not their live index)
+    // so removing one host does not rotate the rest of the ring.
     function layoutRadial() {
         var placed = [];
         var cx = lw / 2;
@@ -262,12 +325,13 @@
             group.ringR = R;
             group.ringAngle = -Math.PI / 2 + gi * 0.9;
 
-            var n = group.devices.length || 1;
-            group.devices.forEach(function (d, i) {
-                var a = (i / n) * Math.PI * 2 + gi * 0.4;
-                // Deterministic wobble keyed off the index — no Math.random, so
+            var capacity = group.capacity || 1;
+            group.devices.forEach(function (d) {
+                var slot = group.slotOf[d.id];
+                var a = (slot / capacity) * Math.PI * 2 + gi * 0.4;
+                // Deterministic wobble keyed off the slot — no Math.random, so
                 // the layout is stable across redraws.
-                var wobble = ((i * 37) % 11 - 5) / 5 * (maxR * 0.02);
+                var wobble = ((slot * 37) % 11 - 5) / 5 * (maxR * 0.02);
                 placed.push(nodeRecord(d,
                     cx + Math.cos(a) * (R + wobble),
                     cy + Math.sin(a) * (R + wobble)));
