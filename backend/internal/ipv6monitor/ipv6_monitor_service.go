@@ -58,19 +58,14 @@ type IPv6Address struct {
 }
 
 func NewIPv6MonitorService(deviceService *device.DeviceService, networkService *network.NetworkService, logger *log.Logger) *IPv6MonitorService {
-	ctx, cancel := context.WithCancel(context.Background())
-	
 	return &IPv6MonitorService{
 		deviceService:     deviceService,
 		networkService:    networkService,
 		logger:           logger,
-		ctx:              ctx,
-		cancel:           cancel,
 		monitorInterfaces: []string{}, // Will be auto-detected
 		hostPrefixes:     []string{},  // Will be auto-detected
 		linkLocalEnabled: true,
 		multicastEnabled: true,
-		deviceChan:       make(chan IPv6Device, 100),
 	}
 }
 
@@ -83,12 +78,19 @@ func (s *IPv6MonitorService) Start() error {
 	}
 	
 	s.logger.Println("Starting IPv6 passive monitoring service...")
-	
+
 	// Auto-detect network interfaces and prefixes
 	if err := s.detectNetworkConfiguration(); err != nil {
 		return fmt.Errorf("failed to detect network configuration: %w", err)
 	}
-	
+
+	// Create a fresh context and device channel for this run. Stop() cancels
+	// the context and closes the channel, so both must be recreated here to
+	// support repeated start/stop cycles without reusing an already-closed
+	// channel or an already-cancelled context.
+	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.deviceChan = make(chan IPv6Device, 100)
+
 	s.isRunning = true
 	
 	// Start device processing worker
